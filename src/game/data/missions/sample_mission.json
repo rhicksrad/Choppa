@@ -1,0 +1,29 @@
+{
+  "id": "m01",
+  "title": "River Mouth",
+  "briefing": "Destroy the enemy emplacements and return to the pad.",
+  "startPos": { "tx": 8, "ty": 8 },
+  "objectives": [
+    {
+      "id": "obj1",
+      "type": "destroy",
+      "name": "Neutralize AAA turret",
+      "at": { "tx": 10, "ty": 7 },
+      "radiusTiles": 1.5
+    },
+    {
+      "id": "obj2",
+      "type": "destroy",
+      "name": "Neutralize SAM site",
+      "at": { "tx": 5, "ty": 12 },
+      "radiusTiles": 1.5
+    },
+    {
+      "id": "obj3",
+      "type": "reach",
+      "name": "Return to the pad",
+      "at": { "tx": 6, "ty": 9 },
+      "radiusTiles": 1.2
+    }
+  ]
+}
