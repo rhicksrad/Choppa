@@ -1,4 +1,11 @@
-export type UIState = 'title' | 'settings' | 'achievements' | 'about' | 'in-game' | 'paused';
+export type UIState =
+  | 'title'
+  | 'settings'
+  | 'achievements'
+  | 'about'
+  | 'in-game'
+  | 'paused'
+  | 'win';
 
 export interface SettingsState {
   masterVolume: number;

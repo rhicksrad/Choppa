@@ -14,12 +14,17 @@ export function renderSettings(context: CanvasRenderingContext2D, _ui: UIStore):
   context.fillText('Settings', w / 2, h * 0.2);
   context.fillStyle = '#c8d7e1';
   context.font = '14px system-ui, sans-serif';
-  context.fillText(
-    'Audio sliders and key remapping will be interactive in Phase 6.',
-    w / 2,
-    h * 0.2 + 22,
-  );
-  context.fillText('Press Esc to return.', w / 2, h * 0.2 + 40);
+  context.fillText('Use number keys to adjust:', w / 2, h * 0.2 + 22);
+  const lines = [
+    '1/2 — Master Volume -/+',
+    '3/4 — Music Volume -/+',
+    '5/6 — SFX Volume -/+',
+    'F — Toggle Fog of War',
+    'K — Toggle Screen Shake',
+    'Press Esc to return',
+  ];
+  for (let i = 0; i < lines.length; i += 1)
+    context.fillText(lines[i]!, w / 2, h * 0.2 + 40 + i * 18);
   context.restore();
 }
 

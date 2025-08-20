@@ -40,6 +40,10 @@ import type { Health } from './game/components/Health';
 import type { Collider } from './game/components/Collider';
 import { drawHUD } from './ui/hud/hud';
 import { loadJson, saveJson } from './core/util/storage';
+import { loadBindings, isDown } from './ui/input-remap/bindings';
+import { AudioBus } from './core/audio/audio';
+import { EngineSound, playCannon, playRocket, playMissile, playExplosion } from './core/audio/sfx';
+import { CameraShake } from './render/camera/shake';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('Canvas element with id "game" not found');
@@ -77,6 +81,7 @@ const titleMenu = new Menu([
   { id: 'achievements', label: 'Achievements' },
   { id: 'about', label: 'About' },
 ]);
+const bindings = loadBindings();
 
 // Simple counters for FPS & dt
 let fps = 0;
@@ -88,6 +93,9 @@ const renderer = new IsoTilemapRenderer();
 const camera = new Camera2D({ deadzoneWidth: 160, deadzoneHeight: 120, lerp: 0.12 });
 const sky = new ParallaxSky();
 const fog = new FogOfWar(0.78);
+const bus = new AudioBus({ masterVolume: 0.9, musicVolume: 0.4, sfxVolume: 0.9 });
+const engine = new EngineSound(bus);
+const shake = new CameraShake();
 
 // ECS world
 const entities = new EntityRegistry();
@@ -177,7 +185,7 @@ const loop = new GameLoop({
     const snap = input.readSnapshot();
 
     // Global UI transitions
-    if (snap.keys['Escape']) {
+    if (isDown(snap, bindings, 'pause')) {
       if (ui.state === 'in-game') ui.state = 'paused';
       else if (ui.state === 'paused') ui.state = 'in-game';
       else ui.state = 'title';
@@ -208,10 +216,10 @@ const loop = new GameLoop({
     const ph = physics.get(player)!;
     let dx = 0;
     let dy = 0;
-    if (snap.keys['w'] || snap.keys['ArrowUp']) dy -= 1;
-    if (snap.keys['s'] || snap.keys['ArrowDown']) dy += 1;
-    if (snap.keys['a'] || snap.keys['ArrowLeft']) dx -= 1;
-    if (snap.keys['d'] || snap.keys['ArrowRight']) dx += 1;
+    if (isDown(snap, bindings, 'moveUp')) dy -= 1;
+    if (isDown(snap, bindings, 'moveDown')) dy += 1;
+    if (isDown(snap, bindings, 'moveLeft')) dx -= 1;
+    if (isDown(snap, bindings, 'moveRight')) dx += 1;
     if (dx !== 0 || dy !== 0) {
       const len = Math.hypot(dx, dy) || 1;
       dx /= len;
@@ -220,6 +228,10 @@ const loop = new GameLoop({
     const accel = 12; // tiles/sec^2
     ph.ax = dx * accel;
     ph.ay = dy * accel;
+    // Engine audio intensity by speed
+    const speed = Math.min(1, Math.hypot(ph.vx, ph.vy) / (physics.get(player)!.maxSpeed || 1));
+    engine.start();
+    engine.setIntensity(speed);
 
     // Set weapon input (use mouse position to aim in screen pixels → convert to tile space approx)
     const w = context.canvas.width;
@@ -242,6 +254,7 @@ const loop = new GameLoop({
     for (let i = 0; i < fireEvents.length; i += 1) {
       const ev = fireEvents[i]!;
       if (ev.kind === 'cannon') {
+        playCannon(bus);
         projectilePool.spawn({
           kind: 'cannon',
           faction: 'player',
@@ -254,6 +267,7 @@ const loop = new GameLoop({
           damage: { amount: 3 },
         });
       } else if (ev.kind === 'rocket') {
+        playRocket(bus);
         projectilePool.spawn({
           kind: 'rocket',
           faction: 'player',
@@ -266,6 +280,7 @@ const loop = new GameLoop({
           damage: { amount: 12, radius: 0.6 },
         });
       } else if (ev.kind === 'missile') {
+        playMissile(bus);
         projectilePool.spawn({
           kind: 'missile',
           faction: 'player',
@@ -290,6 +305,8 @@ const loop = new GameLoop({
       transforms,
       (hit) => {
         damage.queue(hit);
+        playExplosion(bus);
+        if (ui.settings.screenShake) shake.trigger(8, 0.25);
       },
     );
     damage.update();
@@ -344,7 +361,14 @@ const loop = new GameLoop({
       // Map origin is camera-centered
       const originX = Math.floor(w / 2 - camera.x);
       const originY = Math.floor(h / 2 - camera.y);
-      renderer.draw(context, runtimeMap, isoParams, originX, originY);
+      const shakeOffset = shake.offset(1 / 60);
+      renderer.draw(
+        context,
+        runtimeMap,
+        isoParams,
+        originX + shakeOffset.x,
+        originY + shakeOffset.y,
+      );
       // Spawn a couple of static enemy emplacements (temporary until mission spawner)
       if (aaas.get(1) === undefined) {
         const e1 = entities.create();
@@ -379,10 +403,16 @@ const loop = new GameLoop({
         drawSAM(context, isoParams, originX, originY, t.tx, t.ty);
       });
       // Draw projectiles
-      projectilePool.draw(context, originX, originY, isoParams.tileWidth, isoParams.tileHeight);
+      projectilePool.draw(
+        context,
+        originX + shakeOffset.x,
+        originY + shakeOffset.y,
+        isoParams.tileWidth,
+        isoParams.tileHeight,
+      );
 
       // Draw refuel pad
-      drawPad(context, isoParams, originX, originY, pad.tx, pad.ty);
+      drawPad(context, isoParams, originX + shakeOffset.x, originY + shakeOffset.y, pad.tx, pad.ty);
 
       // Draw player heli
       const sprite = sprites.get(player)!;
@@ -393,8 +423,8 @@ const loop = new GameLoop({
         rotorPhase: sprite.rotor,
         color: sprite.color,
         iso: isoParams,
-        originX,
-        originY,
+        originX: originX + shakeOffset.x,
+        originY: originY + shakeOffset.y,
       });
 
       // HUD
@@ -430,12 +460,33 @@ const loop = new GameLoop({
           { x: holeX, y: holeY, radius: Math.max(120, Math.min(w, h) * 0.22), softness: 0.5 },
         ]);
       }
+
+      // Win overlay
+      if (mission.state.complete) {
+        ui.state = 'win';
+        saveJson('vinestrike:progress', { lastWin: Date.now(), mission: mission.state.def.id });
+      }
     } else {
       // Loading state (should not occur with static import)
       context.fillStyle = '#c8d7e1';
       context.font = '14px system-ui, sans-serif';
       context.textAlign = 'center';
       context.fillText('Loading isometric map...', w / 2, h / 2);
+    }
+
+    if (ui.state === 'win') {
+      context.save();
+      context.fillStyle = 'rgba(0,0,0,0.6)';
+      context.fillRect(0, 0, w, h);
+      context.fillStyle = '#92ffa6';
+      context.font = 'bold 28px system-ui, sans-serif';
+      context.textAlign = 'center';
+      context.fillText('Mission Complete', w / 2, h / 2 - 8);
+      context.fillStyle = '#c8d7e1';
+      context.font = '14px system-ui, sans-serif';
+      context.fillText('Press Esc to return to Title', w / 2, h / 2 + 16);
+      context.restore();
+      return;
     }
 
     debug.render(context, { fps, dt: 1 / 60, entities: 0 });
