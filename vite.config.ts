@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: './',
+  // Use repo name for GitHub Pages project site
+  base: '/Choppa/',
   server: {
     open: true,
   },
