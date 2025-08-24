@@ -25,5 +25,9 @@
       "at": { "tx": 6, "ty": 9 },
       "radiusTiles": 1.2
     }
+  ],
+  "enemySpawns": [
+    { "type": "AAA", "at": { "tx": 10, "ty": 7 } },
+    { "type": "SAM", "at": { "tx": 5, "ty": 12 } }
   ]
 }

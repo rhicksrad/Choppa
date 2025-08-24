@@ -21,7 +21,7 @@ export class Menu {
     if (this.index >= this.items.length) this.index = 0;
 
     // Activate
-    if (input.keys['Enter'] || (input.mouseButtons & 1) !== 0) {
+    if (input.keys['Enter'] || input.keys[' '] || (input.mouseButtons & 1) !== 0) {
       return this.items[this.index]!.id;
     }
 

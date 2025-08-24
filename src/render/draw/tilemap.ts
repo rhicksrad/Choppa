@@ -49,7 +49,7 @@ export class IsoTilemapRenderer {
     ctx.lineTo(0, tileHeight / 2);
     ctx.closePath();
     ctx.fill();
-    ctx.stroke();
+    // Remove stroke to avoid visible diamond grid artefacts
 
     this.tileAtlases.set(key, canvas);
     return canvas;

@@ -23,28 +23,28 @@ export function drawHUD(
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
   ctx.save();
-  // Bars bottom-left
+  // Bars bottom-left (larger/high-contrast)
   const x0 = 16;
-  const y0 = h - 20;
-  drawBar(ctx, x0, y0 - 18, 160, 10, bars.fuel01, '#4caf50', '#16351b', 'FUEL');
-  drawBar(ctx, x0, y0, 160, 10, bars.armor01, '#45a1ff', '#0e2236', 'ARMOR');
-  ctx.fillStyle = '#c8d7e1';
-  ctx.font = '12px system-ui, sans-serif';
+  const y0 = h - 24;
+  drawBar(ctx, x0, y0 - 28, 200, 14, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
+  drawBar(ctx, x0, y0 - 8, 200, 14, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 14px system-ui, sans-serif';
   ctx.fillText(
-    `C:${bars.ammo.cannon} R:${bars.ammo.rockets} M:${bars.ammo.missiles} [${bars.activeWeapon}]`,
+    `Ammo  C:${bars.ammo.cannon}  R:${bars.ammo.rockets}  M:${bars.ammo.missiles}   [${bars.activeWeapon}]`,
     x0,
-    y0 - 28,
+    y0 - 44,
   );
 
   // Objective list top-left
   ctx.textAlign = 'left';
   ctx.fillStyle = '#92ffa6';
-  ctx.font = 'bold 14px system-ui, sans-serif';
+  ctx.font = 'bold 16px system-ui, sans-serif';
   ctx.fillText('Objectives', 16, 24);
-  ctx.fillStyle = '#c8d7e1';
-  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillStyle = '#e6eef5';
+  ctx.font = '14px system-ui, sans-serif';
   for (let i = 0; i < objectiveLines.length; i += 1)
-    ctx.fillText(objectiveLines[i]!, 16, 40 + i * 16);
+    ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
 
   // Minimap top-right (orthographic)
   const mmW = 140;

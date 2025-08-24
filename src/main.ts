@@ -257,7 +257,7 @@ const loop = new GameLoop({
         playCannon(bus);
         projectilePool.spawn({
           kind: 'cannon',
-          faction: 'player',
+          faction: ev.faction || 'player',
           x: ev.sx,
           y: ev.sy,
           vx: ev.dx * 18,
@@ -270,7 +270,7 @@ const loop = new GameLoop({
         playRocket(bus);
         projectilePool.spawn({
           kind: 'rocket',
-          faction: 'player',
+          faction: ev.faction || 'player',
           x: ev.x,
           y: ev.y,
           vx: ev.vx,
@@ -283,7 +283,7 @@ const loop = new GameLoop({
         playMissile(bus);
         projectilePool.spawn({
           kind: 'missile',
-          faction: 'player',
+          faction: ev.faction || 'player',
           x: ev.x,
           y: ev.y,
           vx: ev.vx,
@@ -369,28 +369,38 @@ const loop = new GameLoop({
         originX + shakeOffset.x,
         originY + shakeOffset.y,
       );
-      // Spawn a couple of static enemy emplacements (temporary until mission spawner)
-      if (aaas.get(1) === undefined) {
-        const e1 = entities.create();
-        transforms.set(e1, { tx: pad.tx + 4, ty: pad.ty - 2, rot: 0 });
-        aaas.set(e1, {
-          range: 8,
-          cooldown: 0,
-          fireInterval: 0.6,
-          projectileSpeed: 12,
-          spread: 0.06,
-        });
-        const e2 = entities.create();
-        transforms.set(e2, { tx: pad.tx - 6, ty: pad.ty + 3, rot: 0 });
-        sams.set(e2, {
-          range: 12,
-          lockTime: 0.8,
-          cooldown: 0,
-          fireInterval: 2.5,
-          turnRate: Math.PI * 0.7,
-          missileSpeed: 6,
-          lockProgress: 0,
-        });
+      // Spawn enemies from mission definition (once)
+      if (aaas.get(1) === undefined && (mission as any).state?.def?.enemySpawns) {
+        const spawns = (mission as any).state.def.enemySpawns as Array<{
+          type: 'AAA' | 'SAM';
+          at: { tx: number; ty: number };
+        }>;
+        for (let i = 0; i < spawns.length; i += 1) {
+          const s = spawns[i]!;
+          const e = entities.create();
+          transforms.set(e, { tx: s.at.tx, ty: s.at.ty, rot: 0 });
+          healths.set(e, { current: 30, max: 30 });
+          colliders.set(e, { radius: 0.5 });
+          if (s.type === 'AAA') {
+            aaas.set(e, {
+              range: 8,
+              cooldown: 0,
+              fireInterval: 0.6,
+              projectileSpeed: 12,
+              spread: 0.06,
+            });
+          } else {
+            sams.set(e, {
+              range: 12,
+              lockTime: 0.8,
+              cooldown: 0,
+              fireInterval: 2.5,
+              turnRate: Math.PI * 0.7,
+              missileSpeed: 6,
+              lockProgress: 0,
+            });
+          }
+        }
       }
 
       // Draw enemy emplacements
@@ -427,7 +437,7 @@ const loop = new GameLoop({
         originY: originY + shakeOffset.y,
       });
 
-      // HUD
+      // HUD (minimap toggle)
       drawHUD(
         context,
         {

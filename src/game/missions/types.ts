@@ -14,6 +14,7 @@ export interface MissionDef {
   briefing: string;
   startPos: { tx: number; ty: number };
   objectives: ObjectiveDef[];
+  enemySpawns?: Array<{ type: 'AAA' | 'SAM'; at: { tx: number; ty: number } }>;
 }
 
 export interface ObjectiveState extends ObjectiveDef {

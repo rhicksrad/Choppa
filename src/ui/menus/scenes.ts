@@ -13,6 +13,7 @@ export interface SettingsState {
   sfxVolume: number;
   screenShake: boolean;
   fogOfWar: boolean;
+  minimap: boolean;
 }
 
 export interface AchievementsState {
@@ -34,6 +35,7 @@ export function createUIStore(): UIStore {
       sfxVolume: 1,
       screenShake: true,
       fogOfWar: true,
+      minimap: true,
     },
     achievements: { unlocked: [] },
   };

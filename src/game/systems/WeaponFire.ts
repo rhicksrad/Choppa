@@ -8,9 +8,18 @@ import type { InputSnapshot } from '../../core/input/input';
 import { RNG } from '../../core/util/rng';
 
 export type FireEvent =
-  | { kind: 'cannon'; sx: number; sy: number; dx: number; dy: number; spread: number }
-  | { kind: 'rocket'; x: number; y: number; vx: number; vy: number }
   | {
+      faction: 'player' | 'enemy';
+      kind: 'cannon';
+      sx: number;
+      sy: number;
+      dx: number;
+      dy: number;
+      spread: number;
+    }
+  | { faction: 'player' | 'enemy'; kind: 'rocket'; x: number; y: number; vx: number; vy: number }
+  | {
+      faction: 'player' | 'enemy';
       kind: 'missile';
       x: number;
       y: number;
@@ -94,7 +103,15 @@ export class WeaponFireSystem implements System {
           const sn = Math.sin(jitter);
           const dx = dirX * cs - dirY * sn;
           const dy = dirX * sn + dirY * cs;
-          this.eventsOut.push({ kind: 'cannon', sx: t.tx, sy: t.ty, dx, dy, spread });
+          this.eventsOut.push({
+            faction: 'player',
+            kind: 'cannon',
+            sx: t.tx,
+            sy: t.ty,
+            dx,
+            dy,
+            spread,
+          });
         }
       }
 
@@ -104,6 +121,7 @@ export class WeaponFireSystem implements System {
           ammo.rockets = Math.max(0, ammo.rockets - 1);
           const speed = 6;
           this.eventsOut.push({
+            faction: 'player',
             kind: 'rocket',
             x: t.tx,
             y: t.ty,
@@ -119,6 +137,7 @@ export class WeaponFireSystem implements System {
           ammo.missiles = Math.max(0, ammo.missiles - 1);
           const speed = 5.5;
           this.eventsOut.push({
+            faction: 'player',
             kind: 'missile',
             x: t.tx,
             y: t.ty,
