@@ -164,7 +164,7 @@ ammos.set(player, {
 });
 weapons.set(player, { active: 'cannon', cooldownCannon: 0, cooldownRocket: 0, cooldownMissile: 0 });
 healths.set(player, { current: 100, max: 100 });
-colliders.set(player, { radius: 0.4 });
+colliders.set(player, { radius: 0.4, team: 'player' });
 
 // Register systems
 scheduler.add(new MovementSystem(transforms, physics));
@@ -380,7 +380,7 @@ const loop = new GameLoop({
           const e = entities.create();
           transforms.set(e, { tx: s.at.tx, ty: s.at.ty, rot: 0 });
           healths.set(e, { current: 30, max: 30 });
-          colliders.set(e, { radius: 0.5 });
+          colliders.set(e, { radius: 0.5, team: 'enemy' });
           if (s.type === 'AAA') {
             aaas.set(e, {
               range: 8,

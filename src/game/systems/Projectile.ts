@@ -69,6 +69,12 @@ export class ProjectilePool {
         if (hit) return;
         const t = transforms.get(e);
         if (!t) return;
+        if (
+          c.team &&
+          ((pr.faction === 'player' && c.team === 'player') ||
+            (pr.faction === 'enemy' && c.team === 'enemy'))
+        )
+          return;
         const dx = t.tx - pr.x;
         const dy = t.ty - pr.y;
         const r = (c.radius || 0) + pr.radius;

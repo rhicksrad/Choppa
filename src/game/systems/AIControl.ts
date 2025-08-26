@@ -37,6 +37,7 @@ export class AIControlSystem implements System {
       const dpx = dirX * cs - dirY * sn;
       const dpy = dirX * sn + dirY * cs;
       this.fireEvents.push({
+        faction: 'enemy',
         kind: 'cannon',
         sx: t.tx,
         sy: t.ty,
@@ -64,6 +65,7 @@ export class AIControlSystem implements System {
         const dirX = dx / (dist || 1);
         const dirY = dy / (dist || 1);
         this.fireEvents.push({
+          faction: 'enemy',
           kind: 'missile',
           x: t.tx,
           y: t.ty,
