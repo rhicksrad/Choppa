@@ -14,7 +14,6 @@ export class MissionTracker {
   ) {}
 
   public update(): void {
-    // Evaluate each objective
     for (let i = 0; i < this.state.objectives.length; i += 1) {
       const o = this.state.objectives[i]!;
       if (o.complete) continue;
@@ -24,7 +23,6 @@ export class MissionTracker {
           o.complete = true;
         }
       } else if (o.type === 'destroy') {
-        // Consider objective complete if no living collider within radius
         let anyAlive = false;
         this.colliders.forEach((e, _c) => {
           if (anyAlive) return;
@@ -35,6 +33,9 @@ export class MissionTracker {
           if (tileDist(t.tx, t.ty, o.at.tx, o.at.ty) <= o.radiusTiles) anyAlive = true;
         });
         if (!anyAlive) o.complete = true;
+      } else if (o.type === 'collect') {
+        const id = o.collectId ?? o.id;
+        if (this.state.collected[id]) o.complete = true;
       }
     }
     this.state.complete = this.state.objectives.every((o) => o.complete);
@@ -42,6 +43,10 @@ export class MissionTracker {
 
   public nextIncomplete(): ObjectiveState | undefined {
     return this.state.objectives.find((o) => !o.complete);
+  }
+
+  public markCollected(id: string): void {
+    this.state.collected[id] = true;
   }
 }
 

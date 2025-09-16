@@ -1,114 +1,71 @@
-### VineStrike
+# VineStrike
 
-Isometric helicopter action built with TypeScript + Vite + Canvas 2D.
+VineStrike is a browser-based homage to classic isometric helicopter strike games. The MVP now ships with a sprawling isometric theatre, multi-mission campaign flow, reactive enemies, and a light upgrade & pickup system – all built in TypeScript on top of a lightweight ECS, Canvas 2D rendering, and a deterministic fixed-step loop.
 
-Codename VineStrike — an original homage to early-90s isometric action. All names, art, sounds, and code are original.
-
-### Tech
-
-- Vite + TypeScript (strict)
-- Canvas 2D (no WebGL)
-- ECS-lite architecture, deterministic fixed-timestep
-- 100% static hosting (GitHub Pages)
-
-### Getting Started
-
-Prerequisite: Node.js 18+
-
-Install
+## Quickstart
 
 ```bash
-npm ci
+npm install
+npm run dev -- --host
 ```
 
-Run (dev)
+Open the printed URL in Chrome or Firefox. Useful scripts:
 
-```bash
-npm run dev
-```
+- `npm run dev -- --host` – start the Vite dev server
+- `npm run build` – produce an optimized build
+- `npm run lint` – run ESLint over the source
 
-Open the URL printed by Vite (usually http://localhost:5173).
+## Controls
 
-Build
+- **WASD / Arrow Keys** – Fly the chopper
+- **Space / Left Mouse** – Primary cannon
+- **Shift / Right Mouse** – Rockets
+- **E / Middle Mouse / X** – Missiles
+- **R / Q / Tab** – Cycle weapons (1/2/3 for direct selection)
+- **Esc** – Pause / Resume / Back
+- **M** – Toggle mute
 
-```bash
-npm run build
-```
+## Features
 
-Outputs to `dist/`.
+- **Campaign** – Three bespoke missions with briefings, objectives, and wave pacing. Select an operation from the new mission screen.
+- **Large theatre** – A 96×96 tile isometric map with river, coastline, and plateau zones inspired by classic 16-bit strike games.
+- **Upgrades & pickups** – Destroying depots or exploring the map rewards fuel, repairs, intel, and weapon upgrades that persist until you abandon the mission.
+- **Destructibles** – Fuel depots, radar, bunkers, and comms towers can be demolished; many eject pickups or advance objectives when destroyed.
+- **Enemy ecology** – Static AAA/SAM sites, patrolling drones, and chaser gunships coordinate through wave spawning with increasing difficulty.
+- **HUD & minimap** – Live objective tracking, upgrade indicators, minimap, mission timer, and compass cue to the active objective.
+- **Audio & polish** – Procedural engine, weapon, explosion, and pickup cues respect the mute toggle; mission intros and menus provide flow.
 
-Preview build
-
-```bash
-npm run preview
-```
-
-### Deploy (GitHub Pages)
-
-This repo auto-deploys on push to `main`.
-
-- Workflow builds and publishes `dist/` to the `gh-pages` branch.
-- Ensure Settings → Pages deploys from the `gh-pages` branch (root).
-- Asset URLs are relative via Vite `base: './'`.
-
-### Controls (Phase 0 placeholder)
-
-- WASD: movement
-- Mouse: aim
-- Esc: pause
-
-Remapping and full input schema will land in later phases.
-
-### Project Structure (high-level)
+## Project Structure
 
 ```
-/index.html
-/vite.config.ts
-/public/
+/index.html            Entry page and canvas
+/vite.config.ts        Vite configuration
 /src/
-  main.ts
-  core/ (ecs, math, time, input, audio, assets, util)
-  render/ (camera, iso, sprites, draw, debug)
-  world/ (tiles, collisions, pathing)
-  game/
-    components/
-    systems/
-    data/ (tilesets, maps, missions, entity-presets)
-    scenes/
-  ui/ (hud, menus, input-remap)
-  assets/
-/.github/workflows/gh-pages.yml
+  core/                ECS, timing, input, audio, utilities
+  game/                Components, systems, missions, data
+  render/              Camera, isometric projection, sprite painters
+  ui/                  HUD, menus, bindings
+  world/               Tilemap helpers and generated map
+  main.ts              Game wiring and loop
+/public/               Favicon and manifest
 ```
 
-### License
+## Gameplay Notes
 
-- Code: MIT (see `LICENSE`)
-- Original assets in `src/assets/`: CC0 1.0 (see `src/assets/LICENSE`)
+- Start a mission from the **Select Operation** screen; briefings recap objectives and recommended targets.
+- Clear objective circles (destroy / collect / reach) to progress. Intel and rescue pickups advance collection objectives automatically.
+- Destructible structures award score and often spawn fuel, repair, ammo, or upgrade crates – grab them to boost survivability and firepower.
+- The forward pad (highlighted on the map) refuels the helicopter. Watch the HUD compass for guidance to the next objective.
+- Survive the escalating patrol and chaser waves; between waves you have a short respite to rearm or complete mission goals.
 
-### Phase Plan
+## Known Limitations
 
-- Phase 0 — Scaffold & Pages (this commit)
-- Phase 1 — Core Engine
-- Phase 2 — Iso Map + Camera
-- Phase 3 — Player Flight Model
-- Phase 4 — Weapons & Projectiles
-- Phase 5 — Enemies & AI
-- Phase 6 — Mission System + HUD
-- Phase 7 — Polish & MVP Ship
+- Placeholder art and procedural audio are used until bespoke assets land.
+- No persistent progression beyond the current run – upgrades reset when you leave a mission and settings only live locally.
+- Enemy AI and navigation are intentionally lightweight; terrain collision and friendly squads are future enhancements.
+- Mobile/touch controls are not implemented.
 
-### Manual Test Checklist (Phase 0)
+## License
 
-1. `npm ci` installs dependencies without errors
-2. `npm run dev` starts Vite and serves index
-3. Canvas fills the window and shows the phase splash
-4. Resize window — canvas resizes without blurring
-5. `npm run build` completes without errors
-6. `npm run preview` serves built site correctly
-7. No console errors in latest Chrome/Edge/Firefox
-8. ESLint runs: `npm run lint`
-9. Prettier formats: `npm run format`
-10. Push to `main` triggers GitHub Pages deployment
-
-### Credits
-
-Created by the VineStrike team (original code and placeholder assets).
+- Code: MIT (`LICENSE`)
+- Placeholder assets: CC0 (`src/assets/LICENSE`)
