@@ -111,3 +111,19 @@ export function playExplosion(bus: AudioBus): void {
   gain.connect((bus as any)['sfx'] || (bus as any));
   src.start();
 }
+
+export function playPickup(bus: AudioBus): void {
+  const ctx = bus.context;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = 720;
+  gain.gain.value = 0.05;
+  const t = ctx.currentTime;
+  osc.frequency.exponentialRampToValueAtTime(1280, t + 0.12);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  osc.connect(gain);
+  gain.connect((bus as any)['sfx'] || (bus as any));
+  osc.start();
+  osc.stop(t + 0.14);
+}

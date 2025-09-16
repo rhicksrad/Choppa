@@ -1,11 +1,13 @@
 export type UIState =
   | 'title'
+  | 'mission-select'
   | 'settings'
   | 'achievements'
   | 'about'
   | 'in-game'
   | 'paused'
-  | 'win';
+  | 'win'
+  | 'game-over';
 
 export interface SettingsState {
   masterVolume: number;

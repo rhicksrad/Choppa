@@ -59,4 +59,8 @@ export class Menu {
 
     context.restore();
   }
+
+  public getIndex(): number {
+    return this.index;
+  }
 }
