@@ -1,114 +1,60 @@
-### VineStrike
+# VineStrike
 
-Isometric helicopter action built with TypeScript + Vite + Canvas 2D.
+VineStrike is a browser-based homage to classic isometric helicopter strike games. Everything runs in TypeScript with a lightweight ECS, Canvas 2D rendering, and a deterministic fixed-step loop.
 
-Codename VineStrike — an original homage to early-90s isometric action. All names, art, sounds, and code are original.
-
-### Tech
-
-- Vite + TypeScript (strict)
-- Canvas 2D (no WebGL)
-- ECS-lite architecture, deterministic fixed-timestep
-- 100% static hosting (GitHub Pages)
-
-### Getting Started
-
-Prerequisite: Node.js 18+
-
-Install
+## Quickstart
 
 ```bash
-npm ci
+npm install
+npm run dev -- --host
 ```
 
-Run (dev)
-
-```bash
-npm run dev
-```
-
-Open the URL printed by Vite (usually http://localhost:5173).
-
-Build
+Open the printed URL in Chrome or Firefox. For a production build:
 
 ```bash
 npm run build
 ```
 
-Outputs to `dist/`.
+## Controls
 
-Preview build
+- **WASD / Arrow Keys** – Fly the chopper
+- **Space / Left Mouse** – Primary cannon
+- **Shift / Right Mouse** – Rockets
+- **E / Middle Mouse / X** – Missiles
+- **R / Q / Tab** – Cycle weapons (1/2/3 for direct selection)
+- **Esc** – Pause / Resume / Back
+- **M** – Toggle mute
 
-```bash
-npm run preview
-```
-
-### Deploy (GitHub Pages)
-
-This repo auto-deploys on push to `main`.
-
-- Workflow builds and publishes `dist/` to the `gh-pages` branch.
-- Ensure Settings → Pages deploys from the `gh-pages` branch (root).
-- Asset URLs are relative via Vite `base: './'`.
-
-### Controls (Phase 0 placeholder)
-
-- WASD: movement
-- Mouse: aim
-- Esc: pause
-
-Remapping and full input schema will land in later phases.
-
-### Project Structure (high-level)
+## Project Structure
 
 ```
-/index.html
-/vite.config.ts
-/public/
+/index.html            Entry page and canvas
+/vite.config.ts        Vite configuration
 /src/
-  main.ts
-  core/ (ecs, math, time, input, audio, assets, util)
-  render/ (camera, iso, sprites, draw, debug)
-  world/ (tiles, collisions, pathing)
-  game/
-    components/
-    systems/
-    data/ (tilesets, maps, missions, entity-presets)
-    scenes/
-  ui/ (hud, menus, input-remap)
-  assets/
-/.github/workflows/gh-pages.yml
+  core/                ECS, timing, input, audio, utilities
+  game/                Components, systems, data
+  render/              Camera, isometric projection, sprite painters
+  ui/                  HUD, menus, bindings
+  world/               Tilemap helpers and sample map
+  main.ts              Game wiring and loop
+/public/               Favicon and manifest
 ```
 
-### License
+## Gameplay Notes
 
-- Code: MIT (see `LICENSE`)
-- Original assets in `src/assets/`: CC0 1.0 (see `src/assets/LICENSE`)
+- Waves spawn patrol drones and chaser gunships; difficulty ramps each wave.
+- The mission layer tracks static AAA/SAM objectives. Clear them and survive to win.
+- Helicopter health, ammo, and fuel are replenished at the central refuel pad.
+- Explosion, weapon, and engine audio are procedural and respect the mute toggle.
 
-### Phase Plan
+## Known Limitations
 
-- Phase 0 — Scaffold & Pages (this commit)
-- Phase 1 — Core Engine
-- Phase 2 — Iso Map + Camera
-- Phase 3 — Player Flight Model
-- Phase 4 — Weapons & Projectiles
-- Phase 5 — Enemies & AI
-- Phase 6 — Mission System + HUD
-- Phase 7 — Polish & MVP Ship
+- Placeholder art and procedural audio are used until bespoke assets land.
+- No persistent progression between sessions beyond local storage of settings.
+- AI navigation is simple; terrain collision and friendly units are not yet modelled.
+- Mobile/touch controls are not implemented.
 
-### Manual Test Checklist (Phase 0)
+## License
 
-1. `npm ci` installs dependencies without errors
-2. `npm run dev` starts Vite and serves index
-3. Canvas fills the window and shows the phase splash
-4. Resize window — canvas resizes without blurring
-5. `npm run build` completes without errors
-6. `npm run preview` serves built site correctly
-7. No console errors in latest Chrome/Edge/Firefox
-8. ESLint runs: `npm run lint`
-9. Prettier formats: `npm run format`
-10. Push to `main` triggers GitHub Pages deployment
-
-### Credits
-
-Created by the VineStrike team (original code and placeholder assets).
+- Code: MIT (`LICENSE`)
+- Placeholder assets: CC0 (`src/assets/LICENSE`)

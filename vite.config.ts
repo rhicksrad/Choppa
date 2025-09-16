@@ -4,7 +4,7 @@ export default defineConfig({
   // Use repo name for GitHub Pages project site
   base: '/Choppa/',
   server: {
-    open: true,
+    open: false,
   },
   build: {
     sourcemap: true,

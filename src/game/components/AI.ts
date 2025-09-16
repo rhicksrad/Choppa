@@ -15,3 +15,24 @@ export interface SAM {
   missileSpeed: number; // tiles/sec initial
   lockProgress: number; // internal state 0..lockTime
 }
+
+export interface PatrolDrone {
+  axis: 'x' | 'y';
+  originX: number;
+  originY: number;
+  range: number;
+  speed: number;
+  direction: 1 | -1;
+  fireRange: number;
+  fireInterval: number;
+  cooldown: number;
+}
+
+export interface ChaserDrone {
+  speed: number;
+  acceleration: number;
+  fireRange: number;
+  fireInterval: number;
+  cooldown: number;
+  spread: number;
+}
