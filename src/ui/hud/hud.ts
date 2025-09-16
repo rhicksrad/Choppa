@@ -5,6 +5,11 @@ export interface BarsData {
   armor01: number;
   ammo: { cannon: number; rockets: number; missiles: number };
   activeWeapon: string;
+  lives: number;
+  score: number;
+  wave: number;
+  enemiesRemaining: number;
+  nextWaveIn: number | null;
 }
 
 export function drawHUD(
@@ -35,6 +40,9 @@ export function drawHUD(
     x0,
     y0 - 44,
   );
+  ctx.fillStyle = '#c8d7e1';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillText(`Lives: ${bars.lives}`, x0, y0 - 60);
 
   // Objective list top-left
   ctx.textAlign = 'left';
@@ -85,6 +93,20 @@ export function drawHUD(
   const ppx = mmX + (minimap.player.tx / minimap.mapW) * mmW;
   const ppy = mmY + (minimap.player.ty / minimap.mapH) * mmH;
   ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
+
+  // Score & wave stats near minimap
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#c8d7e1';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText(`Score: ${Math.floor(bars.score)}`, mmX + mmW, mmY + mmH + 20);
+  ctx.fillText(
+    `Wave: ${bars.wave}  Remaining: ${bars.enemiesRemaining}`,
+    mmX + mmW,
+    mmY + mmH + 40,
+  );
+  if (bars.nextWaveIn !== null) {
+    ctx.fillText(`Next wave in: ${bars.nextWaveIn.toFixed(1)}s`, mmX + mmW, mmY + mmH + 60);
+  }
 
   // Compass top-center
   if (compassDir) {

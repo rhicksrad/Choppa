@@ -24,6 +24,10 @@ export class ProjectilePool {
     this.items.push(p);
   }
 
+  public clear(): void {
+    this.items.length = 0;
+  }
+
   public update(
     dt: number,
     playerColliders: ComponentStore<Collider>,
