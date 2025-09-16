@@ -5,6 +5,15 @@ export interface BarsData {
   armor01: number;
   ammo: { cannon: number; rockets: number; missiles: number };
   activeWeapon: string;
+  lives: number;
+  score: number;
+  wave: number;
+  enemiesRemaining: number;
+  nextWaveIn: number | null;
+  missionTitle: string;
+  missionTimer: number;
+  objectiveName: string | null;
+  upgrades: { cannon: number; rocket: number; missile: number; armor: number };
 }
 
 export function drawHUD(
@@ -26,8 +35,10 @@ export function drawHUD(
   // Bars bottom-left (larger/high-contrast)
   const x0 = 16;
   const y0 = h - 24;
-  drawBar(ctx, x0, y0 - 28, 200, 14, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
-  drawBar(ctx, x0, y0 - 8, 200, 14, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
+  const fuelColor = bars.fuel01 <= 0.05 ? '#ef476f' : bars.fuel01 <= 0.25 ? '#ffd166' : '#2bd673';
+  const armorColor = bars.armor01 <= 0.25 ? '#f28482' : '#2ba6ff';
+  drawBar(ctx, x0, y0 - 28, 200, 14, bars.fuel01, fuelColor, '#0a1e13', 'FUEL');
+  drawBar(ctx, x0, y0 - 8, 200, 14, bars.armor01, armorColor, '#0a1521', 'ARMOR');
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 14px system-ui, sans-serif';
   ctx.fillText(
@@ -35,6 +46,11 @@ export function drawHUD(
     x0,
     y0 - 44,
   );
+  ctx.fillStyle = '#c8d7e1';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillText(`Lives: ${bars.lives}`, x0, y0 - 60);
+  ctx.fillText(`Mission: ${bars.missionTitle}`, x0, y0 - 76);
+  ctx.fillText(`Time: ${bars.missionTimer.toFixed(1)}s`, x0, y0 - 92);
 
   // Objective list top-left
   ctx.textAlign = 'left';
@@ -45,6 +61,11 @@ export function drawHUD(
   ctx.font = '14px system-ui, sans-serif';
   for (let i = 0; i < objectiveLines.length; i += 1)
     ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
+  if (bars.objectiveName) {
+    ctx.fillStyle = '#ffd166';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText(`Current: ${bars.objectiveName}`, 16, 44 + objectiveLines.length * 18 + 20);
+  }
 
   // Minimap top-right (orthographic)
   const mmW = 140;
@@ -85,6 +106,30 @@ export function drawHUD(
   const ppx = mmX + (minimap.player.tx / minimap.mapW) * mmW;
   const ppy = mmY + (minimap.player.ty / minimap.mapH) * mmH;
   ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
+
+  // Score & wave stats near minimap
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#c8d7e1';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText(`Score: ${Math.floor(bars.score)}`, mmX + mmW, mmY + mmH + 20);
+  ctx.fillText(
+    `Wave: ${bars.wave}  Remaining: ${bars.enemiesRemaining}`,
+    mmX + mmW,
+    mmY + mmH + 40,
+  );
+  if (bars.nextWaveIn !== null) {
+    ctx.fillText(`Next wave in: ${bars.nextWaveIn.toFixed(1)}s`, mmX + mmW, mmY + mmH + 60);
+  }
+
+  // Upgrade indicators bottom-right of minimap
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#9fb3c8';
+  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillText(
+    `Upgrades  C${bars.upgrades.cannon} R${bars.upgrades.rocket} M${bars.upgrades.missile} A${bars.upgrades.armor}`,
+    mmX + mmW,
+    mmY + mmH + 76,
+  );
 
   // Compass top-center
   if (compassDir) {
