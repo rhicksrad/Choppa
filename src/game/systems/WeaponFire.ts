@@ -16,6 +16,10 @@ export type FireEvent =
       dx: number;
       dy: number;
       spread: number;
+      speed?: number;
+      ttl?: number;
+      radius?: number;
+      damage?: number;
     }
   | { faction: 'player' | 'enemy'; kind: 'rocket'; x: number; y: number; vx: number; vy: number }
   | {
@@ -35,6 +39,7 @@ export class WeaponFireSystem implements System {
   private aimTileY = 0;
   private eventsOut: FireEvent[];
   private rng: RNG;
+  private switchHeld = false;
 
   constructor(
     private transforms: ComponentStore<Transform>,
@@ -66,16 +71,26 @@ export class WeaponFireSystem implements System {
     if (!snap) return;
 
     // Cycle weapon
-    if (snap.keys['r'] || snap.keys['R']) {
+    const switchDown =
+      snap.keys['r'] || snap.keys['R'] || snap.keys['q'] || snap.keys['Q'] || snap.keys['Tab'];
+    if (switchDown && !this.switchHeld) {
       this.weapons.forEach((_e, w) => {
         w.active = nextWeapon(w.active);
       });
     }
+    this.switchHeld = switchDown;
 
     // Fire inputs
     const isLmb = (snap.mouseButtons & (1 << 0)) !== 0;
     const isMmb = (snap.mouseButtons & (1 << 1)) !== 0;
     const isRmb = (snap.mouseButtons & (1 << 2)) !== 0;
+    const primaryKey = snap.keys[' '] || snap.keys['Space'] || snap.keys['Enter'] || snap.keys['z'];
+    const secondaryKey =
+      snap.keys['Shift'] ||
+      snap.keys['ShiftLeft'] ||
+      snap.keys['ShiftRight'] ||
+      snap.keys['Control'];
+    const specialKey = snap.keys['e'] || snap.keys['E'] || snap.keys['x'] || snap.keys['X'];
 
     this.weapons.forEach((entity, w) => {
       const t = this.transforms.get(entity);
@@ -83,6 +98,10 @@ export class WeaponFireSystem implements System {
       const ph = this.physics.get(entity);
       const ammo = this.ammo.get(entity);
       if (!ph || !ammo) return;
+
+      if (snap.keys['1']) w.active = 'cannon';
+      else if (snap.keys['2']) w.active = 'rocket';
+      else if (snap.keys['3']) w.active = 'missile';
 
       // Aim direction from entity to aim tile
       const ax = this.aimTileX - t.tx;
@@ -92,7 +111,7 @@ export class WeaponFireSystem implements System {
       const dirY = ay / ad;
 
       // Active-weapon fire (also direct-mapped buttons)
-      if ((w.active === 'cannon' && isLmb) || isLmb) {
+      if ((w.active === 'cannon' && (isLmb || primaryKey)) || isLmb || primaryKey) {
         // Cannon: short cooldown, spread, hitscan
         if (w.cooldownCannon <= 0 && ammo.cannon > 0) {
           w.cooldownCannon = 0.08;
@@ -111,11 +130,15 @@ export class WeaponFireSystem implements System {
             dx,
             dy,
             spread,
+            speed: 22,
+            ttl: 1.1,
+            radius: 0.12,
+            damage: 6,
           });
         }
       }
 
-      if ((w.active === 'rocket' && isRmb) || isRmb) {
+      if ((w.active === 'rocket' && (isRmb || secondaryKey)) || isRmb || secondaryKey) {
         if (w.cooldownRocket <= 0 && ammo.rockets > 0) {
           w.cooldownRocket = 0.4;
           ammo.rockets = Math.max(0, ammo.rockets - 1);
@@ -131,7 +154,7 @@ export class WeaponFireSystem implements System {
         }
       }
 
-      if ((w.active === 'missile' && isMmb) || isMmb || snap.keys['x'] || snap.keys['X']) {
+      if ((w.active === 'missile' && (isMmb || specialKey)) || isMmb || specialKey) {
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 1.0;
           ammo.missiles = Math.max(0, ammo.missiles - 1);

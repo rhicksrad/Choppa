@@ -5,7 +5,8 @@ export type UIState =
   | 'about'
   | 'in-game'
   | 'paused'
-  | 'win';
+  | 'win'
+  | 'game-over';
 
 export interface SettingsState {
   masterVolume: number;
