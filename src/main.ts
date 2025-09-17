@@ -1028,6 +1028,23 @@ const loop = new GameLoop({
       });
     });
 
+    buildings.forEach((entity, building) => {
+      const t = transforms.get(entity);
+      const h = healths.get(entity);
+      if (!t || !h) return;
+      drawBuilding(context, isoParams, originX + shakeOffset.x, originY + shakeOffset.y, {
+        tx: t.tx,
+        ty: t.ty,
+        width: building.width,
+        depth: building.depth,
+        height: building.height,
+        bodyColor: building.bodyColor,
+        roofColor: building.roofColor,
+        ruinColor: building.ruinColor,
+        damage01: 1 - h.current / h.max,
+      });
+    });
+
     aaas.forEach((entity, _a) => {
       const t = transforms.get(entity);
       if (t) drawAAATurret(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
