@@ -1030,19 +1030,19 @@ const loop = new GameLoop({
 
     aaas.forEach((entity, _a) => {
       const t = transforms.get(entity);
-      if (t) drawAAATurret(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawAAATurret(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
     sams.forEach((entity, _s) => {
       const t = transforms.get(entity);
-      if (t) drawSAM(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawSAM(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
     patrols.forEach((entity, _p) => {
       const t = transforms.get(entity);
-      if (t) drawPatrolDrone(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawPatrolDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
     chasers.forEach((entity, _c) => {
       const t = transforms.get(entity);
-      if (t) drawChaserDrone(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawChaserDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
 
     projectilePool.draw(
@@ -1091,8 +1091,8 @@ const loop = new GameLoop({
 
     if (ui.settings.fogOfWar) {
       const playerIso = tileToIso(playerT.tx, playerT.ty, isoParams);
-      const holeX = Math.floor(w / 2 + (playerIso.x - camera.x));
-      const holeY = Math.floor(h / 2 + (playerIso.y - camera.y));
+      const holeX = Math.floor(w / 2 + (playerIso.x - camera.x) + shakeOffset.x);
+      const holeY = Math.floor(h / 2 + (playerIso.y - camera.y) + shakeOffset.y);
       fog.render(context, [
         { x: holeX, y: holeY, radius: Math.max(120, Math.min(w, h) * 0.22), softness: 0.5 },
       ]);
