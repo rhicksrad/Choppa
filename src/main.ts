@@ -1028,6 +1028,7 @@ const loop = new GameLoop({
         collectorIso,
       });
     });
+main
 
     aaas.forEach((entity, _a) => {
       const t = transforms.get(entity);
