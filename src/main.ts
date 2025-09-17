@@ -17,7 +17,6 @@ import { SystemScheduler } from './core/ecs/systems';
 import { MovementSystem } from './game/systems/Movement';
 import { RotorSpinSystem } from './game/systems/RotorSpin';
 import { FuelDrainSystem } from './game/systems/FuelDrain';
-import { RefuelRearmSystem, type RefuelPad } from './game/systems/RefuelRearm';
 import { drawHeli, drawPad } from './render/sprites/heli';
 import { drawBuilding } from './render/sprites/buildings';
 import { WeaponFireSystem, type FireEvent } from './game/systems/WeaponFire';
@@ -41,12 +40,14 @@ import missionJson from './game/data/missions/sample_mission.json';
 import type { Health } from './game/components/Health';
 import type { Collider } from './game/components/Collider';
 import type { Building } from './game/components/Building';
+import type { Pickup } from './game/components/Pickup';
 import { drawHUD } from './ui/hud/hud';
 import { loadJson, saveJson } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
 import { AudioBus } from './core/audio/audio';
 import { EngineSound, playCannon, playRocket, playMissile, playExplosion } from './core/audio/sfx';
 import { CameraShake } from './render/camera/shake';
+import { drawPickupCrate } from './render/sprites/pickups';
 
 interface EnemyMeta {
   kind: 'aaa' | 'sam' | 'patrol' | 'chaser';
@@ -66,6 +67,16 @@ interface BuildingSite {
   roofColor: string;
   ruinColor?: string;
   score: number;
+}
+
+interface PickupSite {
+  tx: number;
+  ty: number;
+  kind: 'fuel' | 'ammo';
+  radius?: number;
+  duration?: number;
+  fuelAmount?: number;
+  ammo?: { cannon?: number; rockets?: number; missiles?: number };
 }
 
 interface Explosion {
@@ -148,11 +159,12 @@ const chasers = new ComponentStore<ChaserDrone>();
 const healths = new ComponentStore<Health>();
 const colliders = new ComponentStore<Collider>();
 const buildings = new ComponentStore<Building>();
+const pickups = new ComponentStore<Pickup>();
 
 let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
 isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
-const pad: RefuelPad = {
+const pad = {
   tx: Math.floor(runtimeMap.width / 2) - 2,
   ty: Math.floor(runtimeMap.height / 2) + 1,
   radius: 1.2,
@@ -203,7 +215,6 @@ const mission = new MissionTracker(missionState, transforms, colliders, healths,
 scheduler.add(new MovementSystem(transforms, physics));
 scheduler.add(new RotorSpinSystem(sprites));
 scheduler.add(new FuelDrainSystem(fuels));
-scheduler.add(new RefuelRearmSystem(transforms, fuels, [pad]));
 scheduler.add(weaponFire);
 scheduler.add(
   new AIControlSystem(transforms, aaas, sams, fireEvents, rng, () => ({
@@ -232,6 +243,7 @@ const waveState: WaveState = {
 };
 const minimapEnemies: { tx: number; ty: number }[] = [];
 const buildingEntities: Entity[] = [];
+const pickupEntities: Entity[] = [];
 const waveSpawnPoints = [
   { tx: 7, ty: 7 },
   { tx: 28, ty: 9 },
@@ -293,6 +305,19 @@ const buildingSites: BuildingSite[] = [
   },
 ];
 
+const pickupSites: PickupSite[] = [
+  { tx: 15.2, ty: 18.4, kind: 'fuel', fuelAmount: 55 },
+  { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { cannon: 90, rockets: 3, missiles: 1 } },
+  { tx: 10.4, ty: 12.6, kind: 'ammo', ammo: { cannon: 110, rockets: 4, missiles: 2 } },
+  { tx: 22.5, ty: 12.2, kind: 'fuel', fuelAmount: 60 },
+  { tx: 25.3, ty: 19.4, kind: 'ammo', ammo: { cannon: 100, rockets: 5, missiles: 2 } },
+  { tx: 28.2, ty: 27.1, kind: 'fuel', fuelAmount: 65 },
+  { tx: 13.2, ty: 26.4, kind: 'fuel', fuelAmount: 58 },
+  { tx: 7.4, ty: 22.3, kind: 'ammo', ammo: { cannon: 80, rockets: 3, missiles: 1 } },
+  { tx: 31.2, ty: 14.4, kind: 'ammo', ammo: { cannon: 95, rockets: 3, missiles: 2 } },
+  { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
+];
+
 let fps = 0;
 let frames = 0;
 let accumulator = 0;
@@ -334,9 +359,12 @@ function destroyEntity(entity: Entity): void {
   healths.remove(entity);
   colliders.remove(entity);
   buildings.remove(entity);
+  pickups.remove(entity);
   buildingMeta.delete(entity);
   const buildingIndex = buildingEntities.indexOf(entity);
   if (buildingIndex !== -1) buildingEntities.splice(buildingIndex, 1);
+  const pickupIndex = pickupEntities.indexOf(entity);
+  if (pickupIndex !== -1) pickupEntities.splice(pickupIndex, 1);
   enemyMeta.delete(entity);
   waveState.enemies.delete(entity);
   entities.destroy(entity);
@@ -412,6 +440,40 @@ function spawnBuildings(): void {
     colliders.set(entity, { radius: site.colliderRadius, team: 'enemy' });
     buildingMeta.set(entity, { score: site.score });
     buildingEntities.push(entity);
+  }
+}
+
+function clearPickups(): void {
+  for (let i = pickupEntities.length - 1; i >= 0; i -= 1) {
+    const entity = pickupEntities[i]!;
+    destroyEntity(entity);
+  }
+  pickupEntities.length = 0;
+}
+
+function spawnPickups(): void {
+  clearPickups();
+  for (let i = 0; i < pickupSites.length; i += 1) {
+    const site = pickupSites[i]!;
+    const entity = entities.create();
+    transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
+    pickups.set(entity, {
+      kind: site.kind,
+      radius: site.radius ?? 0.9,
+      duration: site.duration ?? 1.3,
+      fuelAmount: site.kind === 'fuel' ? (site.fuelAmount ?? 50) : undefined,
+      ammo:
+        site.kind === 'ammo'
+          ? {
+              cannon: site.ammo?.cannon ?? 80,
+              rockets: site.ammo?.rockets ?? 3,
+              missiles: site.ammo?.missiles ?? 1,
+            }
+          : undefined,
+      collectingBy: null,
+      progress: 0,
+    });
+    pickupEntities.push(entity);
   }
 }
 
@@ -524,6 +586,7 @@ function resetGame(): void {
   mission.state = missionState;
   spawnBuildings();
   spawnMissionEnemies();
+  spawnPickups();
   playerState.lives = 3;
   resetPlayer();
   ui.state = 'in-game';
@@ -613,6 +676,7 @@ function updateWave(dt: number): void {
 
 spawnMissionEnemies();
 spawnBuildings();
+spawnPickups();
 const loop = new GameLoop({
   update: (dt) => {
     lastStepDt = dt;
@@ -682,6 +746,8 @@ const loop = new GameLoop({
 
     const playerTransform = transforms.get(player)!;
     const ph = physics.get(player)!;
+    const playerFuel = fuels.get(player)!;
+    const playerAmmo = ammos.get(player)!;
     let dx = 0;
     let dy = 0;
     if (!playerState.invulnerable) {
@@ -699,7 +765,7 @@ const loop = new GameLoop({
     ph.ax = dx * accel;
     ph.ay = dy * accel;
 
-    const speed = Math.min(1, Math.hypot(ph.vx, ph.vy) / (physics.get(player)!.maxSpeed || 1));
+    const speed = Math.min(1, Math.hypot(ph.vx, ph.vy) / (ph.maxSpeed || 1));
     engine.start();
     engine.setIntensity(speed);
 
@@ -717,6 +783,94 @@ const loop = new GameLoop({
     weaponFire.setInput(snap, aimTile.x, aimTile.y);
 
     scheduler.update(dt);
+
+    const completedPickups: {
+      entity: Entity;
+      kind: 'fuel' | 'ammo';
+      fuelAmount?: number;
+      ammo?: { cannon?: number; rockets?: number; missiles?: number };
+    }[] = [];
+    pickups.forEach((entity, pickup) => {
+      const pickupTransform = transforms.get(entity);
+      if (!pickupTransform) {
+        completedPickups.push({
+          entity,
+          kind: pickup.kind,
+          fuelAmount: pickup.fuelAmount,
+          ammo: pickup.ammo,
+        });
+        return;
+      }
+
+      if (pickup.collectingBy === player) {
+        const dx = pickupTransform.tx - playerTransform.tx;
+        const dy = pickupTransform.ty - playerTransform.ty;
+        const dist = Math.hypot(dx, dy);
+        if (dist > pickup.radius + 0.4 || playerState.invulnerable) {
+          pickup.collectingBy = null;
+          pickup.progress = 0;
+          return;
+        }
+        pickup.progress = Math.min(1, pickup.progress + dt / pickup.duration);
+        if (pickup.progress >= 1) {
+          completedPickups.push({
+            entity,
+            kind: pickup.kind,
+            fuelAmount: pickup.fuelAmount,
+            ammo: pickup.ammo ? { ...pickup.ammo } : undefined,
+          });
+        }
+        return;
+      }
+
+      if (pickup.collectingBy && !transforms.has(pickup.collectingBy)) {
+        pickup.collectingBy = null;
+        pickup.progress = 0;
+        return;
+      }
+
+      if (pickup.collectingBy === null) {
+        const dx = pickupTransform.tx - playerTransform.tx;
+        const dy = pickupTransform.ty - playerTransform.ty;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= pickup.radius) {
+          const needsFuel = playerFuel.current < playerFuel.max - 0.5;
+          const needsAmmo =
+            playerAmmo.cannon < playerAmmo.cannonMax ||
+            playerAmmo.rockets < playerAmmo.rocketsMax ||
+            playerAmmo.missiles < playerAmmo.missilesMax;
+          if (
+            !playerState.invulnerable &&
+            ((pickup.kind === 'fuel' && needsFuel) || (pickup.kind === 'ammo' && needsAmmo))
+          ) {
+            pickup.collectingBy = player;
+            pickup.progress = 0;
+          }
+        }
+      }
+    });
+
+    for (let i = 0; i < completedPickups.length; i += 1) {
+      const item = completedPickups[i]!;
+      if (item.kind === 'fuel') {
+        const amount = item.fuelAmount ?? 50;
+        playerFuel.current = Math.min(playerFuel.max, playerFuel.current + amount);
+      } else if (item.ammo) {
+        playerAmmo.cannon = Math.min(
+          playerAmmo.cannonMax,
+          playerAmmo.cannon + (item.ammo.cannon ?? 0),
+        );
+        playerAmmo.rockets = Math.min(
+          playerAmmo.rocketsMax,
+          playerAmmo.rockets + (item.ammo.rockets ?? 0),
+        );
+        playerAmmo.missiles = Math.min(
+          playerAmmo.missilesMax,
+          playerAmmo.missiles + (item.ammo.missiles ?? 0),
+        );
+      }
+      destroyEntity(item.entity);
+    }
 
     const margin = 1.2;
     const maxX = runtimeMap.width - 1 - margin;
@@ -830,7 +984,49 @@ const loop = new GameLoop({
     const originX = Math.floor(w / 2 - camera.x);
     const originY = Math.floor(h / 2 - camera.y);
     const shakeOffset = shake.offset(1 / 60);
-    renderer.draw(context, runtimeMap, isoParams, originX + shakeOffset.x, originY + shakeOffset.y);
+    const originWithShakeX = originX + shakeOffset.x;
+    const originWithShakeY = originY + shakeOffset.y;
+    renderer.draw(context, runtimeMap, isoParams, originWithShakeX, originWithShakeY);
+
+    buildings.forEach((entity, building) => {
+      const t = transforms.get(entity);
+      const h = healths.get(entity);
+      if (!t || !h) return;
+      drawBuilding(context, isoParams, originWithShakeX, originWithShakeY, {
+        tx: t.tx,
+        ty: t.ty,
+        width: building.width,
+        depth: building.depth,
+        height: building.height,
+        bodyColor: building.bodyColor,
+        roofColor: building.roofColor,
+        ruinColor: building.ruinColor,
+        damage01: 1 - h.current / h.max,
+      });
+    });
+
+    const playerCollectorIso = { x: targetIso.x, y: targetIso.y };
+    pickups.forEach((entity, pickup) => {
+      const t = transforms.get(entity);
+      if (!t) return;
+      let collectorIso: { x: number; y: number } | null = null;
+      if (pickup.collectingBy === player) {
+        collectorIso = playerCollectorIso;
+      } else if (pickup.collectingBy) {
+        const collectorTransform = transforms.get(pickup.collectingBy);
+        if (collectorTransform) {
+          collectorIso = tileToIso(collectorTransform.tx, collectorTransform.ty, isoParams);
+        }
+      }
+      drawPickupCrate(context, isoParams, originWithShakeX, originWithShakeY, {
+        tx: t.tx,
+        ty: t.ty,
+        kind: pickup.kind,
+        collecting: pickup.collectingBy !== null,
+        progress: pickup.progress,
+        collectorIso,
+      });
+    });
 
     buildings.forEach((entity, building) => {
       const t = transforms.get(entity);
@@ -851,25 +1047,25 @@ const loop = new GameLoop({
 
     aaas.forEach((entity, _a) => {
       const t = transforms.get(entity);
-      if (t) drawAAATurret(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawAAATurret(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
     sams.forEach((entity, _s) => {
       const t = transforms.get(entity);
-      if (t) drawSAM(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawSAM(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
     patrols.forEach((entity, _p) => {
       const t = transforms.get(entity);
-      if (t) drawPatrolDrone(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawPatrolDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
     chasers.forEach((entity, _c) => {
       const t = transforms.get(entity);
-      if (t) drawChaserDrone(context, isoParams, originX, originY, t.tx, t.ty);
+      if (t) drawChaserDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
 
     projectilePool.draw(
       context,
-      originX + shakeOffset.x,
-      originY + shakeOffset.y,
+      originWithShakeX,
+      originWithShakeY,
       isoParams.tileWidth,
       isoParams.tileHeight,
     );
@@ -889,7 +1085,7 @@ const loop = new GameLoop({
       context.restore();
     }
 
-    drawPad(context, isoParams, originX + shakeOffset.x, originY + shakeOffset.y, pad.tx, pad.ty);
+    drawPad(context, isoParams, originWithShakeX, originWithShakeY, pad.tx, pad.ty);
 
     drawHeli(context, {
       tx: playerT.tx,
@@ -898,8 +1094,8 @@ const loop = new GameLoop({
       rotorPhase: sprites.get(player)!.rotor,
       color: sprites.get(player)!.color,
       iso: isoParams,
-      originX: originX + shakeOffset.x,
-      originY: originY + shakeOffset.y,
+      originX: originWithShakeX,
+      originY: originWithShakeY,
     });
 
     minimapEnemies.length = 0;
@@ -912,24 +1108,36 @@ const loop = new GameLoop({
 
     if (ui.settings.fogOfWar) {
       const playerIso = tileToIso(playerT.tx, playerT.ty, isoParams);
-      const holeX = Math.floor(w / 2 + (playerIso.x - camera.x));
-      const holeY = Math.floor(h / 2 + (playerIso.y - camera.y));
+      const holeX = Math.floor(w / 2 + (playerIso.x - camera.x) + shakeOffset.x);
+      const holeY = Math.floor(h / 2 + (playerIso.y - camera.y) + shakeOffset.y);
       fog.render(context, [
         { x: holeX, y: holeY, radius: Math.max(120, Math.min(w, h) * 0.22), softness: 0.5 },
       ]);
     }
 
+    const fuelComp = fuels.get(player)!;
+    const ammoComp = ammos.get(player)!;
+    const healthComp = healths.get(player)!;
+    const weaponComp = weapons.get(player)!;
+
     drawHUD(
       context,
       {
-        fuel01: fuels.get(player)!.current / fuels.get(player)!.max,
-        armor01: healths.get(player)!.current / healths.get(player)!.max,
+        fuel01: fuelComp.current / fuelComp.max,
+        fuelCurrent: fuelComp.current,
+        fuelMax: fuelComp.max,
+        armor01: healthComp.current / healthComp.max,
         ammo: {
-          cannon: ammos.get(player)!.cannon,
-          rockets: ammos.get(player)!.rockets,
-          missiles: ammos.get(player)!.missiles,
+          cannon: ammoComp.cannon,
+          rockets: ammoComp.rockets,
+          missiles: ammoComp.missiles,
         },
-        activeWeapon: weapons.get(player)!.active,
+        ammoMax: {
+          cannon: ammoComp.cannonMax,
+          rockets: ammoComp.rocketsMax,
+          missiles: ammoComp.missilesMax,
+        },
+        activeWeapon: weaponComp.active,
         lives: Math.max(0, playerState.lives),
         score: stats.score,
         wave: waveState.active ? waveState.index : Math.max(1, waveState.index + 1),
