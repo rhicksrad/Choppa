@@ -125,7 +125,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '`' || e.key === '~') debug.toggle();
 });
 
-const ui: UIStore = loadJson<UIStore>('vinestrike:ui', createUIStore());
+const ui: UIStore = loadJson<UIStore>('choppa:ui', createUIStore());
+ui.state = 'title';
 const titleMenu = new Menu([
   { id: 'start', label: 'Start Mission' },
   { id: 'settings', label: 'Settings' },
@@ -704,7 +705,7 @@ const loop = new GameLoop({
       } else if (action === 'settings') ui.state = 'settings';
       else if (action === 'achievements') ui.state = 'achievements';
       else if (action === 'about') ui.state = 'about';
-      if (action) saveJson('vinestrike:ui', ui);
+      if (action) saveJson('choppa:ui', ui);
       return;
     }
 
@@ -937,7 +938,7 @@ const loop = new GameLoop({
     mission.update();
     if (mission.state.complete && ui.state === 'in-game') {
       ui.state = 'win';
-      saveJson('vinestrike:progress', { lastWin: Date.now(), mission: mission.state.def.id });
+      saveJson('choppa:progress', { lastWin: Date.now(), mission: mission.state.def.id });
     }
 
     updateWave(dt);
@@ -959,7 +960,7 @@ const loop = new GameLoop({
     sky.render(context, camera.x, camera.y);
 
     if (ui.state === 'title') {
-      titleMenu.render(context, 'VineStrike', 'Isometric helicopter action prototype');
+      titleMenu.render(context, 'Choppa', 'Isometric helicopter action prototype');
       return;
     }
     if (ui.state === 'settings') {
@@ -1027,23 +1028,7 @@ const loop = new GameLoop({
         collectorIso,
       });
     });
-
-    buildings.forEach((entity, building) => {
-      const t = transforms.get(entity);
-      const h = healths.get(entity);
-      if (!t || !h) return;
-      drawBuilding(context, isoParams, originX + shakeOffset.x, originY + shakeOffset.y, {
-        tx: t.tx,
-        ty: t.ty,
-        width: building.width,
-        depth: building.depth,
-        height: building.height,
-        bodyColor: building.bodyColor,
-        roofColor: building.roofColor,
-        ruinColor: building.ruinColor,
-        damage01: 1 - h.current / h.max,
-      });
-    });
+main
 
     aaas.forEach((entity, _a) => {
       const t = transforms.get(entity);

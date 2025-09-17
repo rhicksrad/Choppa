@@ -62,7 +62,7 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   context.textAlign = 'center';
   context.fillStyle = '#92ffa6';
   context.font = 'bold 26px system-ui, sans-serif';
-  context.fillText('About VineStrike', w / 2, h * 0.2);
+  context.fillText('About Choppa', w / 2, h * 0.2);
   context.fillStyle = '#c8d7e1';
   context.font = '14px system-ui, sans-serif';
   const lines = [

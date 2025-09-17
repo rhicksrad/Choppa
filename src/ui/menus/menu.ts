@@ -39,22 +39,72 @@ export class Menu {
     context.fillRect(0, 0, w, h);
     context.globalAlpha = 1;
 
-    context.fillStyle = '#92ffa6';
-    context.font = 'bold 32px system-ui, sans-serif';
     context.textAlign = 'center';
-    context.fillText(title, w / 2, h * 0.28);
-    context.fillStyle = '#c8d7e1';
-    context.font = '14px system-ui, sans-serif';
-    context.fillText(subtitle, w / 2, h * 0.28 + 22);
+    context.textBaseline = 'top';
 
-    const startY = h * 0.45;
+    const measureHeight = (text: string): number => {
+      const metrics = context.measureText(text);
+      const ascent = metrics.actualBoundingBoxAscent ?? 0;
+      const descent = metrics.actualBoundingBoxDescent ?? 0;
+      const measured = ascent + descent;
+      if (measured > 0) return measured;
+      const parsed = parseInt(context.font, 10);
+      return Number.isFinite(parsed) ? parsed : 16;
+    };
+
+    const titleFont = 'bold 32px system-ui, sans-serif';
+    const subtitleFont = '14px system-ui, sans-serif';
+    const gapTitleSubtitle = 12;
+    const gapSubtitleMenu = 36;
+    const gapMenuItems = 18;
+
+    context.font = titleFont;
+    const titleHeight = measureHeight(title);
+    context.font = subtitleFont;
+    const subtitleHeight = measureHeight(subtitle);
+
+    const menuFonts: string[] = [];
+    const menuHeights: number[] = [];
     for (let i = 0; i < this.items.length; i += 1) {
-      const y = startY + i * 28;
-      const item = this.items[i]!;
       const selected = i === this.index;
-      context.fillStyle = selected ? '#ffffff' : '#9fb3c8';
-      context.font = selected ? 'bold 18px system-ui, sans-serif' : '16px system-ui, sans-serif';
-      context.fillText(item.label, w / 2, y);
+      const font = selected ? 'bold 18px system-ui, sans-serif' : '16px system-ui, sans-serif';
+      menuFonts.push(font);
+      context.font = font;
+      menuHeights.push(measureHeight(this.items[i]!.label));
+    }
+
+    const menuCount = menuHeights.length;
+    const menuHeightSum = menuHeights.reduce((sum, height) => sum + height, 0);
+    const menuGapSum = menuCount > 1 ? (menuCount - 1) * gapMenuItems : 0;
+    const totalHeight =
+      titleHeight +
+      gapTitleSubtitle +
+      subtitleHeight +
+      (menuCount > 0 ? gapSubtitleMenu + menuHeightSum + menuGapSum : 0);
+
+    let y = (h - totalHeight) / 2;
+
+    context.fillStyle = '#92ffa6';
+    context.font = titleFont;
+    context.fillText(title, w / 2, y);
+    y += titleHeight + gapTitleSubtitle;
+
+    context.fillStyle = '#c8d7e1';
+    context.font = subtitleFont;
+    context.fillText(subtitle, w / 2, y);
+    y += subtitleHeight;
+
+    if (menuCount > 0) {
+      y += gapSubtitleMenu;
+      for (let i = 0; i < menuCount; i += 1) {
+        const item = this.items[i]!;
+        const selected = i === this.index;
+        context.fillStyle = selected ? '#ffffff' : '#9fb3c8';
+        context.font = menuFonts[i]!;
+        context.fillText(item.label, w / 2, y);
+        y += menuHeights[i]!;
+        if (i < menuCount - 1) y += gapMenuItems;
+      }
     }
 
     context.restore();
