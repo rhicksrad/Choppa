@@ -19,6 +19,7 @@ import { RotorSpinSystem } from './game/systems/RotorSpin';
 import { FuelDrainSystem } from './game/systems/FuelDrain';
 import { RefuelRearmSystem, type RefuelPad } from './game/systems/RefuelRearm';
 import { drawHeli, drawPad } from './render/sprites/heli';
+import { drawBuilding } from './render/sprites/buildings';
 import { WeaponFireSystem, type FireEvent } from './game/systems/WeaponFire';
 import type { Ammo } from './game/components/Ammo';
 import type { WeaponHolder } from './game/components/Weapon';
@@ -39,6 +40,7 @@ import type { MissionDef } from './game/missions/types';
 import missionJson from './game/data/missions/sample_mission.json';
 import type { Health } from './game/components/Health';
 import type { Collider } from './game/components/Collider';
+import type { Building } from './game/components/Building';
 import { drawHUD } from './ui/hud/hud';
 import { loadJson, saveJson } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
@@ -50,6 +52,20 @@ interface EnemyMeta {
   kind: 'aaa' | 'sam' | 'patrol' | 'chaser';
   score: number;
   wave?: number;
+}
+
+interface BuildingSite {
+  tx: number;
+  ty: number;
+  width: number;
+  depth: number;
+  height: number;
+  health: number;
+  colliderRadius: number;
+  bodyColor: string;
+  roofColor: string;
+  ruinColor?: string;
+  score: number;
 }
 
 interface Explosion {
@@ -131,6 +147,7 @@ const patrols = new ComponentStore<PatrolDrone>();
 const chasers = new ComponentStore<ChaserDrone>();
 const healths = new ComponentStore<Health>();
 const colliders = new ComponentStore<Collider>();
+const buildings = new ComponentStore<Building>();
 
 let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
@@ -205,6 +222,7 @@ const playerState: PlayerState = { lives: 3, respawnTimer: 0, invulnerable: fals
 const stats = { score: 0 };
 const explosions: Explosion[] = [];
 const enemyMeta = new Map<Entity, EnemyMeta>();
+const buildingMeta = new Map<Entity, { score: number }>();
 const waveState: WaveState = {
   index: 0,
   countdown: 3,
@@ -213,11 +231,66 @@ const waveState: WaveState = {
   enemies: new Set<Entity>(),
 };
 const minimapEnemies: { tx: number; ty: number }[] = [];
+const buildingEntities: Entity[] = [];
 const waveSpawnPoints = [
-  { tx: 3, ty: 3 },
-  { tx: 12, ty: 4 },
-  { tx: 4, ty: 13 },
-  { tx: 12, ty: 12 },
+  { tx: 7, ty: 7 },
+  { tx: 28, ty: 9 },
+  { tx: 12, ty: 28 },
+  { tx: 29, ty: 28 },
+];
+const buildingSites: BuildingSite[] = [
+  {
+    tx: 18,
+    ty: 16,
+    width: 1.6,
+    depth: 1.2,
+    height: 34,
+    health: 110,
+    colliderRadius: 0.85,
+    bodyColor: '#5b6d82',
+    roofColor: '#27313d',
+    ruinColor: '#472b2b',
+    score: 220,
+  },
+  {
+    tx: 21,
+    ty: 19.2,
+    width: 1.4,
+    depth: 1.4,
+    height: 28,
+    health: 95,
+    colliderRadius: 0.8,
+    bodyColor: '#6c7c8f',
+    roofColor: '#2f3e4d',
+    ruinColor: '#593535',
+    score: 180,
+  },
+  {
+    tx: 15,
+    ty: 20.5,
+    width: 1.8,
+    depth: 1.1,
+    height: 24,
+    health: 90,
+    colliderRadius: 0.9,
+    bodyColor: '#7c6d54',
+    roofColor: '#3c3322',
+    ruinColor: '#4a2b21',
+    score: 160,
+  },
+  {
+    tx: 13.6,
+    ty: 17.8,
+    width: 1.3,
+    depth: 1.3,
+    height: 30,
+    health: 100,
+    colliderRadius: 0.82,
+    bodyColor: '#5f6f5b',
+    roofColor: '#2a3529',
+    ruinColor: '#403125',
+    score: 190,
+  },
 ];
 
 let fps = 0;
@@ -260,6 +333,10 @@ function destroyEntity(entity: Entity): void {
   chasers.remove(entity);
   healths.remove(entity);
   colliders.remove(entity);
+  buildings.remove(entity);
+  buildingMeta.delete(entity);
+  const buildingIndex = buildingEntities.indexOf(entity);
+  if (buildingIndex !== -1) buildingEntities.splice(buildingIndex, 1);
   enemyMeta.delete(entity);
   waveState.enemies.delete(entity);
   entities.destroy(entity);
@@ -306,6 +383,35 @@ function spawnMissionEnemies(): void {
       });
       registerEnemy(entity, { kind: 'sam', score: 200 });
     }
+  }
+}
+
+function clearBuildings(): void {
+  for (let i = buildingEntities.length - 1; i >= 0; i -= 1) {
+    const entity = buildingEntities[i]!;
+    destroyEntity(entity);
+  }
+  buildingEntities.length = 0;
+}
+
+function spawnBuildings(): void {
+  clearBuildings();
+  for (let i = 0; i < buildingSites.length; i += 1) {
+    const site = buildingSites[i]!;
+    const entity = entities.create();
+    transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
+    buildings.set(entity, {
+      width: site.width,
+      depth: site.depth,
+      height: site.height,
+      bodyColor: site.bodyColor,
+      roofColor: site.roofColor,
+      ruinColor: site.ruinColor,
+    });
+    healths.set(entity, { current: site.health, max: site.health });
+    colliders.set(entity, { radius: site.colliderRadius, team: 'enemy' });
+    buildingMeta.set(entity, { score: site.score });
+    buildingEntities.push(entity);
   }
 }
 
@@ -416,6 +522,7 @@ function resetGame(): void {
   waveState.timeInWave = 0;
   missionState = loadMission(missionDef);
   mission.state = missionState;
+  spawnBuildings();
   spawnMissionEnemies();
   playerState.lives = 3;
   resetPlayer();
@@ -471,6 +578,16 @@ function handleDeaths(): void {
       destroyEntity(entity);
       continue;
     }
+    const building = buildings.get(entity);
+    if (building) {
+      const t = transforms.get(entity);
+      if (t) spawnExplosion(t.tx, t.ty);
+      playExplosion(bus);
+      const bScore = buildingMeta.get(entity);
+      if (bScore) stats.score += bScore.score;
+      destroyEntity(entity);
+      continue;
+    }
     destroyEntity(entity);
   }
 }
@@ -495,6 +612,7 @@ function updateWave(dt: number): void {
 }
 
 spawnMissionEnemies();
+spawnBuildings();
 const loop = new GameLoop({
   update: (dt) => {
     lastStepDt = dt;
@@ -713,6 +831,23 @@ const loop = new GameLoop({
     const originY = Math.floor(h / 2 - camera.y);
     const shakeOffset = shake.offset(1 / 60);
     renderer.draw(context, runtimeMap, isoParams, originX + shakeOffset.x, originY + shakeOffset.y);
+
+    buildings.forEach((entity, building) => {
+      const t = transforms.get(entity);
+      const h = healths.get(entity);
+      if (!t || !h) return;
+      drawBuilding(context, isoParams, originX + shakeOffset.x, originY + shakeOffset.y, {
+        tx: t.tx,
+        ty: t.ty,
+        width: building.width,
+        depth: building.depth,
+        height: building.height,
+        bodyColor: building.bodyColor,
+        roofColor: building.roofColor,
+        ruinColor: building.ruinColor,
+        damage01: 1 - h.current / h.max,
+      });
+    });
 
     aaas.forEach((entity, _a) => {
       const t = transforms.get(entity);
