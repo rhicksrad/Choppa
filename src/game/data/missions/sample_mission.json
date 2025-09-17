@@ -1,33 +1,40 @@
 {
   "id": "m01",
-  "title": "River Mouth",
-  "briefing": "Destroy the enemy emplacements and return to the pad.",
-  "startPos": { "tx": 8, "ty": 8 },
+  "title": "Expanded Foothold",
+  "briefing": "Push across the valley, neutralize air defenses, and level the command site before returning to base.",
+  "startPos": { "tx": 16, "ty": 19 },
   "objectives": [
     {
       "id": "obj1",
       "type": "destroy",
-      "name": "Neutralize AAA turret",
-      "at": { "tx": 10, "ty": 7 },
-      "radiusTiles": 1.5
+      "name": "Neutralize western AAA turret",
+      "at": { "tx": 11, "ty": 15 },
+      "radiusTiles": 1.6
     },
     {
       "id": "obj2",
       "type": "destroy",
-      "name": "Neutralize SAM site",
-      "at": { "tx": 5, "ty": 12 },
-      "radiusTiles": 1.5
+      "name": "Neutralize ridge-line SAM",
+      "at": { "tx": 26, "ty": 11 },
+      "radiusTiles": 1.6
     },
     {
       "id": "obj3",
+      "type": "destroy",
+      "name": "Level the command campus",
+      "at": { "tx": 18, "ty": 18 },
+      "radiusTiles": 5
+    },
+    {
+      "id": "obj4",
       "type": "reach",
       "name": "Return to the pad",
-      "at": { "tx": 6, "ty": 9 },
+      "at": { "tx": 16, "ty": 19 },
       "radiusTiles": 1.2
     }
   ],
   "enemySpawns": [
-    { "type": "AAA", "at": { "tx": 10, "ty": 7 } },
-    { "type": "SAM", "at": { "tx": 5, "ty": 12 } }
+    { "type": "AAA", "at": { "tx": 11, "ty": 15 } },
+    { "type": "SAM", "at": { "tx": 26, "ty": 11 } }
   ]
 }

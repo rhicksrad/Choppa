@@ -1,6 +1,6 @@
-# VineStrike
+# Choppa
 
-VineStrike is a browser-based homage to classic isometric helicopter strike games. Everything runs in TypeScript with a lightweight ECS, Canvas 2D rendering, and a deterministic fixed-step loop.
+Choppa is a browser-based homage to classic isometric helicopter strike games. Everything runs in TypeScript with a lightweight ECS, Canvas 2D rendering, and a deterministic fixed-step loop.
 
 ## Quickstart
 
@@ -44,7 +44,7 @@ npm run build
 
 - Waves spawn patrol drones and chaser gunships; difficulty ramps each wave.
 - The mission layer tracks static AAA/SAM objectives. Clear them and survive to win.
-- Helicopter health, ammo, and fuel are replenished at the central refuel pad.
+- Helicopter fuel and ammo must be recovered from supply crates scattered across the map.
 - Explosion, weapon, and engine audio are procedural and respect the mute toggle.
 
 ## Known Limitations

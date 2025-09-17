@@ -1,7 +1,7 @@
 {
   "name": "choppa",
   "version": "1.0.0",
-  "description": "VineStrike — isometric helicopter action (web)",
+  "description": "Choppa — isometric helicopter action (web)",
   "type": "module",
   "private": true,
   "scripts": {

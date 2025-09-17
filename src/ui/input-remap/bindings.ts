@@ -5,7 +5,7 @@ export type Action = 'moveUp' | 'moveDown' | 'moveLeft' | 'moveRight' | 'pause';
 
 export type KeyBindings = Record<Action, string[]>; // array of key values
 
-const STORAGE_KEY = 'vinestrike:bindings';
+const STORAGE_KEY = 'choppa:bindings';
 
 export function defaultBindings(): KeyBindings {
   return {

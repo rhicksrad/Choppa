@@ -2,8 +2,11 @@ import type { IsoParams } from '../../render/iso/projection';
 
 export interface BarsData {
   fuel01: number;
+  fuelCurrent: number;
+  fuelMax: number;
   armor01: number;
   ammo: { cannon: number; rockets: number; missiles: number };
+  ammoMax: { cannon: number; rockets: number; missiles: number };
   activeWeapon: string;
   lives: number;
   score: number;
@@ -35,14 +38,17 @@ export function drawHUD(
   drawBar(ctx, x0, y0 - 8, 200, 14, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 14px system-ui, sans-serif';
-  ctx.fillText(
-    `Ammo  C:${bars.ammo.cannon}  R:${bars.ammo.rockets}  M:${bars.ammo.missiles}   [${bars.activeWeapon}]`,
-    x0,
-    y0 - 44,
-  );
+  const fuelText = `Fuel: ${Math.round(bars.fuelCurrent)} / ${Math.round(bars.fuelMax)}`;
+  ctx.fillText(fuelText, x0, y0 - 78);
+  const ammoText =
+    `Ammo  C:${bars.ammo.cannon}/${bars.ammoMax.cannon}  ` +
+    `R:${bars.ammo.rockets}/${bars.ammoMax.rockets}  ` +
+    `M:${bars.ammo.missiles}/${bars.ammoMax.missiles}  [` +
+    `${bars.activeWeapon.toUpperCase()}]`;
+  ctx.fillText(ammoText, x0, y0 - 60);
   ctx.fillStyle = '#c8d7e1';
   ctx.font = '12px system-ui, sans-serif';
-  ctx.fillText(`Lives: ${bars.lives}`, x0, y0 - 60);
+  ctx.fillText(`Lives: ${bars.lives}`, x0, y0 - 96);
 
   // Objective list top-left
   ctx.textAlign = 'left';
