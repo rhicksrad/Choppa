@@ -19,6 +19,12 @@ import { RotorSpinSystem } from './game/systems/RotorSpin';
 import { FuelDrainSystem } from './game/systems/FuelDrain';
 import { drawHeli, drawPad } from './render/sprites/heli';
 import { drawBuilding } from './render/sprites/buildings';
+import {
+  drawSafeHouse,
+  getSafeHouseDoorIso,
+  type SafeHouseParams,
+} from './render/sprites/safehouse';
+import { drawRescueRunner } from './render/sprites/rescuees';
 import { WeaponFireSystem, type FireEvent } from './game/systems/WeaponFire';
 import type { Ammo } from './game/components/Ammo';
 import type { WeaponHolder } from './game/components/Weapon';
@@ -93,6 +99,16 @@ interface Explosion {
   ty: number;
   age: number;
   duration: number;
+}
+
+interface RescueRunner {
+  startIso: { x: number; y: number };
+  endIso: { x: number; y: number };
+  progress: number;
+  delay: number;
+  duration: number;
+  elapsed: number;
+  bobOffset: number;
 }
 
 interface WaveState {
@@ -178,6 +194,20 @@ const pad = {
   tx: runtimeMap.width - 5,
   ty: runtimeMap.height - 5,
   radius: 1.2,
+};
+
+const safeHouse: SafeHouseParams = {
+  tx: pad.tx - 1.4,
+  ty: pad.ty + 0.55,
+  width: 1.18,
+  depth: 1.02,
+  height: 22,
+  bodyColor: '#d8d2c6',
+  roofColor: '#6e7b88',
+  trimColor: '#f4f0e6',
+  doorColor: '#394758',
+  windowColor: '#cfe4ff',
+  walkwayColor: '#d6d0c4',
 };
 
 fog.configure(runtimeMap.width, runtimeMap.height);
@@ -266,6 +296,7 @@ const buildingEntities: Entity[] = [];
 const pickupEntities: Entity[] = [];
 const survivorEntities: Entity[] = [];
 const alienEntities: Set<Entity> = new Set();
+const rescueRunners: RescueRunner[] = [];
 const waveSpawnPoints = [
   { tx: 7, ty: 7 },
   { tx: 28, ty: 9 },
@@ -396,6 +427,45 @@ function updateExplosions(dt: number): void {
     const e = explosions[i]!;
     e.age += dt;
     if (e.age >= e.duration) explosions.splice(i, 1);
+  }
+}
+
+function spawnRescueRunnerAnimation(count: number): void {
+  if (count <= 0) return;
+  const padOrigin = tileToIso(pad.tx - 0.05, pad.ty + 0.18, isoParams);
+  const doorIso = getSafeHouseDoorIso(isoParams, safeHouse);
+  for (let i = 0; i < count; i += 1) {
+    const jitterStartX = (rng.float01() - 0.5) * 10;
+    const jitterStartY = (rng.float01() - 0.5) * 6;
+    const jitterEndX = (rng.float01() - 0.5) * 3;
+    const jitterEndY = (rng.float01() - 0.5) * 2.4;
+    const delay = i * 0.16 + rng.float01() * 0.05;
+    const duration = 0.82 + rng.float01() * 0.32;
+    rescueRunners.push({
+      startIso: { x: padOrigin.x + jitterStartX, y: padOrigin.y + jitterStartY },
+      endIso: { x: doorIso.x + jitterEndX, y: doorIso.y + jitterEndY },
+      progress: 0,
+      delay,
+      duration,
+      elapsed: 0,
+      bobOffset: rng.float01() * Math.PI * 2,
+    });
+  }
+}
+
+function updateRescueRunnerAnimations(dt: number): void {
+  for (let i = rescueRunners.length - 1; i >= 0; i -= 1) {
+    const runner = rescueRunners[i]!;
+    if (runner.delay > 0) {
+      runner.delay -= dt;
+      if (runner.delay > 0) continue;
+      runner.delay = 0;
+    }
+    runner.elapsed += dt;
+    runner.progress += dt / runner.duration;
+    if (runner.progress >= 1.3) {
+      rescueRunners.splice(i, 1);
+    }
   }
 }
 
@@ -714,6 +784,7 @@ function resetGame(): void {
   rescueState.carrying = 0;
   rescueState.rescued = 0;
   rescueState.survivorsSpawned = false;
+  rescueRunners.length = 0;
   aliensTriggered = false;
   aliensDefeated = false;
   campusLeveled = false;
@@ -1036,13 +1107,14 @@ const loop = new GameLoop({
       const dyPad = playerTransform.ty - pad.ty;
       const distPad = Math.hypot(dxPad, dyPad);
       if (distPad <= pad.radius + 0.2) {
-        rescueState.rescued = Math.min(
-          rescueState.total,
-          rescueState.rescued + rescueState.carrying,
-        );
+        const dropped = rescueState.carrying;
+        if (dropped > 0) spawnRescueRunnerAnimation(dropped);
+        rescueState.rescued = Math.min(rescueState.total, rescueState.rescued + dropped);
         rescueState.carrying = 0;
       }
     }
+
+    updateRescueRunnerAnimations(dt);
 
     const margin = 1.2;
     const maxX = runtimeMap.width - 1 - margin;
@@ -1184,6 +1256,8 @@ const loop = new GameLoop({
       });
     });
 
+    drawSafeHouse(context, isoParams, originWithShakeX, originWithShakeY, safeHouse);
+
     const playerCollectorIso = { x: targetIso.x, y: targetIso.y };
     pickups.forEach((entity, pickup) => {
       const t = transforms.get(entity);
@@ -1247,6 +1321,32 @@ const loop = new GameLoop({
     }
 
     drawPad(context, isoParams, originWithShakeX, originWithShakeY, pad.tx, pad.ty);
+
+    const runnerScale = isoParams.tileHeight / 32;
+    for (let i = 0; i < rescueRunners.length; i += 1) {
+      const runner = rescueRunners[i]!;
+      if (runner.delay > 0) continue;
+      const t = Math.min(1, runner.progress);
+      const isoX = runner.startIso.x + (runner.endIso.x - runner.startIso.x) * t;
+      const isoY = runner.startIso.y + (runner.endIso.y - runner.startIso.y) * t;
+      const drawX = originWithShakeX + isoX;
+      const drawY = originWithShakeY + isoY;
+      const dirX = runner.endIso.x - runner.startIso.x;
+      const dirY = runner.endIso.y - runner.startIso.y;
+      const angle = Math.atan2(dirY, dirX);
+      const phase = runner.elapsed * 11 + runner.bobOffset;
+      const bob = Math.sin(phase) * runnerScale * 1.6;
+      const fade = runner.progress <= 1 ? 1 : Math.max(0, 1 - (runner.progress - 1) / 0.3);
+      drawRescueRunner(context, {
+        x: drawX,
+        y: drawY,
+        angle: Number.isFinite(angle) ? angle : 0,
+        stepPhase: phase,
+        bob,
+        fade,
+        scale: runnerScale,
+      });
+    }
 
     drawHeli(context, {
       tx: playerT.tx,
