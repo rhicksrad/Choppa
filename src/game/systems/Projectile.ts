@@ -4,7 +4,7 @@ import type { Collider } from '../components/Collider';
 import type { DamageTag } from '../components/DamageTag';
 
 export interface Projectile {
-  kind: 'rocket' | 'missile' | 'cannon';
+  kind: 'rocket' | 'hellfire' | 'missile';
   faction: 'player' | 'enemy';
   x: number; // tile-space
   y: number;
@@ -64,7 +64,14 @@ export class ProjectilePool {
       pr.x += pr.vx * dt;
       pr.y += pr.vy * dt;
       pr.ttl -= dt;
-      if (pr.ttl <= 0) continue; // expired
+      if (pr.ttl <= 0) {
+        if (pr.kind === 'missile' || pr.kind === 'hellfire') {
+          const amount = pr.damage.amount;
+          const rad = pr.damage.radius ?? 0.05;
+          onHit({ x: pr.x, y: pr.y, radius: rad, amount });
+        }
+        continue; // expired
+      }
 
       // Very simple collision check with colliders; stop on first hit
       let hit = false;
@@ -109,16 +116,29 @@ export class ProjectilePool {
       const iy = (p.x + p.y) * halfH;
       ctx.save();
       ctx.translate(originX + ix, originY + iy - 6);
-      if (p.kind === 'cannon') {
-        ctx.fillStyle = '#ffd166';
-        ctx.fillRect(-1, -1, 2, 2);
+      if (p.kind === 'missile') {
+        const dirScreenX = (p.vx - p.vy) * halfW;
+        const dirScreenY = (p.vx + p.vy) * halfH;
+        const dirLen = Math.hypot(dirScreenX, dirScreenY) || 1;
+        const tailLength = Math.min(12, dirLen * 0.18);
+        ctx.strokeStyle = '#ffba08';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo((-dirScreenX / dirLen) * tailLength, (-dirScreenY / dirLen) * tailLength);
+        ctx.stroke();
+        ctx.fillStyle = '#ffe066';
+        ctx.beginPath();
+        ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
+        ctx.fill();
       } else if (p.kind === 'rocket') {
         ctx.fillStyle = '#ef476f';
         ctx.fillRect(-2, -1, 4, 2);
       } else {
-        ctx.fillStyle = '#118ab2';
+        ctx.fillStyle = '#ff6f59';
         ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 3.2, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
