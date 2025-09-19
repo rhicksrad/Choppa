@@ -51,7 +51,7 @@ import { drawHUD } from './ui/hud/hud';
 import { loadJson, saveJson } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
 import { AudioBus } from './core/audio/audio';
-import { EngineSound, playCannon, playRocket, playMissile, playExplosion } from './core/audio/sfx';
+import { EngineSound, playMissile, playRocket, playHellfire, playExplosion } from './core/audio/sfx';
 import { CameraShake } from './render/camera/shake';
 import { getCanvasViewMetrics } from './render/canvas/metrics';
 import { drawPickupCrate } from './render/sprites/pickups';
@@ -83,7 +83,7 @@ interface PickupSite {
   radius?: number;
   duration?: number;
   fuelAmount?: number;
-  ammo?: { cannon?: number; rockets?: number; missiles?: number };
+  ammo?: { missiles?: number; rockets?: number; hellfires?: number };
 }
 
 interface SurvivorSite {
@@ -230,14 +230,14 @@ physics.set(player, {
 fuels.set(player, { current: 65, max: 100 });
 sprites.set(player, { color: '#92ffa6', rotor: 0 });
 ammos.set(player, {
-  cannon: 200,
-  cannonMax: 200,
+  missiles: 200,
+  missilesMax: 200,
   rockets: 12,
   rocketsMax: 12,
-  missiles: 6,
-  missilesMax: 6,
+  hellfires: 2,
+  hellfiresMax: 2,
 });
-weapons.set(player, { active: 'cannon', cooldownCannon: 0, cooldownRocket: 0, cooldownMissile: 0 });
+weapons.set(player, { active: 'missile', cooldownMissile: 0, cooldownRocket: 0, cooldownHellfire: 0 });
 healths.set(player, { current: 100, max: 100 });
 colliders.set(player, { radius: 0.4, team: 'player' });
 
@@ -379,14 +379,14 @@ const alienSpawnPoints: { tx: number; ty: number }[] = [
 
 const pickupSites: PickupSite[] = [
   { tx: 15.2, ty: 18.4, kind: 'fuel', fuelAmount: 55 },
-  { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { cannon: 90, rockets: 3, missiles: 1 } },
-  { tx: 10.4, ty: 12.6, kind: 'ammo', ammo: { cannon: 110, rockets: 4, missiles: 2 } },
+  { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { missiles: 90, rockets: 3, hellfires: 1 } },
+  { tx: 10.4, ty: 12.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 1 } },
   { tx: 22.5, ty: 12.2, kind: 'fuel', fuelAmount: 60 },
-  { tx: 25.3, ty: 19.4, kind: 'ammo', ammo: { cannon: 100, rockets: 5, missiles: 2 } },
+  { tx: 25.3, ty: 19.4, kind: 'ammo', ammo: { missiles: 100, rockets: 5, hellfires: 1 } },
   { tx: 28.2, ty: 27.1, kind: 'fuel', fuelAmount: 65 },
   { tx: 13.2, ty: 26.4, kind: 'fuel', fuelAmount: 58 },
-  { tx: 7.4, ty: 22.3, kind: 'ammo', ammo: { cannon: 80, rockets: 3, missiles: 1 } },
-  { tx: 31.2, ty: 14.4, kind: 'ammo', ammo: { cannon: 95, rockets: 3, missiles: 2 } },
+  { tx: 7.4, ty: 22.3, kind: 'ammo', ammo: { missiles: 80, rockets: 3, hellfires: 1 } },
+  { tx: 31.2, ty: 14.4, kind: 'ammo', ammo: { missiles: 95, rockets: 3, hellfires: 1 } },
   { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
 ];
 
@@ -595,9 +595,9 @@ function spawnPickups(): void {
       ammo:
         site.kind === 'ammo'
           ? {
-              cannon: site.ammo?.cannon ?? 80,
+              missiles: site.ammo?.missiles ?? 80,
               rockets: site.ammo?.rockets ?? 3,
-              missiles: site.ammo?.missiles ?? 1,
+              hellfires: site.ammo?.hellfires ?? 0,
             }
           : undefined,
       collectingBy: null,
@@ -759,9 +759,9 @@ function resetPlayer(): void {
     ph.ax = 0;
     ph.ay = 0;
     fuel.current = fuel.max;
-    ammo.cannon = ammo.cannonMax;
-    ammo.rockets = ammo.rocketsMax;
     ammo.missiles = ammo.missilesMax;
+    ammo.rockets = ammo.rocketsMax;
+    ammo.hellfires = ammo.hellfiresMax;
     health.current = health.max;
     colliders.set(player, { radius: 0.4, team: 'player' });
   }
@@ -1002,7 +1002,7 @@ const loop = new GameLoop({
       entity: Entity;
       kind: Pickup['kind'];
       fuelAmount?: number;
-      ammo?: { cannon?: number; rockets?: number; missiles?: number };
+      ammo?: { missiles?: number; rockets?: number; hellfires?: number };
       survivorCount?: number;
     }[] = [];
     pickups.forEach((entity, pickup) => {
@@ -1058,9 +1058,9 @@ const loop = new GameLoop({
             }
           } else if (pickup.kind === 'ammo') {
             const needsAmmo =
-              playerAmmo.cannon < playerAmmo.cannonMax ||
+              playerAmmo.missiles < playerAmmo.missilesMax ||
               playerAmmo.rockets < playerAmmo.rocketsMax ||
-              playerAmmo.missiles < playerAmmo.missilesMax;
+              playerAmmo.hellfires < playerAmmo.hellfiresMax;
             if (needsAmmo) {
               pickup.collectingBy = player;
               pickup.progress = 0;
@@ -1083,10 +1083,6 @@ const loop = new GameLoop({
         const amount = item.fuelAmount ?? 50;
         playerFuel.current = Math.min(playerFuel.max, playerFuel.current + amount);
       } else if (item.kind === 'ammo' && item.ammo) {
-        playerAmmo.cannon = Math.min(
-          playerAmmo.cannonMax,
-          playerAmmo.cannon + (item.ammo.cannon ?? 0),
-        );
         playerAmmo.rockets = Math.min(
           playerAmmo.rocketsMax,
           playerAmmo.rockets + (item.ammo.rockets ?? 0),
@@ -1094,6 +1090,10 @@ const loop = new GameLoop({
         playerAmmo.missiles = Math.min(
           playerAmmo.missilesMax,
           playerAmmo.missiles + (item.ammo.missiles ?? 0),
+        );
+        playerAmmo.hellfires = Math.min(
+          playerAmmo.hellfiresMax,
+          playerAmmo.hellfires + (item.ammo.hellfires ?? 0),
         );
       } else if (item.kind === 'survivor') {
         const count = item.survivorCount ?? 1;
@@ -1124,19 +1124,19 @@ const loop = new GameLoop({
 
     for (let i = 0; i < fireEvents.length; i += 1) {
       const ev = fireEvents[i]!;
-      if (ev.kind === 'cannon') {
-        playCannon(bus);
-        const speedC = ev.speed ?? 18;
+      if (ev.kind === 'missile') {
+        playMissile(bus);
+        const speedM = ev.speed ?? 20;
         projectilePool.spawn({
-          kind: 'cannon',
+          kind: 'missile',
           faction: ev.faction,
           x: ev.sx,
           y: ev.sy,
-          vx: ev.dx * speedC,
-          vy: ev.dy * speedC,
-          ttl: ev.ttl ?? 0.8,
-          radius: ev.radius ?? 0.08,
-          damage: { amount: ev.damage ?? 4 },
+          vx: ev.dx * speedM,
+          vy: ev.dy * speedM,
+          ttl: ev.ttl ?? 1,
+          radius: ev.radius ?? 0.14,
+          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.35 },
         });
       } else if (ev.kind === 'rocket') {
         playRocket(bus);
@@ -1151,19 +1151,19 @@ const loop = new GameLoop({
           radius: ev.radius ?? 0.18,
           damage: { amount: 12, radius: 0.6 },
         });
-      } else if (ev.kind === 'missile') {
-        playMissile(bus);
+      } else if (ev.kind === 'hellfire') {
+        playHellfire(bus);
         projectilePool.spawn({
-          kind: 'missile',
+          kind: 'hellfire',
           faction: ev.faction,
           x: ev.x,
           y: ev.y,
           vx: ev.vx,
           vy: ev.vy,
           ttl: ev.ttl ?? 6,
-          radius: ev.radius ?? 0.18,
+          radius: ev.radius ?? 0.22,
           seek: { targetX: ev.targetX, targetY: ev.targetY, turnRate: Math.PI * 0.8 },
-          damage: { amount: 18, radius: 0.9 },
+          damage: { amount: ev.damage ?? 28, radius: ev.damageRadius ?? 1.15 },
         });
       }
     }
@@ -1408,14 +1408,14 @@ const loop = new GameLoop({
         fuelMax: fuelComp.max,
         armor01: healthComp.current / healthComp.max,
         ammo: {
-          cannon: ammoComp.cannon,
-          rockets: ammoComp.rockets,
           missiles: ammoComp.missiles,
+          rockets: ammoComp.rockets,
+          hellfires: ammoComp.hellfires,
         },
         ammoMax: {
-          cannon: ammoComp.cannonMax,
-          rockets: ammoComp.rocketsMax,
           missiles: ammoComp.missilesMax,
+          rockets: ammoComp.rocketsMax,
+          hellfires: ammoComp.hellfiresMax,
         },
         activeWeapon: weaponComp.active,
         lives: Math.max(0, playerState.lives),

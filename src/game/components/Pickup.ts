@@ -8,9 +8,9 @@ export interface Pickup {
   duration: number;
   fuelAmount?: number;
   ammo?: {
-    cannon?: number;
-    rockets?: number;
     missiles?: number;
+    rockets?: number;
+    hellfires?: number;
   };
   survivorCount?: number;
   collectingBy: Entity | null;

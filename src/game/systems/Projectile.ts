@@ -4,7 +4,7 @@ import type { Collider } from '../components/Collider';
 import type { DamageTag } from '../components/DamageTag';
 
 export interface Projectile {
-  kind: 'rocket' | 'missile' | 'cannon';
+  kind: 'rocket' | 'hellfire' | 'missile';
   faction: 'player' | 'enemy';
   x: number; // tile-space
   y: number;
@@ -109,16 +109,16 @@ export class ProjectilePool {
       const iy = (p.x + p.y) * halfH;
       ctx.save();
       ctx.translate(originX + ix, originY + iy - 6);
-      if (p.kind === 'cannon') {
+      if (p.kind === 'missile') {
         ctx.fillStyle = '#ffd166';
         ctx.fillRect(-1, -1, 2, 2);
       } else if (p.kind === 'rocket') {
         ctx.fillStyle = '#ef476f';
         ctx.fillRect(-2, -1, 4, 2);
       } else {
-        ctx.fillStyle = '#118ab2';
+        ctx.fillStyle = '#ff6f59';
         ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, 3.2, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();

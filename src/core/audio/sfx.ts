@@ -46,7 +46,7 @@ export class EngineSound {
   }
 }
 
-export function playCannon(bus: AudioBus): void {
+export function playMissile(bus: AudioBus): void {
   const ctx = bus.context;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -78,7 +78,7 @@ export function playRocket(bus: AudioBus): void {
   osc.stop(t + 0.28);
 }
 
-export function playMissile(bus: AudioBus): void {
+export function playHellfire(bus: AudioBus): void {
   const ctx = bus.context;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();

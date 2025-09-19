@@ -27,9 +27,9 @@ production.
 ## Controls
 
 - **WASD / Arrow Keys** – Fly the chopper
-- **Space / Left Mouse** – Primary cannon
+- **Space / Left Mouse** – Missiles
 - **Shift / Right Mouse** – Rockets
-- **E / Middle Mouse / X** – Missiles
+- **E / Middle Mouse / X** – Hellfire missiles
 - **R / Q / Tab** – Cycle weapons (1/2/3 for direct selection)
 - **Esc** – Pause / Resume / Back
 - **M** – Toggle mute
