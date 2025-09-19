@@ -47,6 +47,7 @@ import { loadBindings, isDown } from './ui/input-remap/bindings';
 import { AudioBus } from './core/audio/audio';
 import { EngineSound, playCannon, playRocket, playMissile, playExplosion } from './core/audio/sfx';
 import { CameraShake } from './render/camera/shake';
+import { getCanvasViewMetrics } from './render/canvas/metrics';
 import { drawPickupCrate } from './render/sprites/pickups';
 
 interface EnemyMeta {
@@ -770,9 +771,16 @@ const loop = new GameLoop({
     engine.start();
     engine.setIntensity(speed);
 
-    const w = context.canvas.width;
-    const h = context.canvas.height;
-    let aimTile = screenToApproxTile(snap.mouseX, snap.mouseY, w, h, camera.x, camera.y, isoParams);
+    const { width: viewWidth, height: viewHeight } = getCanvasViewMetrics(context);
+    let aimTile = screenToApproxTile(
+      snap.mouseX,
+      snap.mouseY,
+      viewWidth,
+      viewHeight,
+      camera.x,
+      camera.y,
+      isoParams,
+    );
     const aimDx = aimTile.x - playerTransform.tx;
     const aimDy = aimTile.y - playerTransform.ty;
     if (!Number.isFinite(aimDx) || !Number.isFinite(aimDy) || Math.hypot(aimDx, aimDy) < 0.3) {
@@ -954,9 +962,10 @@ const loop = new GameLoop({
   },
   render: () => {
     resizeCanvasToDisplaySize();
-    const w = canvas.width;
-    const h = canvas.height;
-    fog.resize(w, h);
+    const displayWidth = canvas.width;
+    const displayHeight = canvas.height;
+    fog.resize(displayWidth, displayHeight);
+    const { width: viewWidth, height: viewHeight, scaleX, scaleY } = getCanvasViewMetrics(context);
     sky.render(context, camera.x, camera.y);
 
     if (ui.state === 'title') {
@@ -980,10 +989,10 @@ const loop = new GameLoop({
     const bounds = isoMapBounds(runtimeMap.width, runtimeMap.height, isoParams);
     camera.bounds = bounds;
     const targetIso = tileToIso(playerT.tx, playerT.ty, isoParams);
-    camera.follow(targetIso.x, targetIso.y, w, h);
+    camera.follow(targetIso.x, targetIso.y, viewWidth, viewHeight);
 
-    const originX = Math.floor(w / 2 - camera.x);
-    const originY = Math.floor(h / 2 - camera.y);
+    const originX = Math.floor(viewWidth / 2 - camera.x);
+    const originY = Math.floor(viewHeight / 2 - camera.y);
     const shakeOffset = shake.offset(1 / 60);
     const originWithShakeX = originX + shakeOffset.x;
     const originWithShakeY = originY + shakeOffset.y;
@@ -1091,10 +1100,19 @@ const loop = new GameLoop({
 
     if (ui.settings.fogOfWar) {
       const playerIso = tileToIso(playerT.tx, playerT.ty, isoParams);
-      const holeX = Math.floor(w / 2 + (playerIso.x - camera.x) + shakeOffset.x);
-      const holeY = Math.floor(h / 2 + (playerIso.y - camera.y) + shakeOffset.y);
+      const holeX = Math.floor(viewWidth / 2 + (playerIso.x - camera.x) + shakeOffset.x);
+      const holeY = Math.floor(viewHeight / 2 + (playerIso.y - camera.y) + shakeOffset.y);
+      const radius = Math.max(120, Math.min(viewWidth, viewHeight) * 0.22);
+      const fogScaleX = scaleX || 1;
+      const fogScaleY = scaleY || 1;
+      const fogScale = Math.max(fogScaleX, fogScaleY);
       fog.render(context, [
-        { x: holeX, y: holeY, radius: Math.max(120, Math.min(w, h) * 0.22), softness: 0.5 },
+        {
+          x: holeX * fogScaleX,
+          y: holeY * fogScaleY,
+          radius: radius * fogScale,
+          softness: 0.5,
+        },
       ]);
     }
 
@@ -1141,39 +1159,39 @@ const loop = new GameLoop({
     if (playerState.invulnerable && ui.state === 'in-game') {
       context.save();
       context.fillStyle = 'rgba(0, 0, 0, 0.35)';
-      context.fillRect(0, 0, w, h);
+      context.fillRect(0, 0, viewWidth, viewHeight);
       context.fillStyle = '#ffd166';
       context.font = 'bold 18px system-ui, sans-serif';
       context.textAlign = 'center';
-      context.fillText('Respawning...', w / 2, h / 2);
+      context.fillText('Respawning...', viewWidth / 2, viewHeight / 2);
       context.restore();
     }
 
     if (ui.state === 'paused') {
       context.save();
       context.fillStyle = 'rgba(0, 0, 0, 0.55)';
-      context.fillRect(0, 0, w, h);
+      context.fillRect(0, 0, viewWidth, viewHeight);
       context.fillStyle = '#92ffa6';
       context.font = 'bold 28px system-ui, sans-serif';
       context.textAlign = 'center';
-      context.fillText('Paused', w / 2, h / 2);
+      context.fillText('Paused', viewWidth / 2, viewHeight / 2);
       context.fillStyle = '#c8d7e1';
       context.font = '14px system-ui, sans-serif';
-      context.fillText('Press Esc to resume', w / 2, h / 2 + 24);
+      context.fillText('Press Esc to resume', viewWidth / 2, viewHeight / 2 + 24);
       context.restore();
     }
 
     if (ui.state === 'game-over') {
       context.save();
       context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      context.fillRect(0, 0, w, h);
+      context.fillRect(0, 0, viewWidth, viewHeight);
       context.fillStyle = '#ef476f';
       context.font = 'bold 28px system-ui, sans-serif';
       context.textAlign = 'center';
-      context.fillText('Mission Failed', w / 2, h / 2);
+      context.fillText('Mission Failed', viewWidth / 2, viewHeight / 2);
       context.fillStyle = '#c8d7e1';
       context.font = '14px system-ui, sans-serif';
-      context.fillText('Press Enter to restart or Esc for title', w / 2, h / 2 + 26);
+      context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, viewHeight / 2 + 26);
       context.restore();
       return;
     }
@@ -1181,14 +1199,14 @@ const loop = new GameLoop({
     if (ui.state === 'win') {
       context.save();
       context.fillStyle = 'rgba(0,0,0,0.6)';
-      context.fillRect(0, 0, w, h);
+      context.fillRect(0, 0, viewWidth, viewHeight);
       context.fillStyle = '#92ffa6';
       context.font = 'bold 28px system-ui, sans-serif';
       context.textAlign = 'center';
-      context.fillText('Mission Complete', w / 2, h / 2 - 8);
+      context.fillText('Mission Complete', viewWidth / 2, viewHeight / 2 - 8);
       context.fillStyle = '#c8d7e1';
       context.font = '14px system-ui, sans-serif';
-      context.fillText('Press Enter to restart or Esc for title', w / 2, h / 2 + 16);
+      context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, viewHeight / 2 + 16);
       context.restore();
       return;
     }

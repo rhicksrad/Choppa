@@ -1,8 +1,8 @@
 import type { UIStore } from './scenes';
+import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 
 export function renderSettings(context: CanvasRenderingContext2D, _ui: UIStore): void {
-  const w = context.canvas.width;
-  const h = context.canvas.height;
+  const { width: w, height: h } = getCanvasViewMetrics(context);
   context.save();
   context.fillStyle = '#0e141a';
   context.globalAlpha = 0.9;
@@ -29,8 +29,7 @@ export function renderSettings(context: CanvasRenderingContext2D, _ui: UIStore):
 }
 
 export function renderAchievements(context: CanvasRenderingContext2D): void {
-  const w = context.canvas.width;
-  const h = context.canvas.height;
+  const { width: w, height: h } = getCanvasViewMetrics(context);
   context.save();
   context.fillStyle = '#0e141a';
   context.globalAlpha = 0.9;
@@ -52,8 +51,7 @@ export function renderAchievements(context: CanvasRenderingContext2D): void {
 }
 
 export function renderAbout(context: CanvasRenderingContext2D): void {
-  const w = context.canvas.width;
-  const h = context.canvas.height;
+  const { width: w, height: h } = getCanvasViewMetrics(context);
   context.save();
   context.fillStyle = '#0e141a';
   context.globalAlpha = 0.9;

@@ -1,4 +1,5 @@
 import type { InputSnapshot } from '../../core/input/input';
+import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 
 export interface MenuItem {
   id: string;
@@ -31,8 +32,7 @@ export class Menu {
   }
 
   public render(context: CanvasRenderingContext2D, title: string, subtitle: string): void {
-    const w = context.canvas.width;
-    const h = context.canvas.height;
+    const { width: w, height: h } = getCanvasViewMetrics(context);
     context.save();
     context.fillStyle = '#0e141a';
     context.globalAlpha = 0.75;
