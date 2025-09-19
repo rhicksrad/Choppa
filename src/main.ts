@@ -172,6 +172,8 @@ const pad = {
   radius: 1.2,
 };
 
+fog.configure(runtimeMap.width, runtimeMap.height);
+
 const player = entities.create();
 transforms.set(player, {
   tx: runtimeMap.width / 2,
@@ -589,6 +591,7 @@ function resetGame(): void {
   spawnBuildings();
   spawnMissionEnemies();
   spawnPickups();
+  fog.reset();
   playerState.lives = 3;
   resetPlayer();
   ui.state = 'in-game';
@@ -965,7 +968,7 @@ const loop = new GameLoop({
     const displayWidth = canvas.width;
     const displayHeight = canvas.height;
     fog.resize(displayWidth, displayHeight);
-    const { width: viewWidth, height: viewHeight, scaleX, scaleY } = getCanvasViewMetrics(context);
+    const { width: viewWidth, height: viewHeight } = getCanvasViewMetrics(context);
     sky.render(context, camera.x, camera.y);
 
     if (ui.state === 'title') {
@@ -996,6 +999,8 @@ const loop = new GameLoop({
     const shakeOffset = shake.offset(1 / 60);
     const originWithShakeX = originX + shakeOffset.x;
     const originWithShakeY = originY + shakeOffset.y;
+    const cameraIsoX = camera.x - shakeOffset.x;
+    const cameraIsoY = camera.y - shakeOffset.y;
     renderer.draw(context, runtimeMap, isoParams, originWithShakeX, originWithShakeY);
 
     buildings.forEach((entity, building) => {
@@ -1098,22 +1103,18 @@ const loop = new GameLoop({
       }
     });
 
+    const revealRadius = Math.max(120, Math.min(viewWidth, viewHeight) * 0.22);
+    fog.reveal(playerT.tx, playerT.ty, revealRadius, isoParams);
     if (ui.settings.fogOfWar) {
-      const playerIso = tileToIso(playerT.tx, playerT.ty, isoParams);
-      const holeX = Math.floor(viewWidth / 2 + (playerIso.x - camera.x) + shakeOffset.x);
-      const holeY = Math.floor(viewHeight / 2 + (playerIso.y - camera.y) + shakeOffset.y);
-      const radius = Math.max(120, Math.min(viewWidth, viewHeight) * 0.22);
-      const fogScaleX = scaleX || 1;
-      const fogScaleY = scaleY || 1;
-      const fogScale = Math.max(fogScaleX, fogScaleY);
-      fog.render(context, [
-        {
-          x: holeX * fogScaleX,
-          y: holeY * fogScaleY,
-          radius: radius * fogScale,
-          softness: 0.5,
-        },
-      ]);
+      fog.render(context, {
+        iso: isoParams,
+        originX: originWithShakeX,
+        originY: originWithShakeY,
+        cameraX: cameraIsoX,
+        cameraY: cameraIsoY,
+        viewWidth,
+        viewHeight,
+      });
     }
 
     const fuelComp = fuels.get(player)!;
@@ -1191,7 +1192,11 @@ const loop = new GameLoop({
       context.fillText('Mission Failed', viewWidth / 2, viewHeight / 2);
       context.fillStyle = '#c8d7e1';
       context.font = '14px system-ui, sans-serif';
-      context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, viewHeight / 2 + 26);
+      context.fillText(
+        'Press Enter to restart or Esc for title',
+        viewWidth / 2,
+        viewHeight / 2 + 26,
+      );
       context.restore();
       return;
     }
@@ -1206,7 +1211,11 @@ const loop = new GameLoop({
       context.fillText('Mission Complete', viewWidth / 2, viewHeight / 2 - 8);
       context.fillStyle = '#c8d7e1';
       context.font = '14px system-ui, sans-serif';
-      context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, viewHeight / 2 + 16);
+      context.fillText(
+        'Press Enter to restart or Esc for title',
+        viewWidth / 2,
+        viewHeight / 2 + 16,
+      );
       context.restore();
       return;
     }
