@@ -51,7 +51,7 @@ export class EnemyBehaviorSystem implements System {
         const ny = dy / (dist || 1);
         this.fireEvents.push({
           faction: 'enemy',
-          kind: 'cannon',
+          kind: 'missile',
           sx: t.tx,
           sy: t.ty,
           dx: nx,
@@ -88,7 +88,7 @@ export class EnemyBehaviorSystem implements System {
         const dirY = (dx / dist) * sn + (dy / dist) * cs;
         this.fireEvents.push({
           faction: 'enemy',
-          kind: 'cannon',
+          kind: 'missile',
           sx: t.tx,
           sy: t.ty,
           dx: dirX,

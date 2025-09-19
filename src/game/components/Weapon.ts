@@ -1,8 +1,8 @@
-export type WeaponKind = 'cannon' | 'rocket' | 'missile';
+export type WeaponKind = 'missile' | 'rocket' | 'hellfire';
 
 export interface WeaponHolder {
   active: WeaponKind;
-  cooldownCannon: number;
-  cooldownRocket: number;
   cooldownMissile: number;
+  cooldownRocket: number;
+  cooldownHellfire: number;
 }
