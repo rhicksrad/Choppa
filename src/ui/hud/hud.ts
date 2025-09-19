@@ -1,4 +1,5 @@
 import type { IsoParams } from '../../render/iso/projection';
+import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 
 export interface BarsData {
   fuel01: number;
@@ -28,8 +29,7 @@ export function drawHUD(
   },
   _iso: IsoParams,
 ): void {
-  const w = ctx.canvas.width;
-  const h = ctx.canvas.height;
+  const { width: w, height: h } = getCanvasViewMetrics(ctx);
   ctx.save();
   // Bars bottom-left (larger/high-contrast)
   const x0 = 16;
