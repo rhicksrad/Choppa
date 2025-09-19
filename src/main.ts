@@ -167,8 +167,8 @@ let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
 isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
 const pad = {
-  tx: Math.floor(runtimeMap.width / 2) - 2,
-  ty: Math.floor(runtimeMap.height / 2) + 1,
+  tx: runtimeMap.width - 5,
+  ty: runtimeMap.height - 5,
   radius: 1.2,
 };
 
@@ -252,7 +252,7 @@ const waveSpawnPoints = [
   { tx: 7, ty: 7 },
   { tx: 28, ty: 9 },
   { tx: 12, ty: 28 },
-  { tx: 29, ty: 28 },
+  { tx: 20, ty: 6 },
 ];
 const buildingSites: BuildingSite[] = [
   {
