@@ -1,4 +1,4 @@
-export type ObjectiveType = 'reach' | 'destroy';
+export type ObjectiveType = 'reach' | 'destroy' | 'custom';
 
 export interface ObjectiveDef {
   id: string;

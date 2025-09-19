@@ -1,7 +1,7 @@
 {
   "id": "m01",
   "title": "Expanded Foothold",
-  "briefing": "Push across the valley, neutralize air defenses, and level the command site before returning to base.",
+  "briefing": "Push across the valley, neutralize air defenses, level the command campus, repel the alien responders, evacuate survivors, and return to base.",
   "startPos": { "tx": 31, "ty": 31 },
   "objectives": [
     {
@@ -27,6 +27,20 @@
     },
     {
       "id": "obj4",
+      "type": "custom",
+      "name": "Crush the alien vanguard",
+      "at": { "tx": 18, "ty": 18 },
+      "radiusTiles": 6
+    },
+    {
+      "id": "obj5",
+      "type": "custom",
+      "name": "Evacuate campus survivors",
+      "at": { "tx": 18, "ty": 18 },
+      "radiusTiles": 6
+    },
+    {
+      "id": "obj6",
       "type": "reach",
       "name": "Return to the pad",
       "at": { "tx": 31, "ty": 31 },
