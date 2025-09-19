@@ -6,8 +6,8 @@ export interface BarsData {
   fuelCurrent: number;
   fuelMax: number;
   armor01: number;
-  ammo: { cannon: number; rockets: number; missiles: number };
-  ammoMax: { cannon: number; rockets: number; missiles: number };
+  ammo: { missiles: number; rockets: number; hellfires: number };
+  ammoMax: { missiles: number; rockets: number; hellfires: number };
   activeWeapon: string;
   lives: number;
   score: number;
@@ -41,9 +41,9 @@ export function drawHUD(
   const fuelText = `Fuel: ${Math.round(bars.fuelCurrent)} / ${Math.round(bars.fuelMax)}`;
   ctx.fillText(fuelText, x0, y0 - 78);
   const ammoText =
-    `Ammo  C:${bars.ammo.cannon}/${bars.ammoMax.cannon}  ` +
+    `Ammo  M:${bars.ammo.missiles}/${bars.ammoMax.missiles}  ` +
     `R:${bars.ammo.rockets}/${bars.ammoMax.rockets}  ` +
-    `M:${bars.ammo.missiles}/${bars.ammoMax.missiles}  [` +
+    `H:${bars.ammo.hellfires}/${bars.ammoMax.hellfires}  [` +
     `${bars.activeWeapon.toUpperCase()}]`;
   ctx.fillText(ammoText, x0, y0 - 60);
   ctx.fillStyle = '#c8d7e1';

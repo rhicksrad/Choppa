@@ -38,7 +38,7 @@ export class AIControlSystem implements System {
       const dpy = dirX * sn + dirY * cs;
       this.fireEvents.push({
         faction: 'enemy',
-        kind: 'cannon',
+        kind: 'missile',
         sx: t.tx,
         sy: t.ty,
         dx: dpx,
@@ -47,7 +47,7 @@ export class AIControlSystem implements System {
       });
     });
 
-    // SAM: lock and fire missile
+    // SAM: lock and fire hellfire missile
     this.sams.forEach((_e, sam) => {
       sam.cooldown = Math.max(0, sam.cooldown - dt);
       const t = this.transforms.get(_e);
@@ -66,7 +66,7 @@ export class AIControlSystem implements System {
         const dirY = dy / (dist || 1);
         this.fireEvents.push({
           faction: 'enemy',
-          kind: 'missile',
+          kind: 'hellfire',
           x: t.tx,
           y: t.ty,
           vx: dirX * sam.missileSpeed,

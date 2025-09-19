@@ -10,7 +10,7 @@ import { RNG } from '../../core/util/rng';
 export type FireEvent =
   | {
       faction: 'player' | 'enemy';
-      kind: 'cannon';
+      kind: 'missile';
       sx: number;
       sy: number;
       dx: number;
@@ -20,17 +20,22 @@ export type FireEvent =
       ttl?: number;
       radius?: number;
       damage?: number;
+      damageRadius?: number;
     }
   | { faction: 'player' | 'enemy'; kind: 'rocket'; x: number; y: number; vx: number; vy: number }
   | {
       faction: 'player' | 'enemy';
-      kind: 'missile';
+      kind: 'hellfire';
       x: number;
       y: number;
       vx: number;
       vy: number;
       targetX: number;
       targetY: number;
+      ttl?: number;
+      radius?: number;
+      damage?: number;
+      damageRadius?: number;
     };
 
 export class WeaponFireSystem implements System {
@@ -62,9 +67,9 @@ export class WeaponFireSystem implements System {
   update(dt: number): void {
     // Cooldowns decay
     this.weapons.forEach((entity, w) => {
-      w.cooldownCannon = Math.max(0, w.cooldownCannon - dt);
-      w.cooldownRocket = Math.max(0, w.cooldownRocket - dt);
       w.cooldownMissile = Math.max(0, w.cooldownMissile - dt);
+      w.cooldownRocket = Math.max(0, w.cooldownRocket - dt);
+      w.cooldownHellfire = Math.max(0, w.cooldownHellfire - dt);
     });
 
     const snap = this.input;
@@ -99,9 +104,9 @@ export class WeaponFireSystem implements System {
       const ammo = this.ammo.get(entity);
       if (!ph || !ammo) return;
 
-      if (snap.keys['1']) w.active = 'cannon';
+      if (snap.keys['1']) w.active = 'missile';
       else if (snap.keys['2']) w.active = 'rocket';
-      else if (snap.keys['3']) w.active = 'missile';
+      else if (snap.keys['3']) w.active = 'hellfire';
 
       // Aim direction from entity to aim tile
       const ax = this.aimTileX - t.tx;
@@ -111,11 +116,11 @@ export class WeaponFireSystem implements System {
       const dirY = ay / ad;
 
       // Active-weapon fire (also direct-mapped buttons)
-      if ((w.active === 'cannon' && (isLmb || primaryKey)) || isLmb || primaryKey) {
-        // Cannon: short cooldown, spread, hitscan
-        if (w.cooldownCannon <= 0 && ammo.cannon > 0) {
-          w.cooldownCannon = 0.08;
-          ammo.cannon = Math.max(0, ammo.cannon - 1);
+      if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
+        // Missile: short cooldown, spread, small AoE
+        if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
+          w.cooldownMissile = 0.1;
+          ammo.missiles = Math.max(0, ammo.missiles - 1);
           const spread = 0.08; // radians
           const jitter = (this.rng.float01() - 0.5) * 2 * spread;
           const cs = Math.cos(jitter);
@@ -124,16 +129,17 @@ export class WeaponFireSystem implements System {
           const dy = dirX * sn + dirY * cs;
           this.eventsOut.push({
             faction: 'player',
-            kind: 'cannon',
+            kind: 'missile',
             sx: t.tx,
             sy: t.ty,
             dx,
             dy,
             spread,
-            speed: 22,
-            ttl: 1.1,
-            radius: 0.12,
-            damage: 6,
+            speed: 20,
+            ttl: 1.15,
+            radius: 0.16,
+            damage: 10,
+            damageRadius: 0.35,
           });
         }
       }
@@ -154,20 +160,24 @@ export class WeaponFireSystem implements System {
         }
       }
 
-      if ((w.active === 'missile' && (isMmb || specialKey)) || isMmb || specialKey) {
-        if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
-          w.cooldownMissile = 1.0;
-          ammo.missiles = Math.max(0, ammo.missiles - 1);
+      if ((w.active === 'hellfire' && (isMmb || specialKey)) || isMmb || specialKey) {
+        if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
+          w.cooldownHellfire = 1.25;
+          ammo.hellfires = Math.max(0, ammo.hellfires - 1);
           const speed = 5.5;
           this.eventsOut.push({
             faction: 'player',
-            kind: 'missile',
+            kind: 'hellfire',
             x: t.tx,
             y: t.ty,
             vx: dirX * speed,
             vy: dirY * speed,
             targetX: this.aimTileX,
             targetY: this.aimTileY,
+            ttl: 6,
+            radius: 0.22,
+            damage: 32,
+            damageRadius: 1.25,
           });
         }
       }
@@ -176,7 +186,7 @@ export class WeaponFireSystem implements System {
 }
 
 function nextWeapon(k: WeaponKind): WeaponKind {
-  if (k === 'cannon') return 'rocket';
-  if (k === 'rocket') return 'missile';
-  return 'cannon';
+  if (k === 'missile') return 'rocket';
+  if (k === 'rocket') return 'hellfire';
+  return 'missile';
 }
