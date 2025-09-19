@@ -2,7 +2,7 @@
   "id": "m01",
   "title": "Expanded Foothold",
   "briefing": "Push across the valley, neutralize air defenses, and level the command site before returning to base.",
-  "startPos": { "tx": 16, "ty": 19 },
+  "startPos": { "tx": 31, "ty": 31 },
   "objectives": [
     {
       "id": "obj1",
@@ -29,7 +29,7 @@
       "id": "obj4",
       "type": "reach",
       "name": "Return to the pad",
-      "at": { "tx": 16, "ty": 19 },
+      "at": { "tx": 31, "ty": 31 },
       "radiusTiles": 1.2
     }
   ],
