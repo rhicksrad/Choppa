@@ -15,6 +15,15 @@ Open the printed URL in Chrome or Firefox. For a production build:
 npm run build
 ```
 
+## Deployment
+
+The production site is deployed through the automated workflow in
+`.github/workflows/gh-pages.yml`, which builds the project with Vite and uploads the
+contents of the `dist/` directory to GitHub Pages. This ensures the published
+site always serves bundled JavaScript along with the generated `favicon.ico` and
+`manifest.webmanifest` assets, avoiding MIME-type errors or missing resources in
+production.
+
 ## Controls
 
 - **WASD / Arrow Keys** – Fly the chopper
