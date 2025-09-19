@@ -1,3 +1,9 @@
+### Unreleased
+
+- Remove redundant static GitHub Pages workflow so the production site serves the
+  bundled build and not raw TypeScript assets.
+- Document the deployment workflow in the README for future contributors.
+
 ### 0.1.0 — Phase 0 — Scaffold & Pages
 
 - Initialize Vite + TypeScript project with strict tsconfig
