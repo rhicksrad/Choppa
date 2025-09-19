@@ -118,6 +118,14 @@ export function drawPickupCrate(
     ctx.quadraticCurveTo(-6, -6, 0, -4);
     ctx.closePath();
     ctx.fill();
+  } else if (params.kind === 'survivor') {
+    ctx.beginPath();
+    ctx.arc(0, -4, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-2, 0, 4, 6);
+    ctx.beginPath();
+    ctx.roundRect(-5, 2, 10, 3.5, 1.5);
+    ctx.fill();
   } else {
     ctx.beginPath();
     ctx.roundRect(-7, -3, 14, 6, 2);
@@ -177,6 +185,14 @@ function getPalette(kind: PickupKind): {
       top: '#3d8f4a',
       straps: '#203526',
       icon: '#9df2b0',
+    };
+  }
+  if (kind === 'survivor') {
+    return {
+      body: '#2f3d6f',
+      top: '#4054a1',
+      straps: '#1c2446',
+      icon: '#f4f6ff',
     };
   }
   return {

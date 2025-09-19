@@ -80,6 +80,14 @@ interface PickupSite {
   ammo?: { cannon?: number; rockets?: number; missiles?: number };
 }
 
+interface SurvivorSite {
+  tx: number;
+  ty: number;
+  count: number;
+  radius?: number;
+  duration?: number;
+}
+
 interface Explosion {
   tx: number;
   ty: number;
@@ -211,10 +219,18 @@ const weaponFire = new WeaponFireSystem(transforms, physics, weapons, ammos, fir
 const damage = new DamageSystem(transforms, colliders, healths);
 const missionDef = missionJson as MissionDef;
 let missionState = loadMission(missionDef);
-const mission = new MissionTracker(missionState, transforms, colliders, healths, () => ({
-  tx: transforms.get(player)!.tx,
-  ty: transforms.get(player)!.ty,
-}));
+const missionHandlers: Record<string, () => boolean> = {};
+const mission = new MissionTracker(
+  missionState,
+  transforms,
+  colliders,
+  healths,
+  () => ({
+    tx: transforms.get(player)!.tx,
+    ty: transforms.get(player)!.ty,
+  }),
+  missionHandlers,
+);
 
 scheduler.add(new MovementSystem(transforms, physics));
 scheduler.add(new RotorSpinSystem(sprites));
@@ -248,6 +264,8 @@ const waveState: WaveState = {
 const minimapEnemies: { tx: number; ty: number }[] = [];
 const buildingEntities: Entity[] = [];
 const pickupEntities: Entity[] = [];
+const survivorEntities: Entity[] = [];
+const alienEntities: Set<Entity> = new Set();
 const waveSpawnPoints = [
   { tx: 7, ty: 7 },
   { tx: 28, ty: 9 },
@@ -309,6 +327,25 @@ const buildingSites: BuildingSite[] = [
   },
 ];
 
+const SURVIVOR_CAPACITY = 4;
+
+const survivorSites: SurvivorSite[] = [
+  { tx: 18.2, ty: 17.4, count: 3, radius: 0.85, duration: 1.6 },
+  { tx: 20.4, ty: 18.8, count: 2, radius: 0.85, duration: 1.6 },
+  { tx: 16.1, ty: 19.6, count: 3, radius: 0.9, duration: 1.7 },
+  { tx: 18.7, ty: 21.2, count: 2, radius: 0.9, duration: 1.7 },
+  { tx: 15.4, ty: 17.8, count: 2, radius: 0.85, duration: 1.5 },
+];
+
+const alienSpawnPoints: { tx: number; ty: number }[] = [
+  { tx: 17.2, ty: 14.6 },
+  { tx: 21.1, ty: 16.3 },
+  { tx: 14.4, ty: 18.4 },
+  { tx: 19.6, ty: 21.3 },
+  { tx: 16.2, ty: 22.1 },
+  { tx: 22.4, ty: 19.2 },
+];
+
 const pickupSites: PickupSite[] = [
   { tx: 15.2, ty: 18.4, kind: 'fuel', fuelAmount: 55 },
   { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { cannon: 90, rockets: 3, missiles: 1 } },
@@ -321,6 +358,20 @@ const pickupSites: PickupSite[] = [
   { tx: 31.2, ty: 14.4, kind: 'ammo', ammo: { cannon: 95, rockets: 3, missiles: 2 } },
   { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
 ];
+
+const rescueState = {
+  carrying: 0,
+  rescued: 0,
+  total: survivorSites.reduce((sum, site) => sum + site.count, 0),
+  survivorsSpawned: false,
+};
+
+let aliensTriggered = false;
+let aliensDefeated = false;
+let campusLeveled = false;
+
+missionHandlers.obj4 = () => aliensTriggered && aliensDefeated;
+missionHandlers.obj5 = () => rescueState.rescued >= rescueState.total;
 
 let fps = 0;
 let frames = 0;
@@ -369,7 +420,10 @@ function destroyEntity(entity: Entity): void {
   if (buildingIndex !== -1) buildingEntities.splice(buildingIndex, 1);
   const pickupIndex = pickupEntities.indexOf(entity);
   if (pickupIndex !== -1) pickupEntities.splice(pickupIndex, 1);
+  const survivorIndex = survivorEntities.indexOf(entity);
+  if (survivorIndex !== -1) survivorEntities.splice(survivorIndex, 1);
   enemyMeta.delete(entity);
+  alienEntities.delete(entity);
   waveState.enemies.delete(entity);
   entities.destroy(entity);
 }
@@ -384,6 +438,7 @@ function clearEnemies(): void {
   for (let i = 0; i < ids.length; i += 1) destroyEntity(ids[i]!);
   enemyMeta.clear();
   waveState.enemies.clear();
+  alienEntities.clear();
 }
 
 function spawnMissionEnemies(): void {
@@ -453,6 +508,7 @@ function clearPickups(): void {
     destroyEntity(entity);
   }
   pickupEntities.length = 0;
+  survivorEntities.length = 0;
 }
 
 function spawnPickups(): void {
@@ -478,6 +534,28 @@ function spawnPickups(): void {
       progress: 0,
     });
     pickupEntities.push(entity);
+  }
+}
+
+function spawnSurvivors(): void {
+  if (rescueState.survivorsSpawned) return;
+  rescueState.survivorsSpawned = true;
+  for (let i = 0; i < survivorSites.length; i += 1) {
+    const site = survivorSites[i]!;
+    const entity = entities.create();
+    transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
+    pickups.set(entity, {
+      kind: 'survivor',
+      radius: site.radius ?? 0.9,
+      duration: site.duration ?? 1.6,
+      fuelAmount: undefined,
+      ammo: undefined,
+      survivorCount: site.count,
+      collectingBy: null,
+      progress: 0,
+    });
+    pickupEntities.push(entity);
+    survivorEntities.push(entity);
   }
 }
 
@@ -534,6 +612,53 @@ function spawnChaserEnemy(point: { tx: number; ty: number }, wave: number): void
   registerEnemy(entity, { kind: 'chaser', score: 220 + wave * 20, wave });
 }
 
+function spawnAlienUnit(point: { tx: number; ty: number }): void {
+  const entity = entities.create();
+  transforms.set(entity, { tx: point.tx, ty: point.ty, rot: 0 });
+  physics.set(entity, {
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    drag: 0.7,
+    maxSpeed: 3.4,
+    turnRate: Math.PI * 1.5,
+  });
+  healths.set(entity, { current: 36, max: 36 });
+  colliders.set(entity, { radius: 0.35, team: 'enemy' });
+  chasers.set(entity, {
+    speed: 3.1,
+    acceleration: 3.6,
+    fireRange: 6.6,
+    fireInterval: 1,
+    cooldown: 0,
+    spread: 0.22,
+  });
+  registerEnemy(entity, { kind: 'chaser', score: 260 });
+  alienEntities.add(entity);
+}
+
+function triggerAlienCounterattack(): void {
+  if (aliensTriggered) return;
+  aliensTriggered = true;
+  aliensDefeated = false;
+  for (let i = 0; i < alienSpawnPoints.length; i += 1) {
+    spawnAlienUnit(alienSpawnPoints[i]!);
+  }
+}
+
+function checkBuildingsForAlienTrigger(): void {
+  if (aliensTriggered) return;
+  for (let i = 0; i < buildingEntities.length; i += 1) {
+    const entity = buildingEntities[i]!;
+    const h = healths.get(entity);
+    if (h && h.current < h.max) {
+      triggerAlienCounterattack();
+      break;
+    }
+  }
+}
+
 function spawnWave(index: number): void {
   waveState.enemies.clear();
   const patrolCount = Math.min(waveSpawnPoints.length, 2 + index);
@@ -586,6 +711,12 @@ function resetGame(): void {
   waveState.countdown = 3.5;
   waveState.active = false;
   waveState.timeInWave = 0;
+  rescueState.carrying = 0;
+  rescueState.rescued = 0;
+  rescueState.survivorsSpawned = false;
+  aliensTriggered = false;
+  aliensDefeated = false;
+  campusLeveled = false;
   missionState = loadMission(missionDef);
   mission.state = missionState;
   spawnBuildings();
@@ -798,9 +929,10 @@ const loop = new GameLoop({
 
     const completedPickups: {
       entity: Entity;
-      kind: 'fuel' | 'ammo';
+      kind: Pickup['kind'];
       fuelAmount?: number;
       ammo?: { cannon?: number; rockets?: number; missiles?: number };
+      survivorCount?: number;
     }[] = [];
     pickups.forEach((entity, pickup) => {
       const pickupTransform = transforms.get(entity);
@@ -830,6 +962,7 @@ const loop = new GameLoop({
             kind: pickup.kind,
             fuelAmount: pickup.fuelAmount,
             ammo: pickup.ammo ? { ...pickup.ammo } : undefined,
+            survivorCount: pickup.survivorCount,
           });
         }
         return;
@@ -845,18 +978,29 @@ const loop = new GameLoop({
         const dx = pickupTransform.tx - playerTransform.tx;
         const dy = pickupTransform.ty - playerTransform.ty;
         const dist = Math.hypot(dx, dy);
-        if (dist <= pickup.radius) {
-          const needsFuel = playerFuel.current < playerFuel.max - 0.5;
-          const needsAmmo =
-            playerAmmo.cannon < playerAmmo.cannonMax ||
-            playerAmmo.rockets < playerAmmo.rocketsMax ||
-            playerAmmo.missiles < playerAmmo.missilesMax;
-          if (
-            !playerState.invulnerable &&
-            ((pickup.kind === 'fuel' && needsFuel) || (pickup.kind === 'ammo' && needsAmmo))
-          ) {
-            pickup.collectingBy = player;
-            pickup.progress = 0;
+        if (dist <= pickup.radius && !playerState.invulnerable) {
+          if (pickup.kind === 'fuel') {
+            const needsFuel = playerFuel.current < playerFuel.max - 0.5;
+            if (needsFuel) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+            }
+          } else if (pickup.kind === 'ammo') {
+            const needsAmmo =
+              playerAmmo.cannon < playerAmmo.cannonMax ||
+              playerAmmo.rockets < playerAmmo.rocketsMax ||
+              playerAmmo.missiles < playerAmmo.missilesMax;
+            if (needsAmmo) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+            }
+          } else if (pickup.kind === 'survivor') {
+            const survivors = pickup.survivorCount ?? 1;
+            const remainingCapacity = SURVIVOR_CAPACITY - rescueState.carrying;
+            if (remainingCapacity >= survivors) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+            }
           }
         }
       }
@@ -867,7 +1011,7 @@ const loop = new GameLoop({
       if (item.kind === 'fuel') {
         const amount = item.fuelAmount ?? 50;
         playerFuel.current = Math.min(playerFuel.max, playerFuel.current + amount);
-      } else if (item.ammo) {
+      } else if (item.kind === 'ammo' && item.ammo) {
         playerAmmo.cannon = Math.min(
           playerAmmo.cannonMax,
           playerAmmo.cannon + (item.ammo.cannon ?? 0),
@@ -880,8 +1024,24 @@ const loop = new GameLoop({
           playerAmmo.missilesMax,
           playerAmmo.missiles + (item.ammo.missiles ?? 0),
         );
+      } else if (item.kind === 'survivor') {
+        const count = item.survivorCount ?? 1;
+        rescueState.carrying = Math.min(SURVIVOR_CAPACITY, rescueState.carrying + count);
       }
       destroyEntity(item.entity);
+    }
+
+    if (rescueState.carrying > 0 && !playerState.invulnerable) {
+      const dxPad = playerTransform.tx - pad.tx;
+      const dyPad = playerTransform.ty - pad.ty;
+      const distPad = Math.hypot(dxPad, dyPad);
+      if (distPad <= pad.radius + 0.2) {
+        rescueState.rescued = Math.min(
+          rescueState.total,
+          rescueState.rescued + rescueState.carrying,
+        );
+        rescueState.carrying = 0;
+      }
     }
 
     const margin = 1.2;
@@ -944,7 +1104,11 @@ const loop = new GameLoop({
     });
 
     damage.update();
+    checkBuildingsForAlienTrigger();
     handleDeaths();
+    if (!campusLeveled && buildingEntities.length === 0) campusLeveled = true;
+    if (aliensTriggered && !aliensDefeated && alienEntities.size === 0) aliensDefeated = true;
+    if (!rescueState.survivorsSpawned && campusLeveled && aliensDefeated) spawnSurvivors();
 
     mission.update();
     if (mission.state.complete && ui.state === 'in-game') {
@@ -1122,6 +1286,20 @@ const loop = new GameLoop({
     const healthComp = healths.get(player)!;
     const weaponComp = weapons.get(player)!;
 
+    const objectiveLines = mission.state.objectives.map((o) => {
+      let label = o.name;
+      if (o.id === 'obj4') {
+        if (!aliensTriggered) label = `${o.name} (stand by)`;
+        else if (!o.complete) label = `${o.name} (${alienEntities.size} remaining)`;
+      } else if (o.id === 'obj5') {
+        const carrying = rescueState.carrying;
+        label = `${o.name} (${rescueState.rescued}/${rescueState.total}`;
+        if (carrying > 0) label += ` +${carrying}`;
+        label += ')';
+      }
+      return `${o.complete ? '[x]' : '[ ]'} ${label}`;
+    });
+
     drawHUD(
       context,
       {
@@ -1146,7 +1324,7 @@ const loop = new GameLoop({
         enemiesRemaining: waveState.enemies.size,
         nextWaveIn: waveState.active ? null : waveState.countdown,
       },
-      mission.state.objectives.map((o) => `${o.complete ? '[x]' : '[ ]'} ${o.name}`),
+      objectiveLines,
       null,
       {
         mapW: runtimeMap.width,

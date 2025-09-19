@@ -11,6 +11,7 @@ export class MissionTracker {
     private colliders: ComponentStore<Collider>,
     private healths: ComponentStore<Health>,
     private getPlayer: () => { tx: number; ty: number },
+    private overrides: Record<string, () => boolean> = {},
   ) {}
 
   public update(): void {
@@ -18,6 +19,11 @@ export class MissionTracker {
     for (let i = 0; i < this.state.objectives.length; i += 1) {
       const o = this.state.objectives[i]!;
       if (o.complete) continue;
+      const override = this.overrides[o.id];
+      if (override) {
+        if (override()) o.complete = true;
+        continue;
+      }
       if (o.type === 'reach') {
         const p = this.getPlayer();
         if (tileDist(p.tx, p.ty, o.at.tx, o.at.ty) <= o.radiusTiles) {
