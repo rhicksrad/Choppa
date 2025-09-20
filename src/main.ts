@@ -33,7 +33,13 @@ import { ProjectilePool } from './game/systems/Projectile';
 import type { AAA, SAM, PatrolDrone, ChaserDrone } from './game/components/AI';
 import { AIControlSystem } from './game/systems/AIControl';
 import { EnemyBehaviorSystem } from './game/systems/EnemyBehavior';
-import { drawAAATurret, drawSAM, drawPatrolDrone, drawChaserDrone } from './render/sprites/targets';
+import {
+  drawAAATurret,
+  drawSAM,
+  drawPatrolDrone,
+  drawChaserDrone,
+  drawAlienMonstrosity,
+} from './render/sprites/targets';
 import { Menu } from './ui/menus/menu';
 import { createUIStore, type UIStore } from './ui/menus/scenes';
 import { renderSettings, renderAchievements, renderAbout } from './ui/menus/renderers';
@@ -1565,7 +1571,12 @@ const loop = new GameLoop({
     });
     chasers.forEach((entity, _c) => {
       const t = transforms.get(entity);
-      if (t) drawChaserDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
+      if (!t) return;
+      if (alienEntities.has(entity)) {
+        drawAlienMonstrosity(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
+      } else {
+        drawChaserDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
+      }
     });
 
     projectilePool.draw(
