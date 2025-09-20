@@ -16,13 +16,25 @@ export type FireEvent =
       dx: number;
       dy: number;
       spread: number;
+      launchOffset?: number;
       speed?: number;
       ttl?: number;
       radius?: number;
       damage?: number;
       damageRadius?: number;
     }
-  | { faction: 'player' | 'enemy'; kind: 'rocket'; x: number; y: number; vx: number; vy: number }
+  | {
+      faction: 'player' | 'enemy';
+      kind: 'rocket';
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      ttl?: number;
+      radius?: number;
+      damage?: number;
+      damageRadius?: number;
+    }
   | {
       faction: 'player' | 'enemy';
       kind: 'hellfire';
@@ -30,6 +42,8 @@ export type FireEvent =
       y: number;
       vx: number;
       vy: number;
+      speed?: number;
+      launchOffset?: number;
       targetX: number;
       targetY: number;
       ttl?: number;
@@ -117,7 +131,7 @@ export class WeaponFireSystem implements System {
 
       // Active-weapon fire (also direct-mapped buttons)
       if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
-        // Missile: short cooldown, spread, small AoE
+        // Missile: rapid salvo with fast launch and splash damage
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 0.1;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
@@ -135,11 +149,12 @@ export class WeaponFireSystem implements System {
             dx,
             dy,
             spread,
-            speed: 20,
-            ttl: 1.15,
-            radius: 0.16,
+            launchOffset: 0.48,
+            speed: 22,
+            ttl: 0.7,
+            radius: 0.08,
             damage: 10,
-            damageRadius: 0.35,
+            damageRadius: 0.12,
           });
         }
       }
@@ -148,7 +163,7 @@ export class WeaponFireSystem implements System {
         if (w.cooldownRocket <= 0 && ammo.rockets > 0) {
           w.cooldownRocket = 0.4;
           ammo.rockets = Math.max(0, ammo.rockets - 1);
-          const speed = 6;
+          const speed = 8.8;
           this.eventsOut.push({
             faction: 'player',
             kind: 'rocket',
@@ -156,6 +171,10 @@ export class WeaponFireSystem implements System {
             y: t.ty,
             vx: dirX * speed,
             vy: dirY * speed,
+            ttl: 5.2,
+            radius: 0.22,
+            damage: 16,
+            damageRadius: 0.9,
           });
         }
       }
@@ -164,7 +183,8 @@ export class WeaponFireSystem implements System {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
           w.cooldownHellfire = 1.25;
           ammo.hellfires = Math.max(0, ammo.hellfires - 1);
-          const speed = 5.5;
+          const speed = 24;
+          const launchOffset = 0.92;
           this.eventsOut.push({
             faction: 'player',
             kind: 'hellfire',
@@ -172,12 +192,14 @@ export class WeaponFireSystem implements System {
             y: t.ty,
             vx: dirX * speed,
             vy: dirY * speed,
+            speed,
+            launchOffset,
             targetX: this.aimTileX,
             targetY: this.aimTileY,
-            ttl: 6,
-            radius: 0.22,
-            damage: 32,
-            damageRadius: 1.25,
+            ttl: 7.5,
+            radius: 0.3,
+            damage: 36,
+            damageRadius: 1.9,
           });
         }
       }

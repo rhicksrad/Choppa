@@ -36,6 +36,8 @@ export class AIControlSystem implements System {
       const sn = Math.sin(jitter);
       const dpx = dirX * cs - dirY * sn;
       const dpy = dirX * sn + dirY * cs;
+      const speed = gun.projectileSpeed;
+      const ttl = gun.range / Math.max(4, speed);
       this.fireEvents.push({
         faction: 'enemy',
         kind: 'missile',
@@ -44,6 +46,12 @@ export class AIControlSystem implements System {
         dx: dpx,
         dy: dpy,
         spread: gun.spread,
+        speed,
+        ttl,
+        radius: 0.08,
+        damage: 10,
+        damageRadius: 0.12,
+        launchOffset: 0.45,
       });
     });
 
@@ -71,6 +79,8 @@ export class AIControlSystem implements System {
           y: t.ty,
           vx: dirX * sam.missileSpeed,
           vy: dirY * sam.missileSpeed,
+          speed: sam.missileSpeed,
+          launchOffset: 0.7,
           targetX: player.x,
           targetY: player.y,
         });
