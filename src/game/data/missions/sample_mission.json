@@ -1,34 +1,34 @@
 {
   "id": "m01",
-  "title": "Expanded Foothold",
-  "briefing": "Push across the valley, neutralize air defenses, level the command campus, repel the alien responders, evacuate survivors, and return to base.",
+  "title": "Operation Dawnshield",
+  "briefing": "Alien strongholds anchor an invasion corridor through the valley. Neutralize their forward defenses, demolish the command campus, and evacuate anyone left standing before the counterattack closes in.",
   "startPos": { "tx": 31, "ty": 31 },
   "objectives": [
     {
       "id": "obj1",
       "type": "destroy",
-      "name": "Neutralize western AAA turret",
+      "name": "Destroy the valley stronghold",
       "at": { "tx": 11, "ty": 15 },
       "radiusTiles": 1.6
     },
     {
       "id": "obj2",
       "type": "destroy",
-      "name": "Neutralize ridge-line SAM",
+      "name": "Disable the ridge command nexus",
       "at": { "tx": 26, "ty": 11 },
       "radiusTiles": 1.6
     },
     {
       "id": "obj3",
       "type": "destroy",
-      "name": "Level the command campus",
+      "name": "Level the alien command campus",
       "at": { "tx": 18, "ty": 18 },
       "radiusTiles": 5
     },
     {
       "id": "obj4",
       "type": "custom",
-      "name": "Crush the alien vanguard",
+      "name": "Break the alien counterattack",
       "at": { "tx": 18, "ty": 18 },
       "radiusTiles": 6
     },
