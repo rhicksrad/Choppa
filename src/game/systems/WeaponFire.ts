@@ -16,6 +16,7 @@ export type FireEvent =
       dx: number;
       dy: number;
       spread: number;
+      launchOffset?: number;
       speed?: number;
       ttl?: number;
       radius?: number;
@@ -117,7 +118,7 @@ export class WeaponFireSystem implements System {
 
       // Active-weapon fire (also direct-mapped buttons)
       if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
-        // Missile: short cooldown, spread, small AoE
+        // Missile: rapid salvo with fast launch and splash damage
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 0.1;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
@@ -135,11 +136,12 @@ export class WeaponFireSystem implements System {
             dx,
             dy,
             spread,
-            speed: 20,
-            ttl: 1.15,
+            launchOffset: 0.65,
+            speed: 26,
+            ttl: 1.2,
             radius: 0.16,
-            damage: 10,
-            damageRadius: 0.35,
+            damage: 12,
+            damageRadius: 0.7,
           });
         }
       }
