@@ -126,6 +126,22 @@ export function drawPickupCrate(
     ctx.beginPath();
     ctx.roundRect(-5, 2, 10, 3.5, 1.5);
     ctx.fill();
+  } else if (params.kind === 'armor') {
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(6, -2);
+    ctx.quadraticCurveTo(0, 8, 0, 8);
+    ctx.quadraticCurveTo(0, 8, -6, -2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = shadeColor(palette.icon, -35);
+    ctx.beginPath();
+    ctx.moveTo(0, -3.5);
+    ctx.lineTo(3.6, -1.2);
+    ctx.quadraticCurveTo(0, 5.5, 0, 5.5);
+    ctx.quadraticCurveTo(0, 5.5, -3.6, -1.2);
+    ctx.closePath();
+    ctx.fill();
   } else {
     ctx.beginPath();
     ctx.roundRect(-7, -3, 14, 6, 2);
@@ -193,6 +209,14 @@ function getPalette(kind: PickupKind): {
       top: '#4054a1',
       straps: '#1c2446',
       icon: '#f4f6ff',
+    };
+  }
+  if (kind === 'armor') {
+    return {
+      body: '#1d4b59',
+      top: '#266c7b',
+      straps: '#0f2e36',
+      icon: '#9df2ff',
     };
   }
   return {

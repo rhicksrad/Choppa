@@ -51,7 +51,13 @@ import { drawHUD } from './ui/hud/hud';
 import { loadJson, saveJson } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
 import { AudioBus } from './core/audio/audio';
-import { EngineSound, playMissile, playRocket, playHellfire, playExplosion } from './core/audio/sfx';
+import {
+  EngineSound,
+  playMissile,
+  playRocket,
+  playHellfire,
+  playExplosion,
+} from './core/audio/sfx';
 import { CameraShake } from './render/camera/shake';
 import { getCanvasViewMetrics } from './render/canvas/metrics';
 import { drawPickupCrate } from './render/sprites/pickups';
@@ -73,17 +79,28 @@ interface BuildingSite {
   bodyColor: string;
   roofColor: string;
   ruinColor?: string;
+  score?: number;
+  drop?: { kind: 'armor'; amount: number };
+  category?: 'campus' | 'stronghold' | 'civilian';
+  triggersAlarm?: boolean;
+}
+
+interface BuildingMeta {
   score: number;
+  drop?: { kind: 'armor'; amount: number };
+  category: 'campus' | 'stronghold' | 'civilian';
+  triggersAlarm: boolean;
 }
 
 interface PickupSite {
   tx: number;
   ty: number;
-  kind: 'fuel' | 'ammo';
+  kind: 'fuel' | 'ammo' | 'armor';
   radius?: number;
   duration?: number;
   fuelAmount?: number;
   ammo?: { missiles?: number; rockets?: number; hellfires?: number };
+  armorAmount?: number;
 }
 
 interface SurvivorSite {
@@ -99,6 +116,7 @@ interface Explosion {
   ty: number;
   age: number;
   duration: number;
+  radius: number;
 }
 
 interface RescueRunner {
@@ -237,7 +255,12 @@ ammos.set(player, {
   hellfires: 2,
   hellfiresMax: 2,
 });
-weapons.set(player, { active: 'missile', cooldownMissile: 0, cooldownRocket: 0, cooldownHellfire: 0 });
+weapons.set(player, {
+  active: 'missile',
+  cooldownMissile: 0,
+  cooldownRocket: 0,
+  cooldownHellfire: 0,
+});
 healths.set(player, { current: 100, max: 100 });
 colliders.set(player, { radius: 0.4, team: 'player' });
 
@@ -248,6 +271,11 @@ const fireEvents: FireEvent[] = [];
 const weaponFire = new WeaponFireSystem(transforms, physics, weapons, ammos, fireEvents, rng);
 const damage = new DamageSystem(transforms, colliders, healths);
 const missionDef = missionJson as MissionDef;
+const missionBriefingInfo = {
+  title: missionDef.title,
+  text: missionDef.briefing,
+  goals: missionDef.objectives.map((o) => o.name),
+};
 let missionState = loadMission(missionDef);
 const missionHandlers: Record<string, () => boolean> = {};
 const mission = new MissionTracker(
@@ -283,7 +311,7 @@ const playerState: PlayerState = { lives: 3, respawnTimer: 0, invulnerable: fals
 const stats = { score: 0 };
 const explosions: Explosion[] = [];
 const enemyMeta = new Map<Entity, EnemyMeta>();
-const buildingMeta = new Map<Entity, { score: number }>();
+const buildingMeta = new Map<Entity, BuildingMeta>();
 const waveState: WaveState = {
   index: 0,
   countdown: 3,
@@ -303,60 +331,123 @@ const waveSpawnPoints = [
   { tx: 12, ty: 28 },
   { tx: 20, ty: 6 },
 ];
-const buildingSites: BuildingSite[] = [
+const campusSites: BuildingSite[] = [
   {
     tx: 18,
     ty: 16,
-    width: 1.6,
-    depth: 1.2,
-    height: 34,
-    health: 110,
-    colliderRadius: 0.85,
-    bodyColor: '#5b6d82',
-    roofColor: '#27313d',
-    ruinColor: '#472b2b',
-    score: 220,
+    width: 1.8,
+    depth: 1.35,
+    height: 36,
+    health: 140,
+    colliderRadius: 0.92,
+    bodyColor: '#372a54',
+    roofColor: '#52e0c6',
+    ruinColor: '#2a1b33',
+    score: 260,
+    category: 'campus',
+    triggersAlarm: true,
   },
   {
     tx: 21,
     ty: 19.2,
-    width: 1.4,
-    depth: 1.4,
-    height: 28,
-    health: 95,
-    colliderRadius: 0.8,
-    bodyColor: '#6c7c8f',
-    roofColor: '#2f3e4d',
-    ruinColor: '#593535',
-    score: 180,
+    width: 1.55,
+    depth: 1.45,
+    height: 30,
+    health: 120,
+    colliderRadius: 0.86,
+    bodyColor: '#3d244f',
+    roofColor: '#60f2d4',
+    ruinColor: '#311a3f',
+    score: 230,
+    category: 'campus',
+    triggersAlarm: true,
   },
   {
     tx: 15,
     ty: 20.5,
-    width: 1.8,
-    depth: 1.1,
-    height: 24,
-    health: 90,
+    width: 1.9,
+    depth: 1.15,
+    height: 26,
+    health: 110,
     colliderRadius: 0.9,
-    bodyColor: '#7c6d54',
-    roofColor: '#3c3322',
-    ruinColor: '#4a2b21',
-    score: 160,
+    bodyColor: '#3f2b59',
+    roofColor: '#4ad1b7',
+    ruinColor: '#2b1a39',
+    score: 200,
+    category: 'campus',
+    triggersAlarm: true,
   },
   {
     tx: 13.6,
     ty: 17.8,
-    width: 1.3,
-    depth: 1.3,
-    height: 30,
-    health: 100,
-    colliderRadius: 0.82,
-    bodyColor: '#5f6f5b',
-    roofColor: '#2a3529',
-    ruinColor: '#403125',
-    score: 190,
+    width: 1.4,
+    depth: 1.4,
+    height: 32,
+    health: 125,
+    colliderRadius: 0.84,
+    bodyColor: '#352c60',
+    roofColor: '#48c7b8',
+    ruinColor: '#291d40',
+    score: 210,
+    category: 'campus',
+    triggersAlarm: true,
   },
 ];
+
+let civilianHouseSites: BuildingSite[] = [];
+let buildingSites: BuildingSite[] = [];
+
+function generateCivilianHouses(): BuildingSite[] {
+  const clusters = [
+    { tx: 9.4, ty: 24.2, spread: 1.4, count: 3 },
+    { tx: 24.6, ty: 27.5, spread: 1.6, count: 3 },
+    { tx: 6.4, ty: 15.2, spread: 1.1, count: 2 },
+    { tx: 28.4, ty: 20.6, spread: 1.2, count: 2 },
+  ];
+  const palettes = [
+    { body: '#7c95a3', roof: '#2f3f4d', ruin: '#3b2b2b' },
+    { body: '#9a7c6a', roof: '#4c3324', ruin: '#3c2018' },
+    { body: '#7f8f6b', roof: '#39482f', ruin: '#32291d' },
+    { body: '#a08aa3', roof: '#3d2c4b', ruin: '#352139' },
+  ];
+  const houses: BuildingSite[] = [];
+  for (let c = 0; c < clusters.length; c += 1) {
+    const cluster = clusters[c]!;
+    for (let i = 0; i < cluster.count; i += 1) {
+      const paletteRawIndex = Math.floor(rng.range(0, palettes.length));
+      const paletteIndex = Math.min(palettes.length - 1, paletteRawIndex);
+      const palette = palettes[paletteIndex]!;
+      houses.push({
+        tx: cluster.tx + rng.range(-cluster.spread, cluster.spread),
+        ty: cluster.ty + rng.range(-cluster.spread, cluster.spread),
+        width: 0.95 + rng.range(-0.1, 0.25),
+        depth: 0.95 + rng.range(-0.18, 0.2),
+        height: 18 + rng.range(-2, 4),
+        health: 60 + rng.range(-8, 10),
+        colliderRadius: 0.6 + rng.range(-0.04, 0.08),
+        bodyColor: palette.body,
+        roofColor: palette.roof,
+        ruinColor: palette.ruin,
+        score: 0,
+        category: 'civilian',
+        triggersAlarm: false,
+      });
+    }
+  }
+  if (houses.length > 0) {
+    const specialIndex = Math.min(houses.length - 1, Math.floor(rng.range(0, houses.length)));
+    houses[specialIndex] = {
+      ...houses[specialIndex]!,
+      drop: { kind: 'armor', amount: 35 },
+    };
+  }
+  return houses;
+}
+
+function regenerateWorldStructures(): void {
+  civilianHouseSites = generateCivilianHouses();
+  buildingSites = [...campusSites, ...civilianHouseSites];
+}
 
 const SURVIVOR_CAPACITY = 4;
 
@@ -401,6 +492,8 @@ let aliensTriggered = false;
 let aliensDefeated = false;
 let campusLeveled = false;
 
+regenerateWorldStructures();
+
 missionHandlers.obj4 = () => aliensTriggered && aliensDefeated;
 missionHandlers.obj5 = () => rescueState.rescued >= rescueState.total;
 
@@ -418,8 +511,8 @@ function setAudioVolumes(): void {
 }
 setAudioVolumes();
 
-function spawnExplosion(tx: number, ty: number): void {
-  explosions.push({ tx, ty, age: 0, duration: 0.6 });
+function spawnExplosion(tx: number, ty: number, radius = 0.9, duration = 0.6): void {
+  explosions.push({ tx, ty, age: 0, duration, radius });
 }
 
 function updateExplosions(dt: number): void {
@@ -528,6 +621,7 @@ function spawnMissionEnemies(): void {
         spread: 0.06,
       });
       registerEnemy(entity, { kind: 'aaa', score: 150 });
+      spawnAlienStronghold('AAA', spawn.at.tx, spawn.at.ty);
     } else {
       sams.set(entity, {
         range: 12,
@@ -539,6 +633,7 @@ function spawnMissionEnemies(): void {
         lockProgress: 0,
       });
       registerEnemy(entity, { kind: 'sam', score: 200 });
+      spawnAlienStronghold('SAM', spawn.at.tx, spawn.at.ty);
     }
   }
 }
@@ -551,24 +646,146 @@ function clearBuildings(): void {
   buildingEntities.length = 0;
 }
 
+function createBuildingEntity(site: BuildingSite): Entity {
+  const entity = entities.create();
+  transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
+  buildings.set(entity, {
+    width: site.width,
+    depth: site.depth,
+    height: site.height,
+    bodyColor: site.bodyColor,
+    roofColor: site.roofColor,
+    ruinColor: site.ruinColor,
+  });
+  healths.set(entity, { current: site.health, max: site.health });
+  colliders.set(entity, { radius: site.colliderRadius, team: 'enemy' });
+  buildingMeta.set(entity, {
+    score: site.score ?? 0,
+    drop: site.drop,
+    category: site.category ?? 'civilian',
+    triggersAlarm: Boolean(site.triggersAlarm),
+  });
+  buildingEntities.push(entity);
+  return entity;
+}
+
 function spawnBuildings(): void {
   clearBuildings();
   for (let i = 0; i < buildingSites.length; i += 1) {
     const site = buildingSites[i]!;
-    const entity = entities.create();
-    transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
-    buildings.set(entity, {
-      width: site.width,
-      depth: site.depth,
-      height: site.height,
-      bodyColor: site.bodyColor,
-      roofColor: site.roofColor,
-      ruinColor: site.ruinColor,
-    });
-    healths.set(entity, { current: site.health, max: site.health });
-    colliders.set(entity, { radius: site.colliderRadius, team: 'enemy' });
-    buildingMeta.set(entity, { score: site.score });
-    buildingEntities.push(entity);
+    createBuildingEntity(site);
+  }
+}
+
+function spawnAlienStronghold(type: 'AAA' | 'SAM', tx: number, ty: number): void {
+  const strongholdStructures: BuildingSite[] =
+    type === 'AAA'
+      ? [
+          {
+            tx: tx - 0.85,
+            ty: ty + 0.55,
+            width: 1.15,
+            depth: 0.95,
+            height: 22,
+            health: 85,
+            colliderRadius: 0.7,
+            bodyColor: '#25143c',
+            roofColor: '#6efdd4',
+            ruinColor: '#341d4d',
+            score: 130,
+            category: 'stronghold',
+          },
+          {
+            tx: tx + 0.9,
+            ty: ty - 0.45,
+            width: 1.05,
+            depth: 0.85,
+            height: 20,
+            health: 80,
+            colliderRadius: 0.68,
+            bodyColor: '#28163f',
+            roofColor: '#63f0c8',
+            ruinColor: '#2f1744',
+            score: 130,
+            category: 'stronghold',
+          },
+          {
+            tx: tx,
+            ty: ty + 0.9,
+            width: 1.6,
+            depth: 0.6,
+            height: 16,
+            health: 70,
+            colliderRadius: 0.65,
+            bodyColor: '#1f0f32',
+            roofColor: '#8bf9e1',
+            ruinColor: '#2a123d',
+            score: 110,
+            category: 'stronghold',
+          },
+        ]
+      : [
+          {
+            tx: tx,
+            ty: ty - 0.95,
+            width: 1.6,
+            depth: 1.15,
+            height: 30,
+            health: 140,
+            colliderRadius: 0.88,
+            bodyColor: '#1f1d46',
+            roofColor: '#7afbe9',
+            ruinColor: '#261b3d',
+            score: 200,
+            category: 'stronghold',
+          },
+          {
+            tx: tx - 1.15,
+            ty: ty + 0.55,
+            width: 1.1,
+            depth: 0.9,
+            height: 24,
+            health: 90,
+            colliderRadius: 0.72,
+            bodyColor: '#261548',
+            roofColor: '#5cf3db',
+            ruinColor: '#2e1a4f',
+            score: 150,
+            category: 'stronghold',
+          },
+          {
+            tx: tx + 1.1,
+            ty: ty + 0.65,
+            width: 1.15,
+            depth: 0.95,
+            height: 24,
+            health: 90,
+            colliderRadius: 0.74,
+            bodyColor: '#2a184d',
+            roofColor: '#68f8e1',
+            ruinColor: '#311e53',
+            score: 150,
+            category: 'stronghold',
+          },
+        ];
+  for (let i = 0; i < strongholdStructures.length; i += 1) {
+    const site = strongholdStructures[i]!;
+    createBuildingEntity({ ...site, triggersAlarm: false });
+  }
+
+  const defenders =
+    type === 'AAA'
+      ? [
+          { tx: tx - 1.2, ty: ty + 0.2 },
+          { tx: tx + 1, ty: ty - 0.1 },
+        ]
+      : [
+          { tx: tx - 1.25, ty: ty + 0.2 },
+          { tx: tx + 1.2, ty: ty + 0.3 },
+          { tx: tx + 0.1, ty: ty - 1.2 },
+        ];
+  for (let i = 0; i < defenders.length; i += 1) {
+    spawnAlienUnit(defenders[i]!);
   }
 }
 
@@ -581,29 +798,35 @@ function clearPickups(): void {
   survivorEntities.length = 0;
 }
 
+function spawnPickupEntity(site: PickupSite): Entity {
+  const entity = entities.create();
+  transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
+  pickups.set(entity, {
+    kind: site.kind,
+    radius: site.radius ?? 0.9,
+    duration: site.duration ?? 1.3,
+    fuelAmount: site.kind === 'fuel' ? (site.fuelAmount ?? 50) : undefined,
+    ammo:
+      site.kind === 'ammo'
+        ? {
+            missiles: site.ammo?.missiles ?? 80,
+            rockets: site.ammo?.rockets ?? 3,
+            hellfires: site.ammo?.hellfires ?? 0,
+          }
+        : undefined,
+    armorAmount: site.kind === 'armor' ? (site.armorAmount ?? 35) : undefined,
+    collectingBy: null,
+    progress: 0,
+  });
+  pickupEntities.push(entity);
+  return entity;
+}
+
 function spawnPickups(): void {
   clearPickups();
   for (let i = 0; i < pickupSites.length; i += 1) {
     const site = pickupSites[i]!;
-    const entity = entities.create();
-    transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
-    pickups.set(entity, {
-      kind: site.kind,
-      radius: site.radius ?? 0.9,
-      duration: site.duration ?? 1.3,
-      fuelAmount: site.kind === 'fuel' ? (site.fuelAmount ?? 50) : undefined,
-      ammo:
-        site.kind === 'ammo'
-          ? {
-              missiles: site.ammo?.missiles ?? 80,
-              rockets: site.ammo?.rockets ?? 3,
-              hellfires: site.ammo?.hellfires ?? 0,
-            }
-          : undefined,
-      collectingBy: null,
-      progress: 0,
-    });
-    pickupEntities.push(entity);
+    spawnPickupEntity(site);
   }
 }
 
@@ -721,6 +944,8 @@ function checkBuildingsForAlienTrigger(): void {
   if (aliensTriggered) return;
   for (let i = 0; i < buildingEntities.length; i += 1) {
     const entity = buildingEntities[i]!;
+    const meta = buildingMeta.get(entity);
+    if (!meta || !meta.triggersAlarm) continue;
     const h = healths.get(entity);
     if (h && h.current < h.max) {
       triggerAlienCounterattack();
@@ -790,13 +1015,14 @@ function resetGame(): void {
   campusLeveled = false;
   missionState = loadMission(missionDef);
   mission.state = missionState;
+  regenerateWorldStructures();
   spawnBuildings();
   spawnMissionEnemies();
   spawnPickups();
   fog.reset();
   playerState.lives = 3;
   resetPlayer();
-  ui.state = 'in-game';
+  ui.state = 'briefing';
   setAudioVolumes();
 }
 
@@ -853,8 +1079,20 @@ function handleDeaths(): void {
       const t = transforms.get(entity);
       if (t) spawnExplosion(t.tx, t.ty);
       playExplosion(bus);
-      const bScore = buildingMeta.get(entity);
-      if (bScore) stats.score += bScore.score;
+      const meta = buildingMeta.get(entity);
+      if (meta) {
+        if (meta.score) stats.score += meta.score;
+        if (t && meta.drop) {
+          spawnPickupEntity({
+            tx: t.tx,
+            ty: t.ty,
+            kind: meta.drop.kind,
+            radius: 0.95,
+            duration: 1.4,
+            armorAmount: meta.drop.amount,
+          });
+        }
+      }
       destroyEntity(entity);
       continue;
     }
@@ -881,8 +1119,8 @@ function updateWave(dt: number): void {
   }
 }
 
-spawnMissionEnemies();
 spawnBuildings();
+spawnMissionEnemies();
 spawnPickups();
 const loop = new GameLoop({
   update: (dt) => {
@@ -930,6 +1168,11 @@ const loop = new GameLoop({
       return;
     }
 
+    if (ui.state === 'briefing') {
+      if (snap.keys['Enter'] || snap.keys[' '] || snap.keys['Space']) ui.state = 'in-game';
+      return;
+    }
+
     if (ui.state === 'paused') {
       if (snap.keys['Escape']) ui.state = 'in-game';
       return;
@@ -955,6 +1198,7 @@ const loop = new GameLoop({
     const ph = physics.get(player)!;
     const playerFuel = fuels.get(player)!;
     const playerAmmo = ammos.get(player)!;
+    const playerHealth = healths.get(player)!;
     let dx = 0;
     let dy = 0;
     if (!playerState.invulnerable) {
@@ -1004,6 +1248,7 @@ const loop = new GameLoop({
       fuelAmount?: number;
       ammo?: { missiles?: number; rockets?: number; hellfires?: number };
       survivorCount?: number;
+      armorAmount?: number;
     }[] = [];
     pickups.forEach((entity, pickup) => {
       const pickupTransform = transforms.get(entity);
@@ -1013,6 +1258,7 @@ const loop = new GameLoop({
           kind: pickup.kind,
           fuelAmount: pickup.fuelAmount,
           ammo: pickup.ammo,
+          armorAmount: pickup.armorAmount,
         });
         return;
       }
@@ -1034,6 +1280,7 @@ const loop = new GameLoop({
             fuelAmount: pickup.fuelAmount,
             ammo: pickup.ammo ? { ...pickup.ammo } : undefined,
             survivorCount: pickup.survivorCount,
+            armorAmount: pickup.armorAmount,
           });
         }
         return;
@@ -1062,6 +1309,12 @@ const loop = new GameLoop({
               playerAmmo.rockets < playerAmmo.rocketsMax ||
               playerAmmo.hellfires < playerAmmo.hellfiresMax;
             if (needsAmmo) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+            }
+          } else if (pickup.kind === 'armor') {
+            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
+            if (needsArmor) {
               pickup.collectingBy = player;
               pickup.progress = 0;
             }
@@ -1095,6 +1348,9 @@ const loop = new GameLoop({
           playerAmmo.hellfiresMax,
           playerAmmo.hellfires + (item.ammo.hellfires ?? 0),
         );
+      } else if (item.kind === 'armor') {
+        const amount = item.armorAmount ?? 35;
+        playerHealth.current = Math.min(playerHealth.max, playerHealth.current + amount);
       } else if (item.kind === 'survivor') {
         const count = item.survivorCount ?? 1;
         rescueState.carrying = Math.min(SURVIVOR_CAPACITY, rescueState.carrying + count);
@@ -1126,17 +1382,23 @@ const loop = new GameLoop({
       const ev = fireEvents[i]!;
       if (ev.kind === 'missile') {
         playMissile(bus);
+        const dirLen = Math.hypot(ev.dx, ev.dy) || 1;
+        const dirX = ev.dx / dirLen;
+        const dirY = ev.dy / dirLen;
         const speedM = ev.speed ?? 20;
+        const launchOffset = ev.launchOffset ?? 0.55;
+        const spawnX = ev.sx + dirX * launchOffset;
+        const spawnY = ev.sy + dirY * launchOffset;
         projectilePool.spawn({
           kind: 'missile',
           faction: ev.faction,
-          x: ev.sx,
-          y: ev.sy,
-          vx: ev.dx * speedM,
-          vy: ev.dy * speedM,
-          ttl: ev.ttl ?? 1,
+          x: spawnX,
+          y: spawnY,
+          vx: dirX * speedM,
+          vy: dirY * speedM,
+          ttl: ev.ttl ?? 1.05,
           radius: ev.radius ?? 0.14,
-          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.35 },
+          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.25 },
         });
       } else if (ev.kind === 'rocket') {
         playRocket(bus);
@@ -1171,6 +1433,9 @@ const loop = new GameLoop({
 
     projectilePool.update(dt, colliders, colliders, transforms, (hit) => {
       damage.queue(hit);
+      const boomRadius = Math.max(0.35, hit.radius * 1.35);
+      const boomDuration = 0.45 + boomRadius * 0.12;
+      spawnExplosion(hit.x, hit.y, boomRadius, boomDuration);
       playExplosion(bus);
       if (ui.settings.screenShake) shake.trigger(8, 0.25);
     });
@@ -1178,7 +1443,13 @@ const loop = new GameLoop({
     damage.update();
     checkBuildingsForAlienTrigger();
     handleDeaths();
-    if (!campusLeveled && buildingEntities.length === 0) campusLeveled = true;
+    if (!campusLeveled) {
+      let campusRemaining = 0;
+      buildingMeta.forEach((meta) => {
+        if (meta.category === 'campus') campusRemaining += 1;
+      });
+      if (campusRemaining === 0) campusLeveled = true;
+    }
     if (aliensTriggered && !aliensDefeated && alienEntities.size === 0) aliensDefeated = true;
     if (!rescueState.survivorsSpawned && campusLeveled && aliensDefeated) spawnSurvivors();
 
@@ -1310,13 +1581,42 @@ const loop = new GameLoop({
       const iso = tileToIso(e.tx, e.ty, isoParams);
       const drawX = originX + iso.x + shakeOffset.x;
       const drawY = originY + iso.y + shakeOffset.y - 10;
-      const alpha = 1 - e.age / e.duration;
+      const progress = Math.min(1, e.age / e.duration);
+      const alpha = 1 - progress;
+      const scale = Math.max(isoParams.tileWidth, isoParams.tileHeight) * 0.45;
+      const outerRadius = e.radius * scale * (0.9 + (1 - progress) * 0.35);
+      const coreRadius = outerRadius * 0.45;
+
       context.save();
-      context.globalAlpha = Math.max(0, alpha);
-      context.fillStyle = '#ffb347';
+      context.globalAlpha = Math.max(0, alpha * 0.9);
+      context.globalCompositeOperation = 'lighter';
+      const gradient = context.createRadialGradient(drawX, drawY, 0, drawX, drawY, outerRadius);
+      gradient.addColorStop(0, 'rgba(255,255,255,0.95)');
+      gradient.addColorStop(0.35, 'rgba(255,214,102,0.85)');
+      gradient.addColorStop(0.75, 'rgba(255,111,89,0.55)');
+      gradient.addColorStop(1, 'rgba(255,71,71,0)');
+      context.fillStyle = gradient;
       context.beginPath();
-      context.arc(drawX, drawY, 16 * alpha, 0, Math.PI * 2);
+      context.arc(drawX, drawY, outerRadius, 0, Math.PI * 2);
       context.fill();
+      context.restore();
+
+      context.save();
+      context.globalAlpha = Math.max(0, alpha * 0.75);
+      context.fillStyle = '#fff2d5';
+      context.beginPath();
+      context.arc(drawX, drawY, coreRadius, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+
+      context.save();
+      context.globalAlpha = Math.max(0, alpha * 0.5);
+      context.strokeStyle = '#ffd166';
+      context.lineWidth = 2;
+      const shockRadius = outerRadius * (0.85 + progress * 0.4);
+      context.beginPath();
+      context.arc(drawX, drawY, shockRadius, 0, Math.PI * 2);
+      context.stroke();
       context.restore();
     }
 
@@ -1443,6 +1743,35 @@ const loop = new GameLoop({
       context.font = 'bold 18px system-ui, sans-serif';
       context.textAlign = 'center';
       context.fillText('Respawning...', viewWidth / 2, viewHeight / 2);
+      context.restore();
+    }
+
+    if (ui.state === 'briefing') {
+      context.save();
+      context.fillStyle = 'rgba(4, 10, 18, 0.7)';
+      context.fillRect(0, 0, viewWidth, viewHeight);
+      context.textAlign = 'center';
+      context.fillStyle = '#92ffa6';
+      context.font = 'bold 28px system-ui, sans-serif';
+      context.fillText(missionBriefingInfo.title, viewWidth / 2, viewHeight / 2 - 140);
+      context.fillStyle = '#c8d7e1';
+      context.font = '16px system-ui, sans-serif';
+      const briefingLines = missionBriefingInfo.text.split('\n');
+      for (let i = 0; i < briefingLines.length; i += 1) {
+        context.fillText(briefingLines[i]!, viewWidth / 2, viewHeight / 2 - 100 + i * 22);
+      }
+      context.textAlign = 'left';
+      const goals = missionBriefingInfo.goals.slice(0, 5);
+      const goalX = viewWidth / 2 - 200;
+      let goalY = viewHeight / 2 - 20;
+      context.font = '15px system-ui, sans-serif';
+      for (let i = 0; i < goals.length; i += 1) {
+        context.fillText(`• ${goals[i]!}`, goalX, goalY + i * 22);
+      }
+      context.textAlign = 'center';
+      context.fillStyle = '#92ffa6';
+      context.font = 'bold 16px system-ui, sans-serif';
+      context.fillText('Press Enter to deploy', viewWidth / 2, goalY + goals.length * 22 + 24);
       context.restore();
     }
 
