@@ -153,6 +153,11 @@ if (!canvas) throw new Error('Canvas element with id "game" not found');
 const context = canvas.getContext('2d');
 if (!context) throw new Error('Failed to get 2D context');
 
+// Disable right-click context menu on the game canvas only
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
+
 function resizeCanvasToDisplaySize(): void {
   const dpr = Math.max(1, window.devicePixelRatio || 1);
   const displayWidth = Math.floor(canvas.clientWidth * dpr);
