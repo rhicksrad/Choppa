@@ -314,10 +314,11 @@ export function playHellfire(bus: AudioBus): void {
   const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
   const now = ctx.currentTime;
 
+  // Roar layer
   const roarOsc = ctx.createOscillator();
   roarOsc.type = 'sawtooth';
   const roarGain = ctx.createGain();
-  roarGain.gain.value = 0.08;
+  roarGain.gain.value = 0.08; // from feature branch
   const roarFilter = ctx.createBiquadFilter();
   roarFilter.type = 'bandpass';
   roarFilter.frequency.value = 560;
@@ -330,6 +331,7 @@ export function playHellfire(bus: AudioBus): void {
   roarOsc.frequency.setValueAtTime(440, now);
   roarOsc.frequency.exponentialRampToValueAtTime(90, now + 0.58);
 
+  // Noisy blast
   const noiseSrc = ctx.createBufferSource();
   noiseSrc.buffer = createNoiseBurst(ctx, 0.6);
   const noiseFilter = ctx.createBiquadFilter();
@@ -347,6 +349,7 @@ export function playHellfire(bus: AudioBus): void {
   noiseFilter.frequency.linearRampToValueAtTime(680, now + 0.14);
   noiseFilter.frequency.exponentialRampToValueAtTime(190, now + 0.62);
 
+  // Sub impact
   const subOsc = ctx.createOscillator();
   subOsc.type = 'sine';
   subOsc.frequency.value = 58;
@@ -357,6 +360,7 @@ export function playHellfire(bus: AudioBus): void {
   subGain.gain.setValueAtTime(0.045, now + 0.02);
   subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
 
+  // Wind/whip layer
   const windSrc = ctx.createBufferSource();
   windSrc.buffer = createNoiseBurst(ctx, 0.5);
   const windFilter = ctx.createBiquadFilter();

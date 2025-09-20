@@ -1605,6 +1605,7 @@ const loop = new GameLoop({
       const outerRadius = e.radius * scale * (0.9 + (1 - progress) * 0.35);
       const coreRadius = outerRadius * 0.45;
 
+      // Outer glow
       context.save();
       context.globalAlpha = Math.max(0, alpha * 0.9);
       context.globalCompositeOperation = 'lighter';
@@ -1619,6 +1620,7 @@ const loop = new GameLoop({
       context.fill();
       context.restore();
 
+      // Core flash
       context.save();
       context.globalAlpha = Math.max(0, alpha * 0.75);
       context.fillStyle = '#fff2d5';
@@ -1627,6 +1629,7 @@ const loop = new GameLoop({
       context.fill();
       context.restore();
 
+      // Shock ring
       context.save();
       context.globalAlpha = Math.max(0, alpha * 0.5);
       context.strokeStyle = '#ffd166';

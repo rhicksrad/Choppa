@@ -114,7 +114,9 @@ export class ProjectilePool {
       const angle = Math.atan2(isoVy, isoVx);
       const speed = Math.hypot(isoVx, isoVy);
       ctx.rotate(angle);
+
       if (p.kind === 'missile') {
+        // Feature-branch styling retained; avoids double-rotation and uses compact body.
         const bodyLength = 4.4;
         const halfWidth = 0.7;
         const tail = Math.min(4.2, 1.4 + speed * 0.01);

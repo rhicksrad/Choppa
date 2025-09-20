@@ -78,12 +78,12 @@ export class WeaponFireSystem implements System {
     this.aimTileY = aimTileY;
   }
 
-  update(dt: number): void {
+  update(_dt: number): void {
     // Cooldowns decay
-    this.weapons.forEach((entity, w) => {
-      w.cooldownMissile = Math.max(0, w.cooldownMissile - dt);
-      w.cooldownRocket = Math.max(0, w.cooldownRocket - dt);
-      w.cooldownHellfire = Math.max(0, w.cooldownHellfire - dt);
+    this.weapons.forEach((_, w) => {
+      w.cooldownMissile = Math.max(0, w.cooldownMissile - _dt);
+      w.cooldownRocket = Math.max(0, w.cooldownRocket - _dt);
+      w.cooldownHellfire = Math.max(0, w.cooldownHellfire - _dt);
     });
 
     const snap = this.input;
@@ -93,7 +93,7 @@ export class WeaponFireSystem implements System {
     const switchDown =
       snap.keys['r'] || snap.keys['R'] || snap.keys['q'] || snap.keys['Q'] || snap.keys['Tab'];
     if (switchDown && !this.switchHeld) {
-      this.weapons.forEach((_e, w) => {
+      this.weapons.forEach((_, w) => {
         w.active = nextWeapon(w.active);
       });
     }
@@ -129,9 +129,8 @@ export class WeaponFireSystem implements System {
       const dirX = ax / ad;
       const dirY = ay / ad;
 
-      // Active-weapon fire (also direct-mapped buttons)
+      // Missiles (LMB / primary)
       if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
-        // Missile: rapid salvo with fast launch and splash damage
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 0.1;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
@@ -159,6 +158,7 @@ export class WeaponFireSystem implements System {
         }
       }
 
+      // Rockets (RMB / secondary)
       if ((w.active === 'rocket' && (isRmb || secondaryKey)) || isRmb || secondaryKey) {
         if (w.cooldownRocket <= 0 && ammo.rockets > 0) {
           w.cooldownRocket = 0.4;
@@ -179,6 +179,7 @@ export class WeaponFireSystem implements System {
         }
       }
 
+      // Hellfire (MMB / special)
       if ((w.active === 'hellfire' && (isMmb || specialKey)) || isMmb || specialKey) {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
           w.cooldownHellfire = 1.25;
