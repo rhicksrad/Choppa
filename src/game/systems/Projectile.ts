@@ -110,8 +110,49 @@ export class ProjectilePool {
       ctx.save();
       ctx.translate(originX + ix, originY + iy - 6);
       if (p.kind === 'missile') {
+        const isoVx = (p.vx - p.vy) * halfW;
+        const isoVy = (p.vx + p.vy) * halfH;
+        const angle = Math.atan2(isoVy, isoVx);
+        const speed = Math.hypot(isoVx, isoVy);
+        const flameLength = Math.min(20, 6 + speed * 0.02);
+        const bodyLength = 8;
+        const halfWidth = 1.6;
+        ctx.rotate(angle);
+
+        const exhaust = ctx.createLinearGradient(
+          -bodyLength / 2 - flameLength,
+          0,
+          -bodyLength / 2,
+          0,
+        );
+        exhaust.addColorStop(0, 'rgba(239,71,111,0)');
+        exhaust.addColorStop(0.4, 'rgba(255,161,90,0.45)');
+        exhaust.addColorStop(1, 'rgba(255,244,214,0.9)');
+        ctx.fillStyle = exhaust;
+        ctx.beginPath();
+        ctx.moveTo(-bodyLength / 2 - flameLength, 0);
+        ctx.lineTo(-bodyLength / 2 - flameLength * 0.25, halfWidth * 1.6);
+        ctx.lineTo(-bodyLength / 2, halfWidth);
+        ctx.lineTo(-bodyLength / 2, -halfWidth);
+        ctx.lineTo(-bodyLength / 2 - flameLength * 0.25, -halfWidth * 1.6);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#f4f1de';
+        ctx.fillRect(-bodyLength / 2, -halfWidth, bodyLength, halfWidth * 2);
+        ctx.fillStyle = '#495057';
+        ctx.fillRect(-1.1, -halfWidth, bodyLength / 2 + 1.1, halfWidth * 2);
+
         ctx.fillStyle = '#ffd166';
-        ctx.fillRect(-1, -1, 2, 2);
+        ctx.beginPath();
+        ctx.moveTo(bodyLength / 2 + 2.4, 0);
+        ctx.lineTo(bodyLength / 2, halfWidth);
+        ctx.lineTo(bodyLength / 2, -halfWidth);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ef476f';
+        ctx.fillRect(-bodyLength / 2 + 0.2, -halfWidth * 0.9, 1.2, halfWidth * 1.8);
       } else if (p.kind === 'rocket') {
         ctx.fillStyle = '#ef476f';
         ctx.fillRect(-2, -1, 4, 2);

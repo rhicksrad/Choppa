@@ -116,6 +116,7 @@ interface Explosion {
   ty: number;
   age: number;
   duration: number;
+  radius: number;
 }
 
 interface RescueRunner {
@@ -510,8 +511,8 @@ function setAudioVolumes(): void {
 }
 setAudioVolumes();
 
-function spawnExplosion(tx: number, ty: number): void {
-  explosions.push({ tx, ty, age: 0, duration: 0.6 });
+function spawnExplosion(tx: number, ty: number, radius = 0.9, duration = 0.6): void {
+  explosions.push({ tx, ty, age: 0, duration, radius });
 }
 
 function updateExplosions(dt: number): void {
@@ -1381,17 +1382,23 @@ const loop = new GameLoop({
       const ev = fireEvents[i]!;
       if (ev.kind === 'missile') {
         playMissile(bus);
+        const dirLen = Math.hypot(ev.dx, ev.dy) || 1;
+        const dirX = ev.dx / dirLen;
+        const dirY = ev.dy / dirLen;
         const speedM = ev.speed ?? 20;
+        const launchOffset = ev.launchOffset ?? 0.55;
+        const spawnX = ev.sx + dirX * launchOffset;
+        const spawnY = ev.sy + dirY * launchOffset;
         projectilePool.spawn({
           kind: 'missile',
           faction: ev.faction,
-          x: ev.sx,
-          y: ev.sy,
-          vx: ev.dx * speedM,
-          vy: ev.dy * speedM,
-          ttl: ev.ttl ?? 1,
+          x: spawnX,
+          y: spawnY,
+          vx: dirX * speedM,
+          vy: dirY * speedM,
+          ttl: ev.ttl ?? 1.05,
           radius: ev.radius ?? 0.14,
-          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.35 },
+          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.25 },
         });
       } else if (ev.kind === 'rocket') {
         playRocket(bus);
@@ -1426,6 +1433,9 @@ const loop = new GameLoop({
 
     projectilePool.update(dt, colliders, colliders, transforms, (hit) => {
       damage.queue(hit);
+      const boomRadius = Math.max(0.35, hit.radius * 1.35);
+      const boomDuration = 0.45 + boomRadius * 0.12;
+      spawnExplosion(hit.x, hit.y, boomRadius, boomDuration);
       playExplosion(bus);
       if (ui.settings.screenShake) shake.trigger(8, 0.25);
     });
@@ -1571,13 +1581,42 @@ const loop = new GameLoop({
       const iso = tileToIso(e.tx, e.ty, isoParams);
       const drawX = originX + iso.x + shakeOffset.x;
       const drawY = originY + iso.y + shakeOffset.y - 10;
-      const alpha = 1 - e.age / e.duration;
+      const progress = Math.min(1, e.age / e.duration);
+      const alpha = 1 - progress;
+      const scale = Math.max(isoParams.tileWidth, isoParams.tileHeight) * 0.45;
+      const outerRadius = e.radius * scale * (0.9 + (1 - progress) * 0.35);
+      const coreRadius = outerRadius * 0.45;
+
       context.save();
-      context.globalAlpha = Math.max(0, alpha);
-      context.fillStyle = '#ffb347';
+      context.globalAlpha = Math.max(0, alpha * 0.9);
+      context.globalCompositeOperation = 'lighter';
+      const gradient = context.createRadialGradient(drawX, drawY, 0, drawX, drawY, outerRadius);
+      gradient.addColorStop(0, 'rgba(255,255,255,0.95)');
+      gradient.addColorStop(0.35, 'rgba(255,214,102,0.85)');
+      gradient.addColorStop(0.75, 'rgba(255,111,89,0.55)');
+      gradient.addColorStop(1, 'rgba(255,71,71,0)');
+      context.fillStyle = gradient;
       context.beginPath();
-      context.arc(drawX, drawY, 16 * alpha, 0, Math.PI * 2);
+      context.arc(drawX, drawY, outerRadius, 0, Math.PI * 2);
       context.fill();
+      context.restore();
+
+      context.save();
+      context.globalAlpha = Math.max(0, alpha * 0.75);
+      context.fillStyle = '#fff2d5';
+      context.beginPath();
+      context.arc(drawX, drawY, coreRadius, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+
+      context.save();
+      context.globalAlpha = Math.max(0, alpha * 0.5);
+      context.strokeStyle = '#ffd166';
+      context.lineWidth = 2;
+      const shockRadius = outerRadius * (0.85 + progress * 0.4);
+      context.beginPath();
+      context.arc(drawX, drawY, shockRadius, 0, Math.PI * 2);
+      context.stroke();
       context.restore();
     }
 
