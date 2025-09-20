@@ -16,6 +16,7 @@ export type FireEvent =
       dx: number;
       dy: number;
       spread: number;
+      launchOffset?: number;
       speed?: number;
       ttl?: number;
       radius?: number;
@@ -30,6 +31,8 @@ export type FireEvent =
       y: number;
       vx: number;
       vy: number;
+      speed?: number;
+      launchOffset?: number;
       targetX: number;
       targetY: number;
       ttl?: number;
@@ -117,7 +120,7 @@ export class WeaponFireSystem implements System {
 
       // Active-weapon fire (also direct-mapped buttons)
       if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
-        // Missile: short cooldown, spread, small AoE
+        // Missile: rapid salvo with fast launch and splash damage
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 0.1;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
@@ -135,11 +138,12 @@ export class WeaponFireSystem implements System {
             dx,
             dy,
             spread,
-            speed: 20,
-            ttl: 1.15,
+            launchOffset: 0.65,
+            speed: 26,
+            ttl: 1.2,
             radius: 0.16,
-            damage: 10,
-            damageRadius: 0.35,
+            damage: 12,
+            damageRadius: 0.7,
           });
         }
       }
@@ -164,7 +168,8 @@ export class WeaponFireSystem implements System {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
           w.cooldownHellfire = 1.25;
           ammo.hellfires = Math.max(0, ammo.hellfires - 1);
-          const speed = 5.5;
+          const speed = 20;
+          const launchOffset = 0.78;
           this.eventsOut.push({
             faction: 'player',
             kind: 'hellfire',
@@ -172,6 +177,8 @@ export class WeaponFireSystem implements System {
             y: t.ty,
             vx: dirX * speed,
             vy: dirY * speed,
+            speed,
+            launchOffset,
             targetX: this.aimTileX,
             targetY: this.aimTileY,
             ttl: 6,

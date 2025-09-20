@@ -1,6 +1,6 @@
 import type { Entity } from '../../core/ecs/entities';
 
-export type PickupKind = 'fuel' | 'ammo' | 'survivor';
+export type PickupKind = 'fuel' | 'ammo' | 'survivor' | 'armor';
 
 export interface Pickup {
   kind: PickupKind;
@@ -13,6 +13,7 @@ export interface Pickup {
     hellfires?: number;
   };
   survivorCount?: number;
+  armorAmount?: number;
   collectingBy: Entity | null;
   progress: number;
 }
