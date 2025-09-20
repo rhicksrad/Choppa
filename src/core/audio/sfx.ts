@@ -1,10 +1,20 @@
 import { AudioBus } from './audio';
 
 export class EngineSound {
-  private osc: OscillatorNode | null = null;
-  private gain: GainNode | null = null;
-  private targetGain = 0;
+  private static noiseBuffer: AudioBuffer | null = null;
+
   private started = false;
+  private rotorOscA: OscillatorNode | null = null;
+  private rotorOscB: OscillatorNode | null = null;
+  private rotorGain: GainNode | null = null;
+  private rotorFilter: BiquadFilterNode | null = null;
+  private chopLfo: OscillatorNode | null = null;
+  private chopDepth: GainNode | null = null;
+  private turbineOsc: OscillatorNode | null = null;
+  private turbineGain: GainNode | null = null;
+  private washSource: AudioBufferSourceNode | null = null;
+  private washFilter: BiquadFilterNode | null = null;
+  private washGain: GainNode | null = null;
 
   constructor(private bus: AudioBus) {}
 
@@ -12,37 +22,201 @@ export class EngineSound {
     if (this.started) return;
     this.started = true;
     const ctx = this.bus.context;
-    this.osc = ctx.createOscillator();
-    this.gain = ctx.createGain();
-    this.osc.type = 'sawtooth';
-    this.osc.frequency.value = 80;
-    this.gain.gain.value = 0;
-    this.osc.connect(this.gain);
-    this.gain.connect((this.bus as any)['sfx'] || (this.bus as any));
-    this.osc.start();
+    const destination: AudioNode = (this.bus as any)['sfx'] || (this.bus as any);
+
+    // Main rotor body – two slightly detuned saws with low-pass filtering.
+    this.rotorOscA = ctx.createOscillator();
+    this.rotorOscB = ctx.createOscillator();
+    this.rotorGain = ctx.createGain();
+    this.rotorFilter = ctx.createBiquadFilter();
+    this.rotorOscA.type = 'sawtooth';
+    this.rotorOscB.type = 'sawtooth';
+    this.rotorOscA.frequency.value = 46;
+    this.rotorOscB.frequency.value = 46;
+    this.rotorOscB.detune.value = 8;
+    this.rotorGain.gain.value = 0.02;
+    this.rotorFilter.type = 'lowpass';
+    this.rotorFilter.frequency.value = 520;
+    this.rotorFilter.Q.value = 0.9;
+    this.rotorOscA.connect(this.rotorGain);
+    this.rotorOscB.connect(this.rotorGain);
+    this.rotorGain.connect(this.rotorFilter);
+    this.rotorFilter.connect(destination);
+
+    // Blade chop modulation – low-frequency oscillator pushes the thump.
+    this.chopLfo = ctx.createOscillator();
+    this.chopDepth = ctx.createGain();
+    this.chopLfo.type = 'sine';
+    this.chopLfo.frequency.value = 3.6;
+    this.chopDepth.gain.value = 0.02;
+    this.chopLfo.connect(this.chopDepth);
+    this.chopDepth.connect(this.rotorGain.gain);
+
+    // Turbine whine gives the high-end air whirr.
+    this.turbineOsc = ctx.createOscillator();
+    this.turbineGain = ctx.createGain();
+    this.turbineOsc.type = 'triangle';
+    this.turbineOsc.frequency.value = 340;
+    this.turbineGain.gain.value = 0.01;
+    this.turbineOsc.connect(this.turbineGain);
+    this.turbineGain.connect(destination);
+
+    // Rotor wash – filtered noise underneath the mix.
+    this.washSource = ctx.createBufferSource();
+    this.washFilter = ctx.createBiquadFilter();
+    this.washGain = ctx.createGain();
+    this.washSource.buffer = EngineSound.getNoiseBuffer(ctx);
+    this.washSource.loop = true;
+    this.washFilter.type = 'bandpass';
+    this.washFilter.frequency.value = 820;
+    this.washFilter.Q.value = 0.7;
+    this.washGain.gain.value = 0.014;
+    this.washSource.connect(this.washFilter);
+    this.washFilter.connect(this.washGain);
+    this.washGain.connect(destination);
+
+    this.rotorOscA.start();
+    this.rotorOscB.start();
+    this.chopLfo.start();
+    this.turbineOsc.start();
+    this.washSource.start();
   }
 
   public setIntensity(intensity01: number): void {
-    if (!this.osc || !this.gain) return;
+    if (!this.started) return;
     const clamped = Math.max(0, Math.min(1, intensity01));
-    this.osc.frequency.value = 70 + clamped * 60;
-    this.targetGain = 0.02 + clamped * 0.08;
-    // Smoothly approach target
-    const g = this.gain.gain;
-    const now = this.bus.context.currentTime;
-    g.cancelScheduledValues(now);
-    g.linearRampToValueAtTime(this.targetGain, now + 0.1);
+    const ctx = this.bus.context;
+    const now = ctx.currentTime;
+
+    if (this.rotorOscA && this.rotorOscB) {
+      const rotorFreq = 46 + clamped * 32;
+      this.rotorOscA.frequency.cancelScheduledValues(now);
+      this.rotorOscA.frequency.linearRampToValueAtTime(rotorFreq, now + 0.2);
+      this.rotorOscB.frequency.cancelScheduledValues(now);
+      this.rotorOscB.frequency.linearRampToValueAtTime(rotorFreq, now + 0.2);
+      this.rotorOscB.detune.cancelScheduledValues(now);
+      this.rotorOscB.detune.linearRampToValueAtTime(8 + clamped * 14, now + 0.2);
+    }
+
+    if (this.rotorGain) {
+      const g = this.rotorGain.gain;
+      g.cancelScheduledValues(now);
+      g.linearRampToValueAtTime(0.02 + clamped * 0.13, now + 0.2);
+    }
+
+    if (this.chopLfo && this.chopDepth) {
+      this.chopLfo.frequency.cancelScheduledValues(now);
+      this.chopLfo.frequency.linearRampToValueAtTime(3.4 + clamped * 3.6, now + 0.2);
+      const depth = this.chopDepth.gain;
+      depth.cancelScheduledValues(now);
+      depth.linearRampToValueAtTime(0.018 + clamped * 0.085, now + 0.2);
+    }
+
+    if (this.rotorFilter) {
+      this.rotorFilter.frequency.cancelScheduledValues(now);
+      this.rotorFilter.frequency.linearRampToValueAtTime(520 + clamped * 520, now + 0.3);
+    }
+
+    if (this.turbineOsc && this.turbineGain) {
+      this.turbineOsc.frequency.cancelScheduledValues(now);
+      this.turbineOsc.frequency.linearRampToValueAtTime(320 + clamped * 260, now + 0.25);
+      const gain = this.turbineGain.gain;
+      gain.cancelScheduledValues(now);
+      gain.linearRampToValueAtTime(0.01 + clamped * 0.06, now + 0.2);
+    }
+
+    if (this.washGain && this.washFilter) {
+      const washG = this.washGain.gain;
+      washG.cancelScheduledValues(now);
+      washG.linearRampToValueAtTime(0.014 + clamped * 0.09, now + 0.25);
+      this.washFilter.frequency.cancelScheduledValues(now);
+      this.washFilter.frequency.linearRampToValueAtTime(760 + clamped * 920, now + 0.25);
+    }
   }
 
   public stop(): void {
-    if (!this.osc || !this.gain) return;
+    if (!this.started) return;
+    this.started = false;
+    const ctx = this.bus.context;
+    const now = ctx.currentTime;
+    const stopTime = now + 0.3;
+
+    if (this.rotorGain) {
+      const g = this.rotorGain.gain;
+      g.cancelScheduledValues(now);
+      g.linearRampToValueAtTime(0.0001, stopTime);
+    }
+    if (this.chopDepth) {
+      const depth = this.chopDepth.gain;
+      depth.cancelScheduledValues(now);
+      depth.linearRampToValueAtTime(0, stopTime);
+    }
+    if (this.turbineGain) {
+      const g = this.turbineGain.gain;
+      g.cancelScheduledValues(now);
+      g.linearRampToValueAtTime(0.0001, stopTime);
+    }
+    if (this.washGain) {
+      const g = this.washGain.gain;
+      g.cancelScheduledValues(now);
+      g.linearRampToValueAtTime(0.0001, stopTime);
+    }
+
+    this.stopNode(this.chopLfo, stopTime);
+    this.stopNode(this.rotorOscA, stopTime);
+    this.stopNode(this.rotorOscB, stopTime);
+    this.stopNode(this.turbineOsc, stopTime);
+    this.stopNode(this.washSource, stopTime);
+
+    this.disconnectNode(this.rotorOscA);
+    this.disconnectNode(this.rotorOscB);
+    this.disconnectNode(this.chopDepth);
+    this.disconnectNode(this.rotorGain);
+    this.disconnectNode(this.rotorFilter);
+    this.disconnectNode(this.turbineGain);
+    this.disconnectNode(this.washFilter);
+    this.disconnectNode(this.washGain);
+    this.disconnectNode(this.turbineOsc);
+    this.disconnectNode(this.washSource);
+
+    this.chopLfo = null;
+    this.chopDepth = null;
+    this.rotorOscA = null;
+    this.rotorOscB = null;
+    this.rotorGain = null;
+    this.rotorFilter = null;
+    this.turbineOsc = null;
+    this.turbineGain = null;
+    this.washSource = null;
+    this.washFilter = null;
+    this.washGain = null;
+  }
+
+  private stopNode(node: { stop: (when?: number) => void } | null, when: number): void {
+    if (!node) return;
     try {
-      this.osc.stop();
-    } catch {}
-    this.osc.disconnect();
-    this.gain.disconnect();
-    this.osc = null;
-    this.gain = null;
+      node.stop(when);
+    } catch {
+      try {
+        node.stop();
+      } catch {}
+    }
+  }
+
+  private disconnectNode(node: AudioNode | null): void {
+    node?.disconnect();
+  }
+
+  private static getNoiseBuffer(ctx: AudioContext): AudioBuffer {
+    if (!EngineSound.noiseBuffer) {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      EngineSound.noiseBuffer = buffer;
+    }
+    return EngineSound.noiseBuffer;
   }
 }
 
