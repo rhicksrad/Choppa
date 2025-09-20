@@ -71,6 +71,8 @@ export class AIControlSystem implements System {
           y: t.ty,
           vx: dirX * sam.missileSpeed,
           vy: dirY * sam.missileSpeed,
+          speed: sam.missileSpeed,
+          launchOffset: 0.7,
           targetX: player.x,
           targetY: player.y,
         });

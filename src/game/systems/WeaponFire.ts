@@ -31,6 +31,8 @@ export type FireEvent =
       y: number;
       vx: number;
       vy: number;
+      speed?: number;
+      launchOffset?: number;
       targetX: number;
       targetY: number;
       ttl?: number;
@@ -166,7 +168,8 @@ export class WeaponFireSystem implements System {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
           w.cooldownHellfire = 1.25;
           ammo.hellfires = Math.max(0, ammo.hellfires - 1);
-          const speed = 5.5;
+          const speed = 20;
+          const launchOffset = 0.78;
           this.eventsOut.push({
             faction: 'player',
             kind: 'hellfire',
@@ -174,6 +177,8 @@ export class WeaponFireSystem implements System {
             y: t.ty,
             vx: dirX * speed,
             vy: dirY * speed,
+            speed,
+            launchOffset,
             targetX: this.aimTileX,
             targetY: this.aimTileY,
             ttl: 6,

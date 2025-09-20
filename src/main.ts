@@ -1421,13 +1421,20 @@ const loop = new GameLoop({
         });
       } else if (ev.kind === 'hellfire') {
         playHellfire(bus);
+        const velLen = Math.hypot(ev.vx, ev.vy) || 1;
+        const dirX = ev.vx / velLen;
+        const dirY = ev.vy / velLen;
+        const launchOffset = ev.launchOffset ?? 0.7;
+        const speedH = ev.speed ?? velLen;
+        const spawnX = ev.x + dirX * launchOffset;
+        const spawnY = ev.y + dirY * launchOffset;
         projectilePool.spawn({
           kind: 'hellfire',
           faction: ev.faction,
-          x: ev.x,
-          y: ev.y,
-          vx: ev.vx,
-          vy: ev.vy,
+          x: spawnX,
+          y: spawnY,
+          vx: dirX * speedH,
+          vy: dirY * speedH,
           ttl: ev.ttl ?? 6,
           radius: ev.radius ?? 0.22,
           seek: { targetX: ev.targetX, targetY: ev.targetY, turnRate: Math.PI * 0.8 },
@@ -1598,6 +1605,7 @@ const loop = new GameLoop({
       const outerRadius = e.radius * scale * (0.9 + (1 - progress) * 0.35);
       const coreRadius = outerRadius * 0.45;
 
+      // Outer glow
       context.save();
       context.globalAlpha = Math.max(0, alpha * 0.9);
       context.globalCompositeOperation = 'lighter';
@@ -1612,6 +1620,7 @@ const loop = new GameLoop({
       context.fill();
       context.restore();
 
+      // Core flash
       context.save();
       context.globalAlpha = Math.max(0, alpha * 0.75);
       context.fillStyle = '#fff2d5';
@@ -1620,6 +1629,7 @@ const loop = new GameLoop({
       context.fill();
       context.restore();
 
+      // Shock ring
       context.save();
       context.globalAlpha = Math.max(0, alpha * 0.5);
       context.strokeStyle = '#ffd166';

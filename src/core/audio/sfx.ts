@@ -254,18 +254,69 @@ export function playRocket(bus: AudioBus): void {
 
 export function playHellfire(bus: AudioBus): void {
   const ctx = bus.context;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.value = 260;
-  gain.gain.value = 0.05;
-  const t = ctx.currentTime;
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-  osc.frequency.exponentialRampToValueAtTime(360, t + 0.2);
-  osc.connect(gain);
-  gain.connect((bus as any)['sfx'] || (bus as any));
-  osc.start();
-  osc.stop(t + 0.36);
+  const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
+  const now = ctx.currentTime;
+
+  const roarOsc = ctx.createOscillator();
+  roarOsc.type = 'sawtooth';
+  const roarGain = ctx.createGain();
+  roarGain.gain.value = 0.06;
+  const roarFilter = ctx.createBiquadFilter();
+  roarFilter.type = 'bandpass';
+  roarFilter.frequency.value = 520;
+  roarFilter.Q.value = 1.1;
+  roarOsc.connect(roarGain);
+  roarGain.connect(roarFilter);
+  roarFilter.connect(destination);
+  roarGain.gain.setValueAtTime(0.07, now);
+  roarGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  roarOsc.frequency.setValueAtTime(420, now);
+  roarOsc.frequency.exponentialRampToValueAtTime(110, now + 0.5);
+
+  const noiseSrc = ctx.createBufferSource();
+  noiseSrc.buffer = createNoiseBurst(ctx, 0.5);
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'highpass';
+  noiseFilter.frequency.value = 260;
+  noiseFilter.Q.value = 0.6;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.085;
+  noiseSrc.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(destination);
+  noiseGain.gain.setValueAtTime(0.09, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  noiseFilter.frequency.setValueAtTime(260, now);
+  noiseFilter.frequency.linearRampToValueAtTime(620, now + 0.12);
+  noiseFilter.frequency.exponentialRampToValueAtTime(200, now + 0.55);
+
+  const subOsc = ctx.createOscillator();
+  subOsc.type = 'sine';
+  subOsc.frequency.value = 62;
+  const subGain = ctx.createGain();
+  subGain.gain.value = 0.035;
+  subOsc.connect(subGain);
+  subGain.connect(destination);
+  subGain.gain.setValueAtTime(0.04, now);
+  subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+  roarOsc.start(now);
+  roarOsc.stop(now + 0.6);
+  noiseSrc.start(now);
+  noiseSrc.stop(now + 0.6);
+  subOsc.start(now);
+  subOsc.stop(now + 0.6);
+}
+
+function createNoiseBurst(ctx: AudioContext, duration: number): AudioBuffer {
+  const length = Math.max(1, Math.floor(duration * ctx.sampleRate));
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i += 1) {
+    const env = 1 - i / length;
+    data[i] = (Math.random() * 2 - 1) * env * env;
+  }
+  return buffer;
 }
 
 export function playExplosion(bus: AudioBus): void {
