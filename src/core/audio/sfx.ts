@@ -222,34 +222,91 @@ export class EngineSound {
 
 export function playMissile(bus: AudioBus): void {
   const ctx = bus.context;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'square';
-  osc.frequency.value = 600;
-  gain.gain.value = 0.06;
-  const t = ctx.currentTime;
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-  osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
-  osc.connect(gain);
-  gain.connect((bus as any)['sfx'] || (bus as any));
-  osc.start();
-  osc.stop(t + 0.08);
+  const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
+  const now = ctx.currentTime;
+
+  const burst = ctx.createBufferSource();
+  burst.buffer = createNoiseBurst(ctx, 0.12);
+  const burstFilter = ctx.createBiquadFilter();
+  burstFilter.type = 'highpass';
+  burstFilter.frequency.value = 1400;
+  burstFilter.Q.value = 0.7;
+  const burstGain = ctx.createGain();
+  burstGain.gain.value = 0.05;
+  burst.connect(burstFilter);
+  burstFilter.connect(burstGain);
+  burstGain.connect(destination);
+  burstGain.gain.setValueAtTime(0.07, now);
+  burstGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+  burstFilter.frequency.setValueAtTime(1400, now);
+  burstFilter.frequency.exponentialRampToValueAtTime(2600, now + 0.08);
+
+  const crackOsc = ctx.createOscillator();
+  crackOsc.type = 'triangle';
+  const crackGain = ctx.createGain();
+  crackGain.gain.value = 0.03;
+  crackOsc.frequency.setValueAtTime(880, now);
+  crackOsc.frequency.exponentialRampToValueAtTime(420, now + 0.08);
+  crackOsc.connect(crackGain);
+  crackGain.connect(destination);
+  crackGain.gain.setValueAtTime(0.035, now);
+  crackGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+
+  burst.start(now);
+  burst.stop(now + 0.14);
+  crackOsc.start(now);
+  crackOsc.stop(now + 0.12);
 }
 
 export function playRocket(bus: AudioBus): void {
   const ctx = bus.context;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.value = 220;
-  gain.gain.value = 0.04;
-  const t = ctx.currentTime;
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-  osc.frequency.exponentialRampToValueAtTime(140, t + 0.22);
-  osc.connect(gain);
-  gain.connect((bus as any)['sfx'] || (bus as any));
-  osc.start();
-  osc.stop(t + 0.28);
+  const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
+  const now = ctx.currentTime;
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = createNoiseBurst(ctx, 0.5);
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = 380;
+  noiseFilter.Q.value = 0.9;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.05;
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(destination);
+  noiseGain.gain.setValueAtTime(0.08, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+  noiseFilter.frequency.setValueAtTime(360, now);
+  noiseFilter.frequency.linearRampToValueAtTime(520, now + 0.15);
+  noiseFilter.frequency.exponentialRampToValueAtTime(210, now + 0.45);
+
+  const tone = ctx.createOscillator();
+  tone.type = 'sawtooth';
+  const toneGain = ctx.createGain();
+  toneGain.gain.value = 0.04;
+  tone.frequency.setValueAtTime(300, now);
+  tone.frequency.exponentialRampToValueAtTime(140, now + 0.35);
+  tone.connect(toneGain);
+  toneGain.connect(destination);
+  toneGain.gain.setValueAtTime(0.05, now);
+  toneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+
+  const sub = ctx.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.value = 95;
+  const subGain = ctx.createGain();
+  subGain.gain.value = 0.028;
+  sub.connect(subGain);
+  subGain.connect(destination);
+  subGain.gain.setValueAtTime(0.032, now + 0.02);
+  subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+  noise.start(now);
+  noise.stop(now + 0.5);
+  tone.start(now);
+  tone.stop(now + 0.45);
+  sub.start(now);
+  sub.stop(now + 0.5);
 }
 
 export function playHellfire(bus: AudioBus): void {
@@ -257,55 +314,78 @@ export function playHellfire(bus: AudioBus): void {
   const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
   const now = ctx.currentTime;
 
+  // Roar layer
   const roarOsc = ctx.createOscillator();
   roarOsc.type = 'sawtooth';
   const roarGain = ctx.createGain();
-  roarGain.gain.value = 0.06;
+  roarGain.gain.value = 0.08; // from feature branch
   const roarFilter = ctx.createBiquadFilter();
   roarFilter.type = 'bandpass';
-  roarFilter.frequency.value = 520;
-  roarFilter.Q.value = 1.1;
+  roarFilter.frequency.value = 560;
+  roarFilter.Q.value = 1.2;
   roarOsc.connect(roarGain);
   roarGain.connect(roarFilter);
   roarFilter.connect(destination);
-  roarGain.gain.setValueAtTime(0.07, now);
-  roarGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-  roarOsc.frequency.setValueAtTime(420, now);
-  roarOsc.frequency.exponentialRampToValueAtTime(110, now + 0.5);
+  roarGain.gain.setValueAtTime(0.09, now);
+  roarGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+  roarOsc.frequency.setValueAtTime(440, now);
+  roarOsc.frequency.exponentialRampToValueAtTime(90, now + 0.58);
 
+  // Noisy blast
   const noiseSrc = ctx.createBufferSource();
-  noiseSrc.buffer = createNoiseBurst(ctx, 0.5);
+  noiseSrc.buffer = createNoiseBurst(ctx, 0.6);
   const noiseFilter = ctx.createBiquadFilter();
   noiseFilter.type = 'highpass';
-  noiseFilter.frequency.value = 260;
-  noiseFilter.Q.value = 0.6;
+  noiseFilter.frequency.value = 280;
+  noiseFilter.Q.value = 0.7;
   const noiseGain = ctx.createGain();
-  noiseGain.gain.value = 0.085;
+  noiseGain.gain.value = 0.095;
   noiseSrc.connect(noiseFilter);
   noiseFilter.connect(noiseGain);
   noiseGain.connect(destination);
-  noiseGain.gain.setValueAtTime(0.09, now);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-  noiseFilter.frequency.setValueAtTime(260, now);
-  noiseFilter.frequency.linearRampToValueAtTime(620, now + 0.12);
-  noiseFilter.frequency.exponentialRampToValueAtTime(200, now + 0.55);
+  noiseGain.gain.setValueAtTime(0.1, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+  noiseFilter.frequency.setValueAtTime(280, now);
+  noiseFilter.frequency.linearRampToValueAtTime(680, now + 0.14);
+  noiseFilter.frequency.exponentialRampToValueAtTime(190, now + 0.62);
 
+  // Sub impact
   const subOsc = ctx.createOscillator();
   subOsc.type = 'sine';
-  subOsc.frequency.value = 62;
+  subOsc.frequency.value = 58;
   const subGain = ctx.createGain();
-  subGain.gain.value = 0.035;
+  subGain.gain.value = 0.04;
   subOsc.connect(subGain);
   subGain.connect(destination);
-  subGain.gain.setValueAtTime(0.04, now);
-  subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+  subGain.gain.setValueAtTime(0.045, now + 0.02);
+  subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
+
+  // Wind/whip layer
+  const windSrc = ctx.createBufferSource();
+  windSrc.buffer = createNoiseBurst(ctx, 0.5);
+  const windFilter = ctx.createBiquadFilter();
+  windFilter.type = 'bandpass';
+  windFilter.frequency.value = 820;
+  windFilter.Q.value = 1.4;
+  const windGain = ctx.createGain();
+  windGain.gain.value = 0.04;
+  windSrc.connect(windFilter);
+  windFilter.connect(windGain);
+  windGain.connect(destination);
+  windGain.gain.setValueAtTime(0.05, now + 0.05);
+  windGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  windFilter.frequency.setValueAtTime(780, now + 0.05);
+  windFilter.frequency.linearRampToValueAtTime(1120, now + 0.2);
+  windFilter.frequency.exponentialRampToValueAtTime(340, now + 0.55);
 
   roarOsc.start(now);
-  roarOsc.stop(now + 0.6);
+  roarOsc.stop(now + 0.7);
   noiseSrc.start(now);
-  noiseSrc.stop(now + 0.6);
+  noiseSrc.stop(now + 0.7);
   subOsc.start(now);
-  subOsc.stop(now + 0.6);
+  subOsc.stop(now + 0.7);
+  windSrc.start(now + 0.02);
+  windSrc.stop(now + 0.6);
 }
 
 function createNoiseBurst(ctx: AudioContext, duration: number): AudioBuffer {
@@ -319,20 +399,56 @@ function createNoiseBurst(ctx: AudioContext, duration: number): AudioBuffer {
   return buffer;
 }
 
-export function playExplosion(bus: AudioBus): void {
+export function playExplosion(bus: AudioBus, size = 1): void {
   const ctx = bus.context;
-  const buffer = ctx.createBuffer(1, 4410, 44100);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i += 1) {
-    const n = Math.random() * 2 - 1;
-    const env = 1 - i / data.length;
-    data[i] = n * env * env;
-  }
-  const src = ctx.createBufferSource();
-  const gain = ctx.createGain();
-  gain.gain.value = 0.12;
-  src.buffer = buffer;
-  src.connect(gain);
-  gain.connect((bus as any)['sfx'] || (bus as any));
-  src.start();
+  const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
+  const now = ctx.currentTime;
+  const scale = Math.max(0.35, Math.min(3, size * 1.6));
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = createNoiseBurst(ctx, 0.7);
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'lowpass';
+  noiseFilter.frequency.value = 2200;
+  noiseFilter.Q.value = 0.5;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = 0.12 * scale;
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(destination);
+  noiseGain.gain.setValueAtTime(0.12 * scale, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+  noiseFilter.frequency.setValueAtTime(1800, now);
+  noiseFilter.frequency.exponentialRampToValueAtTime(260, now + 0.7);
+
+  const thumpOsc = ctx.createOscillator();
+  thumpOsc.type = 'sine';
+  thumpOsc.frequency.value = 52;
+  const thumpGain = ctx.createGain();
+  thumpGain.gain.value = 0.06 * scale;
+  thumpOsc.connect(thumpGain);
+  thumpGain.connect(destination);
+  thumpGain.gain.setValueAtTime(0.08 * scale, now + 0.02);
+  thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+
+  const debris = ctx.createBufferSource();
+  debris.buffer = createNoiseBurst(ctx, 0.25);
+  const debrisFilter = ctx.createBiquadFilter();
+  debrisFilter.type = 'highpass';
+  debrisFilter.frequency.value = 1800;
+  debrisFilter.Q.value = 1.4;
+  const debrisGain = ctx.createGain();
+  debrisGain.gain.value = 0.05 * Math.sqrt(scale);
+  debris.connect(debrisFilter);
+  debrisFilter.connect(debrisGain);
+  debrisGain.connect(destination);
+  debrisGain.gain.setValueAtTime(0.05 * Math.sqrt(scale), now + 0.04);
+  debrisGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+
+  noise.start(now);
+  noise.stop(now + 0.75);
+  thumpOsc.start(now);
+  thumpOsc.stop(now + 0.95);
+  debris.start(now + 0.02);
+  debris.stop(now + 0.32);
 }

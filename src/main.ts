@@ -1391,8 +1391,8 @@ const loop = new GameLoop({
         const dirLen = Math.hypot(ev.dx, ev.dy) || 1;
         const dirX = ev.dx / dirLen;
         const dirY = ev.dy / dirLen;
-        const speedM = ev.speed ?? 20;
-        const launchOffset = ev.launchOffset ?? 0.55;
+        const speedM = ev.speed ?? 22;
+        const launchOffset = ev.launchOffset ?? 0.48;
         const spawnX = ev.sx + dirX * launchOffset;
         const spawnY = ev.sy + dirY * launchOffset;
         projectilePool.spawn({
@@ -1402,9 +1402,9 @@ const loop = new GameLoop({
           y: spawnY,
           vx: dirX * speedM,
           vy: dirY * speedM,
-          ttl: ev.ttl ?? 1.05,
-          radius: ev.radius ?? 0.14,
-          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.25 },
+          ttl: ev.ttl ?? 0.7,
+          radius: ev.radius ?? 0.08,
+          damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.12 },
         });
       } else if (ev.kind === 'rocket') {
         playRocket(bus);
@@ -1415,16 +1415,16 @@ const loop = new GameLoop({
           y: ev.y,
           vx: ev.vx,
           vy: ev.vy,
-          ttl: ev.ttl ?? 4,
-          radius: ev.radius ?? 0.18,
-          damage: { amount: 12, radius: 0.6 },
+          ttl: ev.ttl ?? 5.2,
+          radius: ev.radius ?? 0.22,
+          damage: { amount: ev.damage ?? 16, radius: ev.damageRadius ?? 0.9 },
         });
       } else if (ev.kind === 'hellfire') {
         playHellfire(bus);
         const velLen = Math.hypot(ev.vx, ev.vy) || 1;
         const dirX = ev.vx / velLen;
         const dirY = ev.vy / velLen;
-        const launchOffset = ev.launchOffset ?? 0.7;
+        const launchOffset = ev.launchOffset ?? 0.92;
         const speedH = ev.speed ?? velLen;
         const spawnX = ev.x + dirX * launchOffset;
         const spawnY = ev.y + dirY * launchOffset;
@@ -1435,10 +1435,10 @@ const loop = new GameLoop({
           y: spawnY,
           vx: dirX * speedH,
           vy: dirY * speedH,
-          ttl: ev.ttl ?? 6,
-          radius: ev.radius ?? 0.22,
+          ttl: ev.ttl ?? 7.5,
+          radius: ev.radius ?? 0.3,
           seek: { targetX: ev.targetX, targetY: ev.targetY, turnRate: Math.PI * 0.8 },
-          damage: { amount: ev.damage ?? 28, radius: ev.damageRadius ?? 1.15 },
+          damage: { amount: ev.damage ?? 36, radius: ev.damageRadius ?? 1.9 },
         });
       }
     }
@@ -1446,10 +1446,10 @@ const loop = new GameLoop({
 
     projectilePool.update(dt, colliders, colliders, transforms, (hit) => {
       damage.queue(hit);
-      const boomRadius = Math.max(0.35, hit.radius * 1.35);
-      const boomDuration = 0.45 + boomRadius * 0.12;
+      const boomRadius = Math.max(0.2, hit.radius * 1.45);
+      const boomDuration = 0.32 + hit.radius * 0.38;
       spawnExplosion(hit.x, hit.y, boomRadius, boomDuration);
-      playExplosion(bus);
+      playExplosion(bus, hit.radius);
       if (ui.settings.screenShake) shake.trigger(8, 0.25);
     });
 

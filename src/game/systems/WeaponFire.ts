@@ -23,7 +23,18 @@ export type FireEvent =
       damage?: number;
       damageRadius?: number;
     }
-  | { faction: 'player' | 'enemy'; kind: 'rocket'; x: number; y: number; vx: number; vy: number }
+  | {
+      faction: 'player' | 'enemy';
+      kind: 'rocket';
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      ttl?: number;
+      radius?: number;
+      damage?: number;
+      damageRadius?: number;
+    }
   | {
       faction: 'player' | 'enemy';
       kind: 'hellfire';
@@ -67,12 +78,12 @@ export class WeaponFireSystem implements System {
     this.aimTileY = aimTileY;
   }
 
-  update(dt: number): void {
+  update(_dt: number): void {
     // Cooldowns decay
-    this.weapons.forEach((entity, w) => {
-      w.cooldownMissile = Math.max(0, w.cooldownMissile - dt);
-      w.cooldownRocket = Math.max(0, w.cooldownRocket - dt);
-      w.cooldownHellfire = Math.max(0, w.cooldownHellfire - dt);
+    this.weapons.forEach((_, w) => {
+      w.cooldownMissile = Math.max(0, w.cooldownMissile - _dt);
+      w.cooldownRocket = Math.max(0, w.cooldownRocket - _dt);
+      w.cooldownHellfire = Math.max(0, w.cooldownHellfire - _dt);
     });
 
     const snap = this.input;
@@ -82,7 +93,7 @@ export class WeaponFireSystem implements System {
     const switchDown =
       snap.keys['r'] || snap.keys['R'] || snap.keys['q'] || snap.keys['Q'] || snap.keys['Tab'];
     if (switchDown && !this.switchHeld) {
-      this.weapons.forEach((_e, w) => {
+      this.weapons.forEach((_, w) => {
         w.active = nextWeapon(w.active);
       });
     }
@@ -118,9 +129,8 @@ export class WeaponFireSystem implements System {
       const dirX = ax / ad;
       const dirY = ay / ad;
 
-      // Active-weapon fire (also direct-mapped buttons)
+      // Missiles (LMB / primary)
       if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
-        // Missile: rapid salvo with fast launch and splash damage
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 0.1;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
@@ -138,21 +148,22 @@ export class WeaponFireSystem implements System {
             dx,
             dy,
             spread,
-            launchOffset: 0.65,
-            speed: 26,
-            ttl: 1.2,
-            radius: 0.16,
-            damage: 12,
-            damageRadius: 0.7,
+            launchOffset: 0.48,
+            speed: 22,
+            ttl: 0.7,
+            radius: 0.08,
+            damage: 10,
+            damageRadius: 0.12,
           });
         }
       }
 
+      // Rockets (RMB / secondary)
       if ((w.active === 'rocket' && (isRmb || secondaryKey)) || isRmb || secondaryKey) {
         if (w.cooldownRocket <= 0 && ammo.rockets > 0) {
           w.cooldownRocket = 0.4;
           ammo.rockets = Math.max(0, ammo.rockets - 1);
-          const speed = 6;
+          const speed = 8.8;
           this.eventsOut.push({
             faction: 'player',
             kind: 'rocket',
@@ -160,16 +171,21 @@ export class WeaponFireSystem implements System {
             y: t.ty,
             vx: dirX * speed,
             vy: dirY * speed,
+            ttl: 5.2,
+            radius: 0.22,
+            damage: 16,
+            damageRadius: 0.9,
           });
         }
       }
 
+      // Hellfire (MMB / special)
       if ((w.active === 'hellfire' && (isMmb || specialKey)) || isMmb || specialKey) {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
           w.cooldownHellfire = 1.25;
           ammo.hellfires = Math.max(0, ammo.hellfires - 1);
-          const speed = 20;
-          const launchOffset = 0.78;
+          const speed = 24;
+          const launchOffset = 0.92;
           this.eventsOut.push({
             faction: 'player',
             kind: 'hellfire',
@@ -181,10 +197,10 @@ export class WeaponFireSystem implements System {
             launchOffset,
             targetX: this.aimTileX,
             targetY: this.aimTileY,
-            ttl: 6,
-            radius: 0.22,
-            damage: 32,
-            damageRadius: 1.25,
+            ttl: 7.5,
+            radius: 0.3,
+            damage: 36,
+            damageRadius: 1.9,
           });
         }
       }
