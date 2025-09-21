@@ -24,6 +24,9 @@ export class MissionTracker {
         if (override()) o.complete = true;
         continue;
       }
+      if (!this.prerequisitesMet(o)) {
+        continue;
+      }
       if (o.type === 'reach') {
         const p = this.getPlayer();
         if (tileDist(p.tx, p.ty, o.at.tx, o.at.ty) <= o.radiusTiles) {
@@ -48,6 +51,15 @@ export class MissionTracker {
 
   public nextIncomplete(): ObjectiveState | undefined {
     return this.state.objectives.find((o) => !o.complete);
+  }
+
+  private prerequisitesMet(o: ObjectiveState): boolean {
+    if (!o.requires || o.requires.length === 0) {
+      return true;
+    }
+    return o.requires.every((id) =>
+      this.state.objectives.some((candidate) => candidate.id === id && candidate.complete),
+    );
   }
 }
 
