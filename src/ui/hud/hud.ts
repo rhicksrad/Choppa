@@ -1,5 +1,6 @@
 import type { IsoParams } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
+import type { WeaponKind } from '../../game/components/Weapon';
 
 export interface BarsData {
   fuel01: number;
@@ -8,13 +9,25 @@ export interface BarsData {
   armor01: number;
   ammo: { missiles: number; rockets: number; hellfires: number };
   ammoMax: { missiles: number; rockets: number; hellfires: number };
-  activeWeapon: string;
+  activeWeapon: WeaponKind;
   lives: number;
   score: number;
   wave: number;
   enemiesRemaining: number;
   nextWaveIn: number | null;
 }
+
+const ammoDisplayOrder: {
+  key: keyof BarsData['ammo'];
+  label: string;
+  color: string;
+  bg: string;
+  weapon: WeaponKind;
+}[] = [
+  { key: 'missiles', label: 'MACHINE GUN', color: '#ffd166', bg: '#2b1f08', weapon: 'missile' },
+  { key: 'rockets', label: 'ROCKETS', color: '#ff8a5c', bg: '#2b1208', weapon: 'rocket' },
+  { key: 'hellfires', label: 'HELLFIRES', color: '#f94144', bg: '#2a090b', weapon: 'hellfire' },
+];
 
 export function drawHUD(
   ctx: CanvasRenderingContext2D,
@@ -29,27 +42,41 @@ export function drawHUD(
   },
   _iso: IsoParams,
 ): void {
-  const { width: w, height: h } = getCanvasViewMetrics(ctx);
+  const { width: w } = getCanvasViewMetrics(ctx);
   ctx.save();
-  // Bars bottom-left (larger/high-contrast)
-  const x0 = 16;
-  const y0 = h - 24;
-  drawBar(ctx, x0, y0 - 28, 200, 14, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
-  drawBar(ctx, x0, y0 - 8, 200, 14, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px system-ui, sans-serif';
-  const fuelText = `Fuel: ${Math.round(bars.fuelCurrent)} / ${Math.round(bars.fuelMax)}`;
-  ctx.fillText(fuelText, x0, y0 - 78);
-  const ammoText =
-    `Ammo  M:${bars.ammo.missiles}/${bars.ammoMax.missiles}  ` +
-    `R:${bars.ammo.rockets}/${bars.ammoMax.rockets}  ` +
-    `H:${bars.ammo.hellfires}/${bars.ammoMax.hellfires}  [` +
-    `${bars.activeWeapon.toUpperCase()}]`;
-  ctx.fillText(ammoText, x0, y0 - 60);
-  ctx.fillStyle = '#c8d7e1';
-  ctx.font = '12px system-ui, sans-serif';
-  ctx.fillText(`Lives: ${bars.lives}`, x0, y0 - 96);
 
+  // Minimap top-right (orthographic)
+  const mmW = 140;
+  const mmH = 100;
+  const mmX = w - mmW - 16;
+  const mmY = 16;
+
+  // Resource & ammo bars to the left of the minimap
+  const barW = 220;
+  const barH = 16;
+  const barGap = barH + 12;
+  const barX = Math.max(16, mmX - barW - 24);
+  let barY = mmY;
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#c8d7e1';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText(`Lives: ${bars.lives}`, barX, barY - 8);
+
+  drawBar(ctx, barX, barY, barW, barH, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
+  barY += barGap;
+  drawBar(ctx, barX, barY, barW, barH, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
+  barY += barGap;
+
+  for (const ammoInfo of ammoDisplayOrder) {
+    const current = bars.ammo[ammoInfo.key];
+    const max = bars.ammoMax[ammoInfo.key];
+    const ammo01 = max > 0 ? current / max : 0;
+    const label =
+      ammoInfo.weapon === bars.activeWeapon ? `${ammoInfo.label} [ACTIVE]` : ammoInfo.label;
+    drawBar(ctx, barX, barY, barW, barH, ammo01, ammoInfo.color, ammoInfo.bg, label);
+    barY += barGap;
+  }
   // Objective list top-left
   ctx.textAlign = 'left';
   ctx.fillStyle = '#92ffa6';
@@ -60,11 +87,6 @@ export function drawHUD(
   for (let i = 0; i < objectiveLines.length; i += 1)
     ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
 
-  // Minimap top-right (orthographic)
-  const mmW = 140;
-  const mmH = 100;
-  const mmX = w - mmW - 16;
-  const mmY = 16;
   ctx.fillStyle = '#11202b';
   ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
   ctx.fillStyle = '#0b1720';

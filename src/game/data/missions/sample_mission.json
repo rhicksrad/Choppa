@@ -2,53 +2,53 @@
   "id": "m01",
   "title": "Operation Dawnshield",
   "briefing": "Alien strongholds anchor an invasion corridor through the valley. Neutralize their forward defenses, demolish the command campus, and evacuate anyone left standing before the counterattack closes in.",
-  "startPos": { "tx": 31, "ty": 31 },
+  "startPos": { "tx": 39, "ty": 39 },
   "objectives": [
     {
       "id": "obj1",
       "type": "destroy",
       "name": "Destroy the valley stronghold",
-      "at": { "tx": 11, "ty": 15 },
+      "at": { "tx": 19, "ty": 23 },
       "radiusTiles": 1.6
     },
     {
       "id": "obj2",
       "type": "destroy",
       "name": "Disable the ridge command nexus",
-      "at": { "tx": 26, "ty": 11 },
+      "at": { "tx": 34, "ty": 19 },
       "radiusTiles": 1.6
     },
     {
       "id": "obj3",
       "type": "destroy",
       "name": "Level the alien command campus",
-      "at": { "tx": 18, "ty": 18 },
+      "at": { "tx": 26, "ty": 26 },
       "radiusTiles": 5
     },
     {
       "id": "obj4",
       "type": "custom",
       "name": "Break the alien counterattack",
-      "at": { "tx": 18, "ty": 18 },
+      "at": { "tx": 26, "ty": 26 },
       "radiusTiles": 6
     },
     {
       "id": "obj5",
       "type": "custom",
       "name": "Evacuate campus survivors",
-      "at": { "tx": 18, "ty": 18 },
+      "at": { "tx": 26, "ty": 26 },
       "radiusTiles": 6
     },
     {
       "id": "obj6",
       "type": "reach",
       "name": "Return to the pad",
-      "at": { "tx": 31, "ty": 31 },
+      "at": { "tx": 39, "ty": 39 },
       "radiusTiles": 1.2
     }
   ],
   "enemySpawns": [
-    { "type": "AAA", "at": { "tx": 11, "ty": 15 } },
-    { "type": "SAM", "at": { "tx": 26, "ty": 11 } }
+    { "type": "AAA", "at": { "tx": 19, "ty": 23 } },
+    { "type": "SAM", "at": { "tx": 34, "ty": 19 } }
   ]
 }
