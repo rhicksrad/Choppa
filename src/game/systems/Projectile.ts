@@ -67,6 +67,8 @@ export class ProjectilePool {
       pr.x += pr.vx * dt;
       pr.y += pr.vy * dt;
       pr.ttl -= dt;
+
+      // Expire and explode safely even if ttl became NaN or non-finite
       if (!Number.isFinite(pr.ttl) || pr.ttl <= 0) {
         if (pr.kind === 'missile' || pr.kind === 'hellfire') {
           const amount = pr.damage.amount;
