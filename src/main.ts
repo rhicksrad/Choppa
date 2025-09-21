@@ -39,6 +39,7 @@ import {
   drawPatrolDrone,
   drawChaserDrone,
   drawAlienMonstrosity,
+  drawSpeedboat,
 } from './render/sprites/targets';
 import { Menu } from './ui/menus/menu';
 import { createUIStore, type UIStore } from './ui/menus/scenes';
@@ -47,12 +48,14 @@ import { FogOfWar } from './render/draw/fog';
 import { DamageSystem } from './game/systems/Damage';
 import { MissionTracker } from './game/missions/tracker';
 import { loadMission } from './game/missions/loader';
-import type { MissionDef } from './game/missions/types';
+import type { MissionDef, ObjectiveState } from './game/missions/types';
 import missionJson from './game/data/missions/sample_mission.json';
+import oceanMissionJson from './game/data/missions/ocean_mission.json';
 import type { Health } from './game/components/Health';
 import type { Collider } from './game/components/Collider';
 import type { Building } from './game/components/Building';
 import type { Pickup } from './game/components/Pickup';
+import type { Speedboat } from './game/components/Speedboat';
 import { drawHUD } from './ui/hud/hud';
 import { loadJson, saveJson } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
@@ -69,9 +72,10 @@ import {
 import { CameraShake } from './render/camera/shake';
 import { getCanvasViewMetrics } from './render/canvas/metrics';
 import { drawPickupCrate } from './render/sprites/pickups';
+import { SpeedboatBehaviorSystem } from './game/systems/SpeedboatBehavior';
 
 interface EnemyMeta {
-  kind: 'aaa' | 'sam' | 'patrol' | 'chaser';
+  kind: 'aaa' | 'sam' | 'patrol' | 'chaser' | 'speedboat';
   score: number;
   wave?: number;
 }
@@ -117,6 +121,83 @@ interface SurvivorSite {
   count: number;
   radius?: number;
   duration?: number;
+}
+
+function cloneBuildingSite(site: BuildingSite): BuildingSite {
+  return {
+    ...site,
+    drop: site.drop ? { ...site.drop } : undefined,
+  };
+}
+
+function clonePickupSite(site: PickupSite): PickupSite {
+  return {
+    ...site,
+    ammo: site.ammo ? { ...site.ammo } : undefined,
+  };
+}
+
+function cloneSurvivorSite(site: SurvivorSite): SurvivorSite {
+  return { ...site };
+}
+
+function clonePadConfig(config: PadConfig): PadConfig {
+  return { ...config };
+}
+
+function clonePoint(point: { tx: number; ty: number }): { tx: number; ty: number } {
+  return { tx: point.tx, ty: point.ty };
+}
+
+function cloneSafeHouseParams(params: SafeHouseParams): SafeHouseParams {
+  return { ...params };
+}
+
+function offsetBoatLane(seed: { entry: { tx: number; ty: number }; target: { tx: number; ty: number } }): BoatLane {
+  return {
+    entry: { tx: seed.entry.tx + MAP_BORDER, ty: seed.entry.ty + MAP_BORDER },
+    target: { tx: seed.target.tx + MAP_BORDER, ty: seed.target.ty + MAP_BORDER },
+  };
+}
+
+type ObjectiveLabelFn = (objective: ObjectiveState) => string;
+
+type PadConfig = { tx: number; ty: number; radius: number };
+
+interface ScenarioConfig {
+  pad: PadConfig;
+  safeHouse: SafeHouseParams;
+  campusSites: BuildingSite[];
+  civilianGenerator?: () => BuildingSite[];
+  staticStructures?: BuildingSite[];
+  pickupSites: PickupSite[];
+  survivorSites: SurvivorSite[];
+  alienSpawnPoints: Array<{ tx: number; ty: number }>;
+  waveSpawnPoints: Array<{ tx: number; ty: number }>;
+  initialWaveCountdown?: number;
+  waveCooldown?: (index: number) => number;
+  waveSpawner?: (index: number) => boolean;
+  setupMissionHandlers: () => void;
+  setupObjectiveLabels: () => void;
+  onApply?: () => void;
+  onReset?: () => void;
+  spawnExtraEnemies?: () => void;
+}
+
+interface BoatLane {
+  entry: { tx: number; ty: number };
+  target: { tx: number; ty: number };
+}
+
+interface BoatWave {
+  count: number;
+}
+
+interface BoatScenarioConfig {
+  lanes: BoatLane[];
+  waves: BoatWave[];
+  maxEscapes: number;
+  nextWaveDelay: number;
 }
 
 interface Explosion {
@@ -217,6 +298,7 @@ const healths = new ComponentStore<Health>();
 const colliders = new ComponentStore<Collider>();
 const buildings = new ComponentStore<Building>();
 const pickups = new ComponentStore<Pickup>();
+const speedboats = new ComponentStore<Speedboat>();
 
 let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
@@ -229,13 +311,13 @@ function offsetTiles<T extends { tx: number; ty: number }>(items: T[]): T[] {
     ty: item.ty + MAP_BORDER,
   }));
 }
-const pad = {
+let pad: PadConfig = {
   tx: runtimeMap.width - 5,
   ty: runtimeMap.height - 5,
   radius: 1.2,
 };
 
-const safeHouse: SafeHouseParams = {
+let safeHouse: SafeHouseParams = {
   tx: pad.tx - 1.4,
   ty: pad.ty + 0.55,
   width: 1.18,
@@ -291,12 +373,15 @@ const projectilePool = new ProjectilePool();
 const fireEvents: FireEvent[] = [];
 const weaponFire = new WeaponFireSystem(transforms, physics, weapons, ammos, fireEvents, rng);
 const damage = new DamageSystem(transforms, colliders, healths);
-const missionDef = missionJson as MissionDef;
-const missionBriefingInfo = {
-  title: missionDef.title,
-  text: missionDef.briefing,
-  goals: missionDef.objectives.map((o) => o.name),
-};
+const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
+const savedProgress = loadJson<{ mission?: string }>('choppa:progress', {});
+let currentMissionIndex = 0;
+if (savedProgress.mission) {
+  const savedIndex = missionDefs.findIndex((def) => def.id === savedProgress.mission);
+  if (savedIndex >= 0) currentMissionIndex = Math.min(savedIndex + 1, missionDefs.length - 1);
+}
+let nextMissionIndex = currentMissionIndex;
+let missionDef: MissionDef = missionDefs[currentMissionIndex];
 let missionState = loadMission(missionDef);
 const missionHandlers: Record<string, () => boolean> = {};
 const mission = new MissionTracker(
@@ -310,6 +395,7 @@ const mission = new MissionTracker(
   }),
   missionHandlers,
 );
+let missionBriefingInfo = createMissionBriefing(missionDef);
 
 scheduler.add(new MovementSystem(transforms, physics));
 scheduler.add(new RotorSpinSystem(sprites));
@@ -326,6 +412,12 @@ scheduler.add(
     x: transforms.get(player)!.tx,
     y: transforms.get(player)!.ty,
   })),
+);
+scheduler.add(
+  new SpeedboatBehaviorSystem(transforms, physics, speedboats, fireEvents, rng, () => ({
+    x: transforms.get(player)!.tx,
+    y: transforms.get(player)!.ty,
+  }), handleBoatLanding),
 );
 
 const playerState: PlayerState = { lives: 3, respawnTimer: 0, invulnerable: false };
@@ -347,13 +439,62 @@ const pickupCraneSounds = new Map<Entity, PickupCraneSoundHandle>();
 const survivorEntities: Entity[] = [];
 const alienEntities: Set<Entity> = new Set();
 const rescueRunners: RescueRunner[] = [];
-const waveSpawnPoints = offsetTiles([
+
+const SURVIVOR_CAPACITY = 4;
+
+const rescueState = {
+  carrying: 0,
+  rescued: 0,
+  total: 0,
+  survivorsSpawned: false,
+};
+
+let aliensTriggered = false;
+let aliensDefeated = false;
+let campusLeveled = false;
+
+let campusSites: BuildingSite[] = [];
+let civilianHouseSites: BuildingSite[] = [];
+let staticBuildingSites: BuildingSite[] = [];
+let buildingSites: BuildingSite[] = [];
+let pickupSites: PickupSite[] = [];
+let survivorSites: SurvivorSite[] = [];
+let alienSpawnPoints: { tx: number; ty: number }[] = [];
+let waveSpawnPoints: { tx: number; ty: number }[] = [];
+let extraStructureGenerator: (() => BuildingSite[]) | null = null;
+let spawnWaveHandler: ((index: number) => boolean) | null = null;
+let computeWaveCooldown: ((index: number) => number) | null = null;
+let initialWaveCountdown = 3.5;
+let scenarioOnReset: (() => void) | null = null;
+let spawnExtraScenarioEnemies: (() => void) | null = null;
+let objectiveLabelOverrides: Record<string, ObjectiveLabelFn> = {};
+
+let boatScenario: BoatScenarioConfig | null = null;
+let boatsEscaped = 0;
+let boatObjectiveComplete = false;
+let boatObjectiveFailed = false;
+
+const MISSION_ONE_PAD: PadConfig = { tx: runtimeMap.width - 5, ty: runtimeMap.height - 5, radius: 1.2 };
+const MISSION_ONE_SAFEHOUSE: SafeHouseParams = {
+  tx: MISSION_ONE_PAD.tx - 1.4,
+  ty: MISSION_ONE_PAD.ty + 0.55,
+  width: 1.18,
+  depth: 1.02,
+  height: 22,
+  bodyColor: '#d8d2c6',
+  roofColor: '#6e7b88',
+  trimColor: '#f4f0e6',
+  doorColor: '#394758',
+  windowColor: '#cfe4ff',
+  walkwayColor: '#d6d0c4',
+};
+const MISSION_ONE_WAVE_SPAWNS = offsetTiles([
   { tx: 7, ty: 7 },
   { tx: 28, ty: 9 },
   { tx: 12, ty: 28 },
   { tx: 20, ty: 6 },
 ]);
-const campusSites: BuildingSite[] = offsetTiles([
+const MISSION_ONE_CAMPUS_SITES = offsetTiles([
   {
     tx: 18,
     ty: 16,
@@ -415,11 +556,7 @@ const campusSites: BuildingSite[] = offsetTiles([
     triggersAlarm: true,
   },
 ]);
-
-let civilianHouseSites: BuildingSite[] = [];
-let buildingSites: BuildingSite[] = [];
-
-function generateCivilianHouses(): BuildingSite[] {
+function generateMissionOneCivilianHouses(): BuildingSite[] {
   const clusters = offsetTiles([
     { tx: 9.4, ty: 24.2, spread: 1.4, count: 3 },
     { tx: 24.6, ty: 27.5, spread: 1.6, count: 3 },
@@ -465,23 +602,14 @@ function generateCivilianHouses(): BuildingSite[] {
   }
   return houses;
 }
-
-function regenerateWorldStructures(): void {
-  civilianHouseSites = generateCivilianHouses();
-  buildingSites = [...campusSites, ...civilianHouseSites];
-}
-
-const SURVIVOR_CAPACITY = 4;
-
-const survivorSites: SurvivorSite[] = offsetTiles([
+const MISSION_ONE_SURVIVOR_SITES = offsetTiles([
   { tx: 18.2, ty: 17.4, count: 3, radius: 0.85, duration: 1.6 },
   { tx: 20.4, ty: 18.8, count: 2, radius: 0.85, duration: 1.6 },
   { tx: 16.1, ty: 19.6, count: 3, radius: 0.9, duration: 1.7 },
   { tx: 18.7, ty: 21.2, count: 2, radius: 0.9, duration: 1.7 },
   { tx: 15.4, ty: 17.8, count: 2, radius: 0.85, duration: 1.5 },
 ]);
-
-const alienSpawnPoints: { tx: number; ty: number }[] = offsetTiles([
+const MISSION_ONE_ALIEN_SPAWNS = offsetTiles([
   { tx: 17.2, ty: 14.6 },
   { tx: 21.1, ty: 16.3 },
   { tx: 14.4, ty: 18.4 },
@@ -489,8 +617,7 @@ const alienSpawnPoints: { tx: number; ty: number }[] = offsetTiles([
   { tx: 16.2, ty: 22.1 },
   { tx: 22.4, ty: 19.2 },
 ]);
-
-const pickupSites: PickupSite[] = offsetTiles([
+const MISSION_ONE_PICKUP_SITES = offsetTiles([
   { tx: 15.2, ty: 18.4, kind: 'fuel', fuelAmount: 55 },
   { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { missiles: 90, rockets: 3, hellfires: 1 } },
   { tx: 10.4, ty: 12.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 1 } },
@@ -503,21 +630,471 @@ const pickupSites: PickupSite[] = offsetTiles([
   { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
 ]);
 
-const rescueState = {
-  carrying: 0,
-  rescued: 0,
-  total: survivorSites.reduce((sum, site) => sum + site.count, 0),
-  survivorsSpawned: false,
+const MISSION_TWO_PAD: PadConfig = { tx: 30, ty: 44, radius: 1.3 };
+const MISSION_TWO_SAFEHOUSE: SafeHouseParams = {
+  tx: MISSION_TWO_PAD.tx - 0.9,
+  ty: MISSION_TWO_PAD.ty + 0.5,
+  width: 1.6,
+  depth: 1.18,
+  height: 28,
+  bodyColor: '#b0bcc9',
+  roofColor: '#3e4c5d',
+  trimColor: '#d9e4ef',
+  doorColor: '#243241',
+  windowColor: '#9ed4ff',
+  walkwayColor: '#6f7c89',
+};
+const MISSION_TWO_STRONGHOLDS = offsetTiles([
+  {
+    tx: 18.4,
+    ty: 8.2,
+    width: 2.4,
+    depth: 1.5,
+    height: 34,
+    health: 150,
+    colliderRadius: 1.18,
+    bodyColor: '#1f2e57',
+    roofColor: '#83d3ff',
+    ruinColor: '#15213d',
+    score: 320,
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+  {
+    tx: 24.5,
+    ty: 9.4,
+    width: 2.2,
+    depth: 1.4,
+    height: 30,
+    health: 140,
+    colliderRadius: 1.05,
+    bodyColor: '#243961',
+    roofColor: '#76d1ff',
+    ruinColor: '#1a2642',
+    score: 310,
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+  {
+    tx: 29.2,
+    ty: 11.6,
+    width: 2.1,
+    depth: 1.6,
+    height: 28,
+    health: 135,
+    colliderRadius: 1.02,
+    bodyColor: '#1c2f4a',
+    roofColor: '#8bd0ff',
+    ruinColor: '#152438',
+    score: 290,
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+]);
+const MISSION_TWO_STATIC_STRUCTURES = offsetTiles([
+  {
+    tx: 21.8,
+    ty: 13.4,
+    width: 1.6,
+    depth: 1.2,
+    height: 20,
+    health: 95,
+    colliderRadius: 0.9,
+    bodyColor: '#36485e',
+    roofColor: '#5fa1c7',
+    ruinColor: '#243542',
+    score: 180,
+    category: 'civilian',
+    triggersAlarm: false,
+    drop: { kind: 'armor', amount: 35 },
+  },
+  {
+    tx: 27.2,
+    ty: 14.1,
+    width: 1.5,
+    depth: 1.2,
+    height: 22,
+    health: 100,
+    colliderRadius: 0.88,
+    bodyColor: '#3a4c62',
+    roofColor: '#58a7d4',
+    ruinColor: '#27374a',
+    score: 190,
+    category: 'civilian',
+    triggersAlarm: false,
+  },
+  {
+    tx: 23.6,
+    ty: 10.9,
+    width: 1.2,
+    depth: 1.1,
+    height: 18,
+    health: 80,
+    colliderRadius: 0.76,
+    bodyColor: '#28384c',
+    roofColor: '#6fb7dd',
+    ruinColor: '#1c2835',
+    score: 160,
+    category: 'civilian',
+    triggersAlarm: false,
+  },
+  {
+    tx: 31.4,
+    ty: 16.2,
+    width: 1.8,
+    depth: 1.3,
+    height: 24,
+    health: 110,
+    colliderRadius: 0.94,
+    bodyColor: '#2e4054',
+    roofColor: '#72b9df',
+    ruinColor: '#1f2b38',
+    score: 210,
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+]);
+const MISSION_TWO_PICKUP_SITES = offsetTiles([
+  { tx: 26.8, ty: 35.4, kind: 'fuel', fuelAmount: 70 },
+  { tx: 30.1, ty: 34.8, kind: 'ammo', ammo: { missiles: 120, rockets: 5, hellfires: 2 } },
+  { tx: 22.6, ty: 12.4, kind: 'ammo', ammo: { missiles: 105, rockets: 4, hellfires: 1 } },
+  { tx: 28.4, ty: 12.8, kind: 'fuel', fuelAmount: 65 },
+  { tx: 33.2, ty: 17.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 2 } },
+  { tx: 19.4, ty: 32.8, kind: 'fuel', fuelAmount: 68 },
+]);
+const MISSION_TWO_SURVIVOR_SITES: SurvivorSite[] = [];
+const MISSION_TWO_ALIEN_SPAWNS = offsetTiles([
+  { tx: 18.2, ty: 9.6 },
+  { tx: 24.6, ty: 11.2 },
+  { tx: 29.8, ty: 13 },
+  { tx: 22.8, ty: 15.4 },
+]);
+const MISSION_TWO_WAVE_SPAWNS = offsetTiles([
+  { tx: 16.5, ty: 2.4 },
+  { tx: 24.2, ty: 1.8 },
+  { tx: 31.1, ty: 3.1 },
+]);
+const MISSION_TWO_GUARD_POSTS = offsetTiles([
+  { tx: 20.2, ty: 13 },
+  { tx: 26.1, ty: 14.1 },
+  { tx: 30.6, ty: 15.2 },
+]);
+const MISSION_TWO_PATROL_ROUTES = offsetTiles([
+  { tx: 22.6, ty: 13.8, axis: 'x' as const, range: 1.6 },
+  { tx: 28.2, ty: 14.5, axis: 'x' as const, range: 1.8 },
+  { tx: 24.8, ty: 11.4, axis: 'y' as const, range: 1.4 },
+]);
+const MISSION_TWO_BOAT_LANES: BoatLane[] = [
+  offsetBoatLane({ entry: { tx: 16.5, ty: 2.4 }, target: { tx: 20.4, ty: 13.5 } }),
+  offsetBoatLane({ entry: { tx: 24.2, ty: 1.8 }, target: { tx: 26.8, ty: 13.9 } }),
+  offsetBoatLane({ entry: { tx: 31.1, ty: 3.1 }, target: { tx: 32.9, ty: 14.4 } }),
+];
+const MISSION_TWO_BOAT_WAVES: BoatWave[] = [{ count: 4 }, { count: 5 }, { count: 6 }];
+const MISSION_TWO_MAX_ESCAPES = 3;
+const MISSION_TWO_WAVE_DELAY = 7.2;
+
+const scenarioConfigs: Record<string, ScenarioConfig> = {
+  m01: {
+    pad: MISSION_ONE_PAD,
+    safeHouse: MISSION_ONE_SAFEHOUSE,
+    campusSites: MISSION_ONE_CAMPUS_SITES,
+    civilianGenerator: generateMissionOneCivilianHouses,
+    pickupSites: MISSION_ONE_PICKUP_SITES,
+    survivorSites: MISSION_ONE_SURVIVOR_SITES,
+    alienSpawnPoints: MISSION_ONE_ALIEN_SPAWNS,
+    waveSpawnPoints: MISSION_ONE_WAVE_SPAWNS,
+    initialWaveCountdown: 3.5,
+    waveCooldown: defaultWaveCooldown,
+    waveSpawner: spawnDefaultWave,
+    setupMissionHandlers: setupMissionOneHandlers,
+    setupObjectiveLabels: setupMissionOneObjectiveLabels,
+    onApply: () => {
+      boatScenario = null;
+      boatsEscaped = 0;
+      boatObjectiveComplete = false;
+      boatObjectiveFailed = false;
+    },
+  },
+  m02: {
+    pad: MISSION_TWO_PAD,
+    safeHouse: MISSION_TWO_SAFEHOUSE,
+    campusSites: MISSION_TWO_STRONGHOLDS,
+    staticStructures: MISSION_TWO_STATIC_STRUCTURES,
+    pickupSites: MISSION_TWO_PICKUP_SITES,
+    survivorSites: MISSION_TWO_SURVIVOR_SITES,
+    alienSpawnPoints: MISSION_TWO_ALIEN_SPAWNS,
+    waveSpawnPoints: MISSION_TWO_WAVE_SPAWNS,
+    initialWaveCountdown: 4.5,
+    waveCooldown: boatWaveCooldown,
+    waveSpawner: spawnBoatWave,
+    setupMissionHandlers: setupMissionTwoHandlers,
+    setupObjectiveLabels: setupMissionTwoObjectiveLabels,
+    onApply: () => {
+      activateBoatScenario();
+    },
+    onReset: () => {
+      boatsEscaped = 0;
+      boatObjectiveComplete = false;
+      boatObjectiveFailed = false;
+    },
+    spawnExtraEnemies: spawnMissionTwoGuards,
+  },
 };
 
-let aliensTriggered = false;
-let aliensDefeated = false;
-let campusLeveled = false;
+function createMissionBriefing(def: MissionDef): { title: string; text: string; goals: string[] } {
+  return {
+    title: def.title,
+    text: def.briefing,
+    goals: def.objectives.map((o) => o.name),
+  };
+}
 
-regenerateWorldStructures();
+function defaultWaveCooldown(index: number): number {
+  return Math.max(3, 5 - index * 0.2);
+}
 
-missionHandlers.obj4 = () => aliensTriggered && aliensDefeated;
-missionHandlers.obj5 = () => rescueState.rescued >= rescueState.total;
+function boatWaveCooldown(index: number): number {
+  if (!boatScenario) return Number.POSITIVE_INFINITY;
+  return index < boatScenario.waves.length ? boatScenario.nextWaveDelay : Number.POSITIVE_INFINITY;
+}
+
+function regenerateWorldStructures(): void {
+  civilianHouseSites = extraStructureGenerator ? extraStructureGenerator() : [];
+  buildingSites = [...campusSites];
+  if (civilianHouseSites.length > 0) buildingSites.push(...civilianHouseSites);
+  if (staticBuildingSites.length > 0) buildingSites.push(...staticBuildingSites);
+}
+
+function applyScenario(id: string): void {
+  const config = scenarioConfigs[id];
+  if (!config) throw new Error(`Unknown mission scenario: ${id}`);
+  pad = clonePadConfig(config.pad);
+  safeHouse = cloneSafeHouseParams(config.safeHouse);
+  campusSites = config.campusSites.map((site) => cloneBuildingSite(site));
+  extraStructureGenerator = config.civilianGenerator ?? null;
+  staticBuildingSites = config.staticStructures
+    ? config.staticStructures.map((site) => cloneBuildingSite(site))
+    : [];
+  pickupSites = config.pickupSites.map((site) => clonePickupSite(site));
+  survivorSites = config.survivorSites.map((site) => cloneSurvivorSite(site));
+  alienSpawnPoints = config.alienSpawnPoints.map((point) => clonePoint(point));
+  waveSpawnPoints = config.waveSpawnPoints.map((point) => clonePoint(point));
+  spawnWaveHandler = config.waveSpawner ?? spawnDefaultWave;
+  computeWaveCooldown = config.waveCooldown ?? defaultWaveCooldown;
+  initialWaveCountdown = config.initialWaveCountdown ?? 3.5;
+  scenarioOnReset = config.onReset ?? null;
+  spawnExtraScenarioEnemies = config.spawnExtraEnemies ?? null;
+  objectiveLabelOverrides = {};
+  for (const key of Object.keys(missionHandlers)) delete missionHandlers[key];
+  if (config.onApply) config.onApply();
+  regenerateWorldStructures();
+  rescueState.carrying = 0;
+  rescueState.rescued = 0;
+  rescueState.total = survivorSites.reduce((sum, site) => sum + site.count, 0);
+  rescueState.survivorsSpawned = false;
+  aliensTriggered = false;
+  aliensDefeated = false;
+  campusLeveled = false;
+  config.setupMissionHandlers();
+  config.setupObjectiveLabels();
+  waveState.index = 0;
+  waveState.countdown = initialWaveCountdown;
+  waveState.active = false;
+  waveState.timeInWave = 0;
+  waveState.enemies.clear();
+}
+
+function setMission(index: number): void {
+  currentMissionIndex = index;
+  missionDef = missionDefs[currentMissionIndex];
+  missionState = loadMission(missionDef);
+  mission.state = missionState;
+  missionBriefingInfo = createMissionBriefing(missionDef);
+  applyScenario(missionDef.id);
+}
+
+function setupMissionOneHandlers(): void {
+  missionHandlers.obj4 = () => aliensTriggered && aliensDefeated;
+  missionHandlers.obj5 = () => rescueState.rescued >= rescueState.total;
+}
+
+function setupMissionOneObjectiveLabels(): void {
+  objectiveLabelOverrides.obj4 = (objective) => {
+    if (!aliensTriggered) return `${objective.name} (stand by)`;
+    if (!objective.complete) return `${objective.name} (${alienEntities.size} remaining)`;
+    return objective.name;
+  };
+  objectiveLabelOverrides.obj5 = (objective) => {
+    const carrying = rescueState.carrying;
+    let label = `${objective.name} (${rescueState.rescued}/${rescueState.total}`;
+    if (carrying > 0) label += ` +${carrying}`;
+    label += ')';
+    return label;
+  };
+}
+
+function setupMissionTwoHandlers(): void {
+  missionHandlers.boats = () => boatObjectiveComplete && !boatObjectiveFailed;
+}
+
+function setupMissionTwoObjectiveLabels(): void {
+  objectiveLabelOverrides.boats = (objective) => {
+    if (!boatScenario) return objective.name;
+    const totalWaves = boatScenario.waves.length;
+    const currentWave = waveState.active ? waveState.index : Math.min(waveState.index + 1, totalWaves);
+    let label = `${objective.name} (Escaped: ${boatsEscaped}/${boatScenario.maxEscapes}`;
+    if (!objective.complete) {
+      const clampedWave = Math.min(Math.max(currentWave, 1), totalWaves);
+      label += ` | Wave ${clampedWave} of ${totalWaves}`;
+      if (!waveState.active && waveState.index < totalWaves && Number.isFinite(waveState.countdown)) {
+        label += ` | Next wave in: ${Math.max(0, waveState.countdown).toFixed(1)}s`;
+      }
+    }
+    label += ')';
+    return label;
+  };
+}
+
+function spawnMissionTwoGuards(): void {
+  for (let i = 0; i < MISSION_TWO_GUARD_POSTS.length; i += 1) {
+    spawnCoastGuard(MISSION_TWO_GUARD_POSTS[i]!, 9.2);
+  }
+  for (let i = 0; i < MISSION_TWO_PATROL_ROUTES.length; i += 1) {
+    spawnShorePatrol(MISSION_TWO_PATROL_ROUTES[i]!);
+  }
+}
+
+function spawnCoastGuard(point: { tx: number; ty: number }, leashRange: number): void {
+  const entity = entities.create();
+  transforms.set(entity, { tx: point.tx, ty: point.ty, rot: 0 });
+  physics.set(entity, {
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    drag: 0.72,
+    maxSpeed: 3.4,
+    turnRate: Math.PI * 1.5,
+  });
+  healths.set(entity, { current: 38, max: 38 });
+  colliders.set(entity, { radius: 0.35, team: 'enemy' });
+  chasers.set(entity, {
+    speed: 3.1,
+    acceleration: 3.5,
+    fireRange: 6.5,
+    fireInterval: 1.05,
+    cooldown: 0,
+    spread: 0.2,
+    guard: {
+      homeX: point.tx,
+      homeY: point.ty,
+      holdRadius: 0.6,
+      aggroRange: 6.8,
+      leashRange,
+      alerted: false,
+    },
+  });
+  registerEnemy(entity, { kind: 'chaser', score: 250 });
+}
+
+function spawnShorePatrol(route: { tx: number; ty: number; axis: 'x' | 'y'; range: number }): void {
+  const entity = entities.create();
+  transforms.set(entity, { tx: route.tx, ty: route.ty, rot: 0 });
+  physics.set(entity, {
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    drag: 0.86,
+    maxSpeed: 2.3,
+    turnRate: Math.PI,
+  });
+  healths.set(entity, { current: 28, max: 28 });
+  colliders.set(entity, { radius: 0.38, team: 'enemy' });
+  patrols.set(entity, {
+    axis: route.axis,
+    originX: route.tx,
+    originY: route.ty,
+    range: route.range,
+    speed: 2.1,
+    direction: rng.float01() > 0.5 ? 1 : -1,
+    fireRange: 6.4,
+    fireInterval: 1.15,
+    cooldown: 0,
+  });
+  registerEnemy(entity, { kind: 'patrol', score: 165 });
+}
+
+function activateBoatScenario(): void {
+  boatScenario = {
+    lanes: MISSION_TWO_BOAT_LANES,
+    waves: MISSION_TWO_BOAT_WAVES,
+    maxEscapes: MISSION_TWO_MAX_ESCAPES,
+    nextWaveDelay: MISSION_TWO_WAVE_DELAY,
+  };
+  boatsEscaped = 0;
+  boatObjectiveComplete = false;
+  boatObjectiveFailed = false;
+}
+
+function spawnSpeedboat(lane: BoatLane, wave: number): void {
+  const entity = entities.create();
+  const entryJitter = (rng.float01() - 0.5) * 0.6;
+  const entryJitterY = (rng.float01() - 0.5) * 0.4;
+  transforms.set(entity, { tx: lane.entry.tx + entryJitter, ty: lane.entry.ty + entryJitterY, rot: 0 });
+  physics.set(entity, {
+    vx: 0,
+    vy: 0,
+    ax: 0,
+    ay: 0,
+    drag: 0.78,
+    maxSpeed: 3.6 + wave * 0.25,
+    turnRate: Math.PI,
+  });
+  healths.set(entity, { current: 24 + wave * 4, max: 24 + wave * 4 });
+  colliders.set(entity, { radius: 0.4, team: 'enemy' });
+  speedboats.set(entity, {
+    targetX: lane.target.tx + (rng.float01() - 0.5) * 0.5,
+    targetY: lane.target.ty + (rng.float01() - 0.5) * 0.5,
+    speed: 3.6 + wave * 0.25,
+    acceleration: 3.4,
+    fireRange: 6.2,
+    fireInterval: Math.max(0.95, 1.3 - wave * 0.08),
+    cooldown: 0,
+    arrivalRadius: 0.6,
+  });
+  registerEnemy(entity, { kind: 'speedboat', score: 220 + wave * 25, wave });
+}
+
+function spawnDefaultWave(index: number): boolean {
+  if (waveSpawnPoints.length === 0) return false;
+  waveState.enemies.clear();
+  const patrolCount = Math.min(waveSpawnPoints.length, 2 + index);
+  const chaserCount = Math.min(waveSpawnPoints.length, Math.max(0, Math.floor(index / 2)));
+  for (let i = 0; i < patrolCount; i += 1) {
+    const point = waveSpawnPoints[i % waveSpawnPoints.length]!;
+    const axis: 'x' | 'y' = i % 2 === 0 ? 'x' : 'y';
+    spawnPatrolEnemy(point, index, axis);
+  }
+  for (let i = 0; i < chaserCount; i += 1) {
+    const point = waveSpawnPoints[(i + patrolCount) % waveSpawnPoints.length]!;
+    spawnChaserEnemy(point, index);
+  }
+  return true;
+}
+
+function spawnBoatWave(index: number): boolean {
+  if (!boatScenario || boatScenario.lanes.length === 0) return false;
+  waveState.enemies.clear();
+  const waveDef = boatScenario.waves[index - 1];
+  if (!waveDef) return false;
+  const laneOffset = Math.floor(rng.range(0, boatScenario.lanes.length));
+  for (let i = 0; i < waveDef.count; i += 1) {
+    const lane = boatScenario.lanes[(i + laneOffset) % boatScenario.lanes.length]!;
+    spawnSpeedboat(lane, index);
+  }
+  return waveDef.count > 0;
+}
 
 let fps = 0;
 let frames = 0;
@@ -542,6 +1119,21 @@ function updateExplosions(dt: number): void {
     const e = explosions[i]!;
     e.age += dt;
     if (e.age >= e.duration) explosions.splice(i, 1);
+  }
+}
+
+function handleBoatLanding(entity: Entity): void {
+  if (!boatScenario) return;
+  const t = transforms.get(entity);
+  if (t) spawnExplosion(t.tx, t.ty, 1.1, 0.8);
+  playExplosion(bus, 0.8);
+  destroyEntity(entity);
+  boatsEscaped += 1;
+  if (ui.state === 'in-game' && boatsEscaped >= boatScenario.maxEscapes) {
+    boatObjectiveFailed = true;
+    ui.state = 'game-over';
+    waveState.active = false;
+    engine.stop();
   }
 }
 
@@ -617,6 +1209,7 @@ function destroyEntity(entity: Entity): void {
   sams.remove(entity);
   patrols.remove(entity);
   chasers.remove(entity);
+  speedboats.remove(entity);
   healths.remove(entity);
   colliders.remove(entity);
   buildings.remove(entity);
@@ -679,6 +1272,7 @@ function spawnMissionEnemies(): void {
       spawnAlienStronghold('SAM', spawn.at.tx, spawn.at.ty);
     }
   }
+  if (spawnExtraScenarioEnemies) spawnExtraScenarioEnemies();
 }
 
 function clearBuildings(): void {
@@ -1005,21 +1599,6 @@ function checkBuildingsForAlienTrigger(): void {
   }
 }
 
-function spawnWave(index: number): void {
-  waveState.enemies.clear();
-  const patrolCount = Math.min(waveSpawnPoints.length, 2 + index);
-  const chaserCount = Math.min(waveSpawnPoints.length, Math.max(0, Math.floor(index / 2)));
-  for (let i = 0; i < patrolCount; i += 1) {
-    const point = waveSpawnPoints[i % waveSpawnPoints.length]!;
-    const axis: 'x' | 'y' = i % 2 === 0 ? 'x' : 'y';
-    spawnPatrolEnemy(point, index, axis);
-  }
-  for (let i = 0; i < chaserCount; i += 1) {
-    const point = waveSpawnPoints[(i + patrolCount) % waveSpawnPoints.length]!;
-    spawnChaserEnemy(point, index);
-  }
-}
-
 function resetPlayer(): void {
   const t = transforms.get(player);
   const ph = physics.get(player);
@@ -1047,14 +1626,16 @@ function resetPlayer(): void {
   engine.setIntensity(0);
 }
 
-function resetGame(): void {
+function resetGame(targetMissionIndex?: number): void {
+  const missionIndex = targetMissionIndex ?? currentMissionIndex;
+  setMission(missionIndex);
   clearEnemies();
   projectilePool.clear();
   damage.reset();
   explosions.length = 0;
   stats.score = 0;
   waveState.index = 0;
-  waveState.countdown = 3.5;
+  waveState.countdown = initialWaveCountdown;
   waveState.active = false;
   waveState.timeInWave = 0;
   rescueState.carrying = 0;
@@ -1064,9 +1645,7 @@ function resetGame(): void {
   aliensTriggered = false;
   aliensDefeated = false;
   campusLeveled = false;
-  missionState = loadMission(missionDef);
-  mission.state = missionState;
-  regenerateWorldStructures();
+  if (scenarioOnReset) scenarioOnReset();
   spawnBuildings();
   spawnMissionEnemies();
   spawnPickups();
@@ -1157,19 +1736,29 @@ function updateWave(dt: number): void {
     waveState.timeInWave += dt;
     if (waveState.enemies.size === 0) {
       waveState.active = false;
-      waveState.countdown = Math.max(3, 5 - waveState.index * 0.2);
+      const delay = computeWaveCooldown ? computeWaveCooldown(waveState.index) : Number.POSITIVE_INFINITY;
+      waveState.countdown = delay;
+      if (boatScenario && waveState.index >= boatScenario.waves.length && !boatObjectiveFailed) {
+        boatObjectiveComplete = true;
+      }
     }
-  } else {
+  } else if (spawnWaveHandler) {
+    if (!Number.isFinite(waveState.countdown)) return;
     waveState.countdown -= dt;
     if (waveState.countdown <= 0) {
       waveState.index += 1;
-      spawnWave(waveState.index);
-      waveState.active = true;
-      waveState.timeInWave = 0;
+      const spawned = spawnWaveHandler(waveState.index);
+      if (spawned) {
+        waveState.active = true;
+        waveState.timeInWave = 0;
+      } else {
+        waveState.countdown = Number.POSITIVE_INFINITY;
+      }
     }
   }
 }
 
+setMission(currentMissionIndex);
 spawnBuildings();
 spawnMissionEnemies();
 spawnPickups();
@@ -1238,7 +1827,7 @@ const loop = new GameLoop({
     }
 
     if (ui.state === 'win') {
-      if (snap.keys['Enter'] || snap.keys[' ']) resetGame();
+      if (snap.keys['Enter'] || snap.keys[' ']) resetGame(nextMissionIndex);
       if (snap.keys['Escape']) ui.state = 'title';
       return;
     }
@@ -1524,6 +2113,7 @@ const loop = new GameLoop({
     mission.update();
     if (mission.state.complete && ui.state === 'in-game') {
       ui.state = 'win';
+      nextMissionIndex = Math.min(currentMissionIndex + 1, missionDefs.length - 1);
       saveJson('choppa:progress', { lastWin: Date.now(), mission: mission.state.def.id });
     }
 
@@ -1639,6 +2229,12 @@ const loop = new GameLoop({
       } else {
         drawChaserDrone(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
       }
+    });
+
+    speedboats.forEach((entity, _boat) => {
+      const t = transforms.get(entity);
+      if (!t) return;
+      drawSpeedboat(context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
     });
 
     projectilePool.draw(
@@ -1763,18 +2359,13 @@ const loop = new GameLoop({
     const weaponComp = weapons.get(player)!;
 
     const objectiveLines = mission.state.objectives.map((o) => {
-      let label = o.name;
-      if (o.id === 'obj4') {
-        if (!aliensTriggered) label = `${o.name} (stand by)`;
-        else if (!o.complete) label = `${o.name} (${alienEntities.size} remaining)`;
-      } else if (o.id === 'obj5') {
-        const carrying = rescueState.carrying;
-        label = `${o.name} (${rescueState.rescued}/${rescueState.total}`;
-        if (carrying > 0) label += ` +${carrying}`;
-        label += ')';
-      }
+      const labelFn = objectiveLabelOverrides[o.id];
+      const label = labelFn ? labelFn(o) : o.name;
       return `${o.complete ? '[x]' : '[ ]'} ${label}`;
     });
+
+    const nextWaveCountdown =
+      !waveState.active && Number.isFinite(waveState.countdown) ? Math.max(0, waveState.countdown) : null;
 
     drawHUD(
       context,
@@ -1798,7 +2389,7 @@ const loop = new GameLoop({
         score: stats.score,
         wave: waveState.active ? waveState.index : Math.max(1, waveState.index + 1),
         enemiesRemaining: waveState.enemies.size,
-        nextWaveIn: waveState.active ? null : waveState.countdown,
+        nextWaveIn: nextWaveCountdown,
       },
       objectiveLines,
       null,
