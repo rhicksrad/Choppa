@@ -192,7 +192,7 @@ const bindings = loadBindings();
 const renderer = new IsoTilemapRenderer();
 const camera = new Camera2D({ deadzoneWidth: 160, deadzoneHeight: 120, lerp: 0.12 });
 const sky = new ParallaxSky();
-const fog = new FogOfWar(0.78);
+const fog = new FogOfWar();
 const bus = new AudioBus({
   masterVolume: ui.settings.masterVolume,
   musicVolume: ui.settings.musicVolume,
@@ -945,6 +945,14 @@ function spawnAlienUnit(point: { tx: number; ty: number }): void {
     fireInterval: 1,
     cooldown: 0,
     spread: 0.22,
+    guard: {
+      homeX: point.tx,
+      homeY: point.ty,
+      holdRadius: 0.45,
+      aggroRange: 5.6,
+      leashRange: 9.5,
+      alerted: false,
+    },
   });
   registerEnemy(entity, { kind: 'chaser', score: 260 });
   alienEntities.add(entity);

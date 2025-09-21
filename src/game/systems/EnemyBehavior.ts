@@ -73,10 +73,39 @@ export class EnemyBehaviorSystem implements System {
       const dx = player.x - t.tx;
       const dy = player.y - t.ty;
       const dist = Math.hypot(dx, dy) || 1;
-      const desiredVx = (dx / dist) * chaser.speed;
-      const desiredVy = (dy / dist) * chaser.speed;
-      phys.ax = (desiredVx - phys.vx) * chaser.acceleration;
-      phys.ay = (desiredVy - phys.vy) * chaser.acceleration;
+
+      let holdingPosition = false;
+      const guard = chaser.guard;
+      if (guard) {
+        const homeDx = guard.homeX - t.tx;
+        const homeDy = guard.homeY - t.ty;
+        const homeDist = Math.hypot(homeDx, homeDy);
+        const playerHomeDist = Math.hypot(player.x - guard.homeX, player.y - guard.homeY);
+
+        if (!guard.alerted && playerHomeDist <= guard.aggroRange) guard.alerted = true;
+        else if (guard.alerted && playerHomeDist > guard.leashRange) guard.alerted = false;
+
+        if (!guard.alerted) {
+          holdingPosition = true;
+          if (homeDist > guard.holdRadius) {
+            const safeDist = homeDist || 1;
+            const desiredVx = (homeDx / safeDist) * Math.min(chaser.speed * 0.6, safeDist * 2.4);
+            const desiredVy = (homeDy / safeDist) * Math.min(chaser.speed * 0.6, safeDist * 2.4);
+            phys.ax = (desiredVx - phys.vx) * chaser.acceleration;
+            phys.ay = (desiredVy - phys.vy) * chaser.acceleration;
+          } else {
+            phys.ax = (0 - phys.vx) * chaser.acceleration * 0.6;
+            phys.ay = (0 - phys.vy) * chaser.acceleration * 0.6;
+          }
+        }
+      }
+
+      if (!holdingPosition) {
+        const desiredVx = (dx / dist) * chaser.speed;
+        const desiredVy = (dy / dist) * chaser.speed;
+        phys.ax = (desiredVx - phys.vx) * chaser.acceleration;
+        phys.ay = (desiredVy - phys.vy) * chaser.acceleration;
+      }
 
       chaser.cooldown = Math.max(0, chaser.cooldown - dt);
       if (dist <= chaser.fireRange && chaser.cooldown <= 0) {
