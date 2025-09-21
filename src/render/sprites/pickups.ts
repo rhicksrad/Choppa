@@ -25,24 +25,76 @@ export function drawPickupCrate(
   const palette = getPalette(params.kind);
   const halfTileW = iso.tileWidth / 2;
   const halfTileH = iso.tileHeight / 2;
-  const sx = halfTileW * 0.35;
-  const sy = halfTileH * 0.35;
-  const height = 22;
+  const crateSx = halfTileW * 0.35;
+  const crateSy = halfTileH * 0.35;
 
   const extendPhase = params.collecting ? Math.min(1, params.progress / 0.45) : 0;
   const haulPhase = params.collecting ? Math.max(0, (params.progress - 0.45) / 0.55) : 0;
   const lift = haulPhase * 26;
 
+  const isFuel = params.kind === 'fuel';
+  const shadowRadiusX = isFuel ? halfTileW * 0.32 : crateSx * 0.9;
+  const shadowRadiusY = isFuel ? halfTileH * 0.3 : crateSy * 0.9;
+
   // Drop shadow
   ctx.save();
   ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
   ctx.beginPath();
-  ctx.ellipse(baseX, baseY + 8, sx * 0.9, sy * 0.9, 0, 0, Math.PI * 2);
+  ctx.ellipse(baseX, baseY + 8, shadowRadiusX, shadowRadiusY, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
   ctx.save();
   ctx.translate(baseX, baseY - lift);
+
+  const attachYOffset = isFuel
+    ? drawFuelBarrel(ctx, palette, halfTileW, halfTileH)
+    : drawSupplyCrate(ctx, palette, params, crateSx, crateSy);
+
+  ctx.restore();
+
+  const attachX = baseX;
+  const attachY = baseY - lift + attachYOffset;
+
+  if (params.collecting && params.collectorIso) {
+    const collectorX = originX + params.collectorIso.x;
+    const collectorY = originY + params.collectorIso.y - 12;
+    const ropeTipX = collectorX + (attachX - collectorX) * extendPhase;
+    const ropeTipY = collectorY + (attachY - collectorY) * extendPhase;
+    const endX = haulPhase > 0 ? attachX : ropeTipX;
+    const endY = haulPhase > 0 ? attachY : ropeTipY;
+
+    ctx.save();
+    ctx.strokeStyle = '#dfe5eb';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(collectorX, collectorY - 6);
+    ctx.lineTo(collectorX, collectorY + 2);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#bcc4cc';
+    ctx.fillRect(collectorX - 3, collectorY - 10, 6, 6);
+
+    ctx.fillStyle = '#cfd5dc';
+    ctx.beginPath();
+    ctx.arc(endX, endY + 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  return { attachX, attachY };
+}
+
+function drawSupplyCrate(
+  ctx: CanvasRenderingContext2D,
+  palette: { body: string; top: string; straps: string; icon: string },
+  params: PickupDrawParams,
+  sx: number,
+  sy: number,
+): number {
+  const height = 22;
 
   // Left wall
   ctx.fillStyle = shadeColor(palette.body, -22);
@@ -109,16 +161,7 @@ export function drawPickupCrate(
   ctx.fillStyle = palette.icon;
   ctx.save();
   ctx.translate(0, (roofPoints[0]!.y + roofPoints[2]!.y) / 2 + 2);
-  if (params.kind === 'fuel') {
-    ctx.beginPath();
-    ctx.moveTo(0, -4);
-    ctx.quadraticCurveTo(6, -6, 6, -1);
-    ctx.quadraticCurveTo(6, 5, 0, 8);
-    ctx.quadraticCurveTo(-6, 5, -6, -1);
-    ctx.quadraticCurveTo(-6, -6, 0, -4);
-    ctx.closePath();
-    ctx.fill();
-  } else if (params.kind === 'survivor') {
+  if (params.kind === 'survivor') {
     ctx.beginPath();
     ctx.arc(0, -4, 4, 0, Math.PI * 2);
     ctx.fill();
@@ -153,40 +196,118 @@ export function drawPickupCrate(
   }
   ctx.restore();
 
+  return -height + sy * 0.2;
+}
+
+function drawFuelBarrel(
+  ctx: CanvasRenderingContext2D,
+  palette: { body: string; top: string; straps: string; icon: string },
+  halfTileW: number,
+  halfTileH: number,
+): number {
+  const radiusX = halfTileW * 0.3;
+  const radiusY = halfTileH * 0.28;
+  const bodyHeight = 28;
+  const topY = -bodyHeight;
+
+  const gradient = ctx.createLinearGradient(-radiusX, 0, radiusX, 0);
+  gradient.addColorStop(0, shadeColor(palette.body, -35));
+  gradient.addColorStop(0.5, palette.body);
+  gradient.addColorStop(1, shadeColor(palette.body, 20));
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(-radiusX, topY);
+  ctx.lineTo(-radiusX, 0);
+  ctx.bezierCurveTo(-radiusX, radiusY, radiusX, radiusY, radiusX, 0);
+  ctx.lineTo(radiusX, topY);
+  ctx.bezierCurveTo(radiusX, topY - radiusY, -radiusX, topY - radiusY, -radiusX, topY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = shadeColor(palette.body, -45);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI);
+  ctx.fill();
+
+  const highlightTop = topY + bodyHeight * 0.2;
+  const highlightBottom = -bodyHeight * 0.05;
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(-radiusX * 0.45, highlightTop);
+  ctx.lineTo(-radiusX * 0.2, highlightTop - 2);
+  ctx.lineTo(-radiusX * 0.2, highlightBottom);
+  ctx.lineTo(-radiusX * 0.45, highlightBottom + 2);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
 
-  const attachX = baseX;
-  const attachY = baseY - lift - height + sy * 0.2;
+  const strapY1 = topY + bodyHeight * 0.35;
+  const strapY2 = topY + bodyHeight * 0.7;
+  ctx.strokeStyle = palette.straps;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(0, strapY1, radiusX * 0.95, radiusY * 0.6, 0, 0, Math.PI);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(0, strapY2, radiusX * 0.95, radiusY * 0.6, 0, 0, Math.PI);
+  ctx.stroke();
 
-  if (params.collecting && params.collectorIso) {
-    const collectorX = originX + params.collectorIso.x;
-    const collectorY = originY + params.collectorIso.y - 12;
-    const ropeTipX = collectorX + (attachX - collectorX) * extendPhase;
-    const ropeTipY = collectorY + (attachY - collectorY) * extendPhase;
-    const endX = haulPhase > 0 ? attachX : ropeTipX;
-    const endY = haulPhase > 0 ? attachY : ropeTipY;
+  const labelHeight = bodyHeight * 0.32;
+  const labelWidth = radiusX * 1.6;
+  const labelY = topY + bodyHeight * 0.55;
 
-    ctx.save();
-    ctx.strokeStyle = '#dfe5eb';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(collectorX, collectorY - 6);
-    ctx.lineTo(collectorX, collectorY + 2);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
+  ctx.fillStyle = shadeColor(palette.body, -30);
+  ctx.beginPath();
+  ctx.roundRect(
+    -labelWidth / 2,
+    labelY - labelHeight / 2,
+    labelWidth,
+    labelHeight,
+    labelHeight * 0.3,
+  );
+  ctx.fill();
+  ctx.strokeStyle = shadeColor(palette.body, -45);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(
+    -labelWidth / 2,
+    labelY - labelHeight / 2,
+    labelWidth,
+    labelHeight,
+    labelHeight * 0.3,
+  );
+  ctx.stroke();
 
-    ctx.fillStyle = '#bcc4cc';
-    ctx.fillRect(collectorX - 3, collectorY - 10, 6, 6);
+  ctx.save();
+  ctx.fillStyle = palette.icon;
+  ctx.font = '700 10px "Press Start 2P", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.translate(0, labelY);
+  ctx.scale(1, 0.9);
+  ctx.fillText('OIL', 0, 0);
+  ctx.restore();
 
-    ctx.fillStyle = '#cfd5dc';
-    ctx.beginPath();
-    ctx.arc(endX, endY + 3, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+  ctx.fillStyle = palette.top;
+  ctx.beginPath();
+  ctx.ellipse(0, topY, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  return { attachX, attachY };
+  ctx.strokeStyle = shadeColor(palette.top, -25);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(0, topY, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = shadeColor(palette.top, 35);
+  ctx.beginPath();
+  ctx.ellipse(0, topY - radiusY * 0.15, radiusX * 0.55, radiusY * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  return topY - radiusY;
 }
 
 function getPalette(kind: PickupKind): {
@@ -197,10 +318,10 @@ function getPalette(kind: PickupKind): {
 } {
   if (kind === 'fuel') {
     return {
-      body: '#2f6f3a',
-      top: '#3d8f4a',
-      straps: '#203526',
-      icon: '#9df2b0',
+      body: '#bb2b2b',
+      top: '#e04c4c',
+      straps: '#781212',
+      icon: '#fff3c4',
     };
   }
   if (kind === 'survivor') {
