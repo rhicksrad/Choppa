@@ -192,6 +192,59 @@ export function drawChaserDrone(
   ctx.restore();
 }
 
+export function drawSpeedboat(
+  ctx: CanvasRenderingContext2D,
+  iso: IsoParams,
+  originX: number,
+  originY: number,
+  tx: number,
+  ty: number,
+): void {
+  const halfW = iso.tileWidth / 2;
+  const halfH = iso.tileHeight / 2;
+  const ix = (tx - ty) * halfW;
+  const iy = (tx + ty) * halfH;
+  ctx.save();
+  ctx.translate(originX + ix, originY + iy);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 10, 18, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#1b2a3f';
+  ctx.strokeStyle = '#91d8ff';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(0, -14);
+  ctx.lineTo(12, 8);
+  ctx.quadraticCurveTo(0, 16, -12, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#2f4d6a';
+  ctx.beginPath();
+  ctx.roundRect(-8, -6, 16, 10, 3);
+  ctx.fill();
+
+  ctx.fillStyle = '#c3f2ff';
+  ctx.beginPath();
+  ctx.roundRect(-5, -4, 10, 6, 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#63fce0';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.lineTo(0, -16);
+  ctx.moveTo(-3, -9);
+  ctx.lineTo(-5, -14);
+  ctx.moveTo(3, -9);
+  ctx.lineTo(5, -14);
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function drawAlienMonstrosity(
   ctx: CanvasRenderingContext2D,
   iso: IsoParams,
