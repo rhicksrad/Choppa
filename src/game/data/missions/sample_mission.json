@@ -43,6 +43,7 @@
       "id": "obj6",
       "type": "reach",
       "name": "Return to the pad",
+      "requires": ["obj1", "obj2", "obj3", "obj4", "obj5"],
       "at": { "tx": 39, "ty": 39 },
       "radiusTiles": 1.2
     }
