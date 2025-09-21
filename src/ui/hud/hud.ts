@@ -24,7 +24,7 @@ const ammoDisplayOrder: {
   bg: string;
   weapon: WeaponKind;
 }[] = [
-  { key: 'missiles', label: 'MACHINE GUN', color: '#ffd166', bg: '#2b1f08', weapon: 'missile' },
+  { key: 'missiles', label: 'MISSILES', color: '#ffd166', bg: '#2b1f08', weapon: 'missile' },
   { key: 'rockets', label: 'ROCKETS', color: '#ff8a5c', bg: '#2b1208', weapon: 'rocket' },
   { key: 'hellfires', label: 'HELLFIRES', color: '#f94144', bg: '#2a090b', weapon: 'hellfire' },
 ];
@@ -59,6 +59,8 @@ export function drawHUD(
   let barY = mmY;
 
   ctx.textAlign = 'left';
+
+  // Lives and resource bars
   ctx.fillStyle = '#c8d7e1';
   ctx.font = '14px system-ui, sans-serif';
   ctx.fillText(`Lives: ${bars.lives}`, barX, barY - 8);
@@ -77,6 +79,7 @@ export function drawHUD(
     drawBar(ctx, barX, barY, barW, barH, ammo01, ammoInfo.color, ammoInfo.bg, label);
     barY += barGap;
   }
+
   // Objective list top-left
   ctx.textAlign = 'left';
   ctx.fillStyle = '#92ffa6';
@@ -87,11 +90,13 @@ export function drawHUD(
   for (let i = 0; i < objectiveLines.length; i += 1)
     ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
 
+  // Minimap panel
   ctx.fillStyle = '#11202b';
   ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
   ctx.fillStyle = '#0b1720';
   ctx.fillRect(mmX, mmY, mmW, mmH);
-  // grid/terrain hint (simple)
+
+  // Grid/terrain hint
   ctx.strokeStyle = '#142a3a';
   ctx.lineWidth = 1;
   for (let gx = 0; gx <= minimap.mapW; gx += 4) {
@@ -108,7 +113,8 @@ export function drawHUD(
     ctx.lineTo(mmX + mmW, y);
     ctx.stroke();
   }
-  // enemies
+
+  // Enemies
   ctx.fillStyle = '#ef476f';
   for (let i = 0; i < minimap.enemies.length; i += 1) {
     const e = minimap.enemies[i]!;
@@ -116,7 +122,8 @@ export function drawHUD(
     const py = mmY + (e.ty / minimap.mapH) * mmH;
     ctx.fillRect(px - 2, py - 2, 4, 4);
   }
-  // player
+
+  // Player
   ctx.fillStyle = '#92ffa6';
   const ppx = mmX + (minimap.player.tx / minimap.mapW) * mmW;
   const ppy = mmY + (minimap.player.ty / minimap.mapH) * mmH;
