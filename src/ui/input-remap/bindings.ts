@@ -1,7 +1,14 @@
 import type { InputSnapshot } from '../../core/input/input';
 import { loadJson, saveJson } from '../../core/util/storage';
 
-export type Action = 'moveUp' | 'moveDown' | 'moveLeft' | 'moveRight' | 'pause';
+export type Action =
+  | 'moveUp'
+  | 'moveDown'
+  | 'moveLeft'
+  | 'moveRight'
+  | 'strafeLeft'
+  | 'strafeRight'
+  | 'pause';
 
 export type KeyBindings = Record<Action, string[]>; // array of key values
 
@@ -13,12 +20,24 @@ export function defaultBindings(): KeyBindings {
     moveDown: ['s', 'S', 'ArrowDown'],
     moveLeft: ['a', 'A', 'ArrowLeft'],
     moveRight: ['d', 'D', 'ArrowRight'],
+    strafeLeft: ['q', 'Q'],
+    strafeRight: ['e', 'E'],
     pause: ['Escape'],
   };
 }
 
 export function loadBindings(): KeyBindings {
-  return loadJson<KeyBindings>(STORAGE_KEY, defaultBindings());
+  const stored = loadJson<KeyBindings>(STORAGE_KEY, defaultBindings());
+  const defaults = defaultBindings();
+  return {
+    moveUp: stored.moveUp ?? defaults.moveUp,
+    moveDown: stored.moveDown ?? defaults.moveDown,
+    moveLeft: stored.moveLeft ?? defaults.moveLeft,
+    moveRight: stored.moveRight ?? defaults.moveRight,
+    strafeLeft: stored.strafeLeft ?? defaults.strafeLeft,
+    strafeRight: stored.strafeRight ?? defaults.strafeRight,
+    pause: stored.pause ?? defaults.pause,
+  };
 }
 
 export function saveBindings(b: KeyBindings): void {

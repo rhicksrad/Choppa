@@ -91,7 +91,7 @@ export class WeaponFireSystem implements System {
 
     // Cycle weapon
     const switchDown =
-      snap.keys['r'] || snap.keys['R'] || snap.keys['q'] || snap.keys['Q'] || snap.keys['Tab'];
+      snap.keys['r'] || snap.keys['R'] || snap.keys['f'] || snap.keys['F'] || snap.keys['Tab'];
     if (switchDown && !this.switchHeld) {
       this.weapons.forEach((_, w) => {
         w.active = nextWeapon(w.active);
@@ -109,7 +109,7 @@ export class WeaponFireSystem implements System {
       snap.keys['ShiftLeft'] ||
       snap.keys['ShiftRight'] ||
       snap.keys['Control'];
-    const specialKey = snap.keys['e'] || snap.keys['E'] || snap.keys['x'] || snap.keys['X'];
+    const specialKey = snap.keys['c'] || snap.keys['C'] || snap.keys['x'] || snap.keys['X'];
 
     this.weapons.forEach((entity, w) => {
       const t = this.transforms.get(entity);
