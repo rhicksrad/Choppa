@@ -21,6 +21,9 @@ export class ProjectilePool {
   private items: Projectile[] = [];
 
   public spawn(p: Projectile): void {
+    if (!Number.isFinite(p.ttl)) {
+      p.ttl = 0;
+    }
     this.items.push(p);
   }
 
@@ -64,7 +67,14 @@ export class ProjectilePool {
       pr.x += pr.vx * dt;
       pr.y += pr.vy * dt;
       pr.ttl -= dt;
-      if (pr.ttl <= 0) continue; // expired
+      if (!Number.isFinite(pr.ttl) || pr.ttl <= 0) {
+        if (pr.kind === 'missile' || pr.kind === 'hellfire') {
+          const amount = pr.damage.amount;
+          const rad = pr.damage.radius ?? 0.05;
+          onHit({ x: pr.x, y: pr.y, radius: rad, amount });
+        }
+        continue; // expired
+      }
 
       // Very simple collision check with colliders; stop on first hit
       let hit = false;
