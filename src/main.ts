@@ -63,6 +63,8 @@ import {
   playRocket,
   playHellfire,
   playExplosion,
+  startPickupCrane,
+  type PickupCraneSoundHandle,
 } from './core/audio/sfx';
 import { CameraShake } from './render/camera/shake';
 import { getCanvasViewMetrics } from './render/canvas/metrics';
@@ -341,6 +343,7 @@ const waveState: WaveState = {
 const minimapEnemies: { tx: number; ty: number }[] = [];
 const buildingEntities: Entity[] = [];
 const pickupEntities: Entity[] = [];
+const pickupCraneSounds = new Map<Entity, PickupCraneSoundHandle>();
 const survivorEntities: Entity[] = [];
 const alienEntities: Set<Entity> = new Set();
 const rescueRunners: RescueRunner[] = [];
@@ -581,8 +584,29 @@ function updateRescueRunnerAnimations(dt: number): void {
   }
 }
 
+function beginPickupCraneSound(entity: Entity, pickup: Pickup): void {
+  if (pickupCraneSounds.has(entity)) return;
+  const handle = startPickupCrane(bus, pickup.duration);
+  pickupCraneSounds.set(entity, handle);
+}
+
+function cancelPickupCraneSound(entity: Entity): void {
+  const handle = pickupCraneSounds.get(entity);
+  if (!handle) return;
+  handle.cancel();
+  pickupCraneSounds.delete(entity);
+}
+
+function completePickupCraneSound(entity: Entity): void {
+  const handle = pickupCraneSounds.get(entity);
+  if (!handle) return;
+  handle.complete();
+  pickupCraneSounds.delete(entity);
+}
+
 function destroyEntity(entity: Entity): void {
   if (entity === player) return;
+  cancelPickupCraneSound(entity);
   transforms.remove(entity);
   physics.remove(entity);
   fuels.remove(entity);
@@ -1280,6 +1304,7 @@ const loop = new GameLoop({
     pickups.forEach((entity, pickup) => {
       const pickupTransform = transforms.get(entity);
       if (!pickupTransform) {
+        completePickupCraneSound(entity);
         completedPickups.push({
           entity,
           kind: pickup.kind,
@@ -1297,10 +1322,12 @@ const loop = new GameLoop({
         if (dist > pickup.radius + 0.4 || playerState.invulnerable) {
           pickup.collectingBy = null;
           pickup.progress = 0;
+          cancelPickupCraneSound(entity);
           return;
         }
         pickup.progress = Math.min(1, pickup.progress + dt / pickup.duration);
         if (pickup.progress >= 1) {
+          completePickupCraneSound(entity);
           completedPickups.push({
             entity,
             kind: pickup.kind,
@@ -1316,6 +1343,7 @@ const loop = new GameLoop({
       if (pickup.collectingBy && !transforms.has(pickup.collectingBy)) {
         pickup.collectingBy = null;
         pickup.progress = 0;
+        cancelPickupCraneSound(entity);
         return;
       }
 
@@ -1329,6 +1357,7 @@ const loop = new GameLoop({
             if (needsFuel) {
               pickup.collectingBy = player;
               pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
             }
           } else if (pickup.kind === 'ammo') {
             const needsAmmo =
@@ -1338,12 +1367,14 @@ const loop = new GameLoop({
             if (needsAmmo) {
               pickup.collectingBy = player;
               pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
             }
           } else if (pickup.kind === 'armor') {
             const needsArmor = playerHealth.current < playerHealth.max - 0.5;
             if (needsArmor) {
               pickup.collectingBy = player;
               pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
             }
           } else if (pickup.kind === 'survivor') {
             const survivors = pickup.survivorCount ?? 1;
@@ -1351,6 +1382,7 @@ const loop = new GameLoop({
             if (remainingCapacity >= survivors) {
               pickup.collectingBy = player;
               pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
             }
           }
         }

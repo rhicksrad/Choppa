@@ -1,5 +1,10 @@
 import { AudioBus } from './audio';
 
+export interface PickupCraneSoundHandle {
+  complete(): void;
+  cancel(): void;
+}
+
 export class EngineSound {
   private static noiseBuffer: AudioBuffer | null = null;
 
@@ -388,6 +393,102 @@ export function playHellfire(bus: AudioBus): void {
   windSrc.stop(now + 0.6);
 }
 
+export function startPickupCrane(bus: AudioBus, haulDuration = 1.3): PickupCraneSoundHandle {
+  const ctx = bus.context;
+  const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
+  const now = ctx.currentTime;
+
+  playCraneDoor(ctx, destination, now, false);
+
+  const motorStart = now + 0.12;
+  const effectiveDuration = Math.max(0.6, haulDuration);
+  const rampDuration = Math.min(0.3, effectiveDuration * 0.45);
+
+  const motorOsc = ctx.createOscillator();
+  motorOsc.type = 'sawtooth';
+  const motorFilter = ctx.createBiquadFilter();
+  motorFilter.type = 'lowpass';
+  motorFilter.frequency.value = 780;
+  motorFilter.Q.value = 0.7;
+  const motorGain = ctx.createGain();
+  motorGain.gain.value = 0.0001;
+  motorOsc.connect(motorFilter);
+  motorFilter.connect(motorGain);
+  motorGain.connect(destination);
+
+  motorOsc.start(motorStart);
+  motorGain.gain.setValueAtTime(0.0001, motorStart);
+  motorGain.gain.linearRampToValueAtTime(0.075, motorStart + rampDuration);
+  motorGain.gain.setTargetAtTime(0.06, motorStart + rampDuration, 0.5);
+
+  motorOsc.frequency.setValueAtTime(150, motorStart);
+  motorOsc.frequency.linearRampToValueAtTime(190, motorStart + effectiveDuration * 0.5);
+  motorOsc.frequency.setTargetAtTime(220, motorStart + effectiveDuration * 0.5, 0.6);
+
+  motorFilter.frequency.setValueAtTime(580, motorStart);
+  motorFilter.frequency.linearRampToValueAtTime(1280, motorStart + effectiveDuration * 0.6);
+
+  const cableSource = ctx.createBufferSource();
+  cableSource.buffer = getCableRattleBuffer(ctx);
+  cableSource.loop = true;
+  const cableFilter = ctx.createBiquadFilter();
+  cableFilter.type = 'bandpass';
+  cableFilter.frequency.value = 620;
+  cableFilter.Q.value = 0.9;
+  const cableGain = ctx.createGain();
+  cableGain.gain.value = 0.0001;
+  cableSource.connect(cableFilter);
+  cableFilter.connect(cableGain);
+  cableGain.connect(destination);
+
+  cableSource.start(motorStart);
+  cableGain.gain.setValueAtTime(0.0001, motorStart);
+  cableGain.gain.linearRampToValueAtTime(0.06, motorStart + rampDuration * 0.6);
+  cableGain.gain.setTargetAtTime(0.045, motorStart + rampDuration * 0.6, 0.5);
+
+  motorOsc.onended = () => {
+    motorOsc.disconnect();
+    motorFilter.disconnect();
+    motorGain.disconnect();
+  };
+  cableSource.onended = () => {
+    cableSource.disconnect();
+    cableFilter.disconnect();
+    cableGain.disconnect();
+  };
+
+  const stopMotor = (release: number): void => {
+    const nowTime = ctx.currentTime;
+    const earliest = motorStart + 0.05;
+    const stopAt = Math.max(earliest, nowTime + release);
+    motorGain.gain.cancelScheduledValues(nowTime);
+    motorGain.gain.setValueAtTime(Math.max(0.0001, motorGain.gain.value), nowTime);
+    motorGain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+    cableGain.gain.cancelScheduledValues(nowTime);
+    cableGain.gain.setValueAtTime(Math.max(0.0001, cableGain.gain.value), nowTime);
+    cableGain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+    motorFilter.frequency.cancelScheduledValues(nowTime);
+    motorFilter.frequency.linearRampToValueAtTime(420, stopAt);
+    cableSource.stop(stopAt + 0.02);
+    motorOsc.stop(stopAt + 0.04);
+  };
+
+  let finished = false;
+  return {
+    complete: () => {
+      if (finished) return;
+      finished = true;
+      stopMotor(0.28);
+      playCraneDoor(ctx, destination, ctx.currentTime + 0.04, true);
+    },
+    cancel: () => {
+      if (finished) return;
+      finished = true;
+      stopMotor(0.18);
+    },
+  };
+}
+
 function createNoiseBurst(ctx: AudioContext, duration: number): AudioBuffer {
   const length = Math.max(1, Math.floor(duration * ctx.sampleRate));
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
@@ -397,6 +498,79 @@ function createNoiseBurst(ctx: AudioContext, duration: number): AudioBuffer {
     data[i] = (Math.random() * 2 - 1) * env * env;
   }
   return buffer;
+}
+
+let doorThunkCache: { sampleRate: number; buffer: AudioBuffer } | null = null;
+
+function getDoorThunkBuffer(ctx: AudioContext): AudioBuffer {
+  if (!doorThunkCache || doorThunkCache.sampleRate !== ctx.sampleRate) {
+    const duration = 0.32;
+    const length = Math.max(1, Math.floor(duration * ctx.sampleRate));
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i += 1) {
+      const t = i / length;
+      const env = Math.pow(1 - t, 2.2);
+      const scrape = Math.sin(t * Math.PI * 90) * (0.4 + 0.6 * (1 - t));
+      const rumble = (Math.random() * 2 - 1) * (0.6 + 0.4 * (1 - t));
+      data[i] = (scrape + rumble) * env;
+    }
+    doorThunkCache = { sampleRate: ctx.sampleRate, buffer };
+  }
+  return doorThunkCache.buffer;
+}
+
+let cableRattleCache: { sampleRate: number; buffer: AudioBuffer } | null = null;
+
+function getCableRattleBuffer(ctx: AudioContext): AudioBuffer {
+  if (!cableRattleCache || cableRattleCache.sampleRate !== ctx.sampleRate) {
+    const duration = 0.42;
+    const length = Math.max(1, Math.floor(duration * ctx.sampleRate));
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i += 1) {
+      const t = i / length;
+      const random = Math.random() * 2 - 1;
+      const flutter = Math.sin(t * Math.PI * 140) * 0.4;
+      const pulse = 0.6 + 0.4 * Math.sin(t * Math.PI * 6);
+      data[i] = (random * 0.7 + flutter) * pulse * 0.6;
+    }
+    cableRattleCache = { sampleRate: ctx.sampleRate, buffer };
+  }
+  return cableRattleCache.buffer;
+}
+
+function playCraneDoor(
+  ctx: AudioContext,
+  destination: AudioNode,
+  when: number,
+  closing: boolean,
+): void {
+  const src = ctx.createBufferSource();
+  src.buffer = getDoorThunkBuffer(ctx);
+  src.playbackRate.value = closing ? 0.92 : 1.05;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = closing ? 240 : 320;
+  filter.Q.value = 1.2;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0001;
+  src.connect(filter);
+  filter.connect(gain);
+  gain.connect(destination);
+
+  const peak = closing ? 0.22 : 0.26;
+  gain.gain.setValueAtTime(0.0001, when);
+  gain.gain.linearRampToValueAtTime(peak, when + 0.08);
+  gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.32);
+
+  src.start(when);
+  src.stop(when + 0.36);
+  src.onended = () => {
+    src.disconnect();
+    filter.disconnect();
+    gain.disconnect();
+  };
 }
 
 export function playExplosion(bus: AudioBus, size = 1): void {

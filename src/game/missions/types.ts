@@ -6,6 +6,7 @@ export interface ObjectiveDef {
   name: string;
   at: { tx: number; ty: number };
   radiusTiles: number;
+  requires?: string[];
 }
 
 export interface MissionDef {

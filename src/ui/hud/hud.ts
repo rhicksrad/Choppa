@@ -24,7 +24,7 @@ const ammoDisplayOrder: {
   bg: string;
   weapon: WeaponKind;
 }[] = [
-  { key: 'missiles', label: 'MISSILES', color: '#ffd166', bg: '#2b1f08', weapon: 'missile' },
+  { key: 'missiles', label: 'Machine gun', color: '#ffd166', bg: '#2b1f08', weapon: 'missile' },
   { key: 'rockets', label: 'ROCKETS', color: '#ff8a5c', bg: '#2b1208', weapon: 'rocket' },
   { key: 'hellfires', label: 'HELLFIRES', color: '#f94144', bg: '#2a090b', weapon: 'hellfire' },
 ];
