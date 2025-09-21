@@ -1257,6 +1257,8 @@ const loop = new GameLoop({
       if (isDown(snap, bindings, 'moveDown')) dy += 1;
       if (isDown(snap, bindings, 'moveLeft')) dx -= 1;
       if (isDown(snap, bindings, 'moveRight')) dx += 1;
+      if (isDown(snap, bindings, 'strafeLeft')) dx -= 1;
+      if (isDown(snap, bindings, 'strafeRight')) dx += 1;
     }
     if (dx !== 0 || dy !== 0) {
       const len = Math.hypot(dx, dy) || 1;
