@@ -192,7 +192,7 @@ const bindings = loadBindings();
 const renderer = new IsoTilemapRenderer();
 const camera = new Camera2D({ deadzoneWidth: 160, deadzoneHeight: 120, lerp: 0.12 });
 const sky = new ParallaxSky();
-const fog = new FogOfWar(0.78);
+const fog = new FogOfWar();
 const bus = new AudioBus({
   masterVolume: ui.settings.masterVolume,
   musicVolume: ui.settings.musicVolume,
