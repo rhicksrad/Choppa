@@ -28,6 +28,15 @@ export interface PatrolDrone {
   cooldown: number;
 }
 
+export interface GuardBehavior {
+  homeX: number;
+  homeY: number;
+  holdRadius: number;
+  aggroRange: number;
+  leashRange: number;
+  alerted: boolean;
+}
+
 export interface ChaserDrone {
   speed: number;
   acceleration: number;
@@ -35,4 +44,5 @@ export interface ChaserDrone {
   fireInterval: number;
   cooldown: number;
   spread: number;
+  guard?: GuardBehavior;
 }

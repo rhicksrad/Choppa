@@ -945,6 +945,14 @@ function spawnAlienUnit(point: { tx: number; ty: number }): void {
     fireInterval: 1,
     cooldown: 0,
     spread: 0.22,
+    guard: {
+      homeX: point.tx,
+      homeY: point.ty,
+      holdRadius: 0.45,
+      aggroRange: 5.6,
+      leashRange: 9.5,
+      alerted: false,
+    },
   });
   registerEnemy(entity, { kind: 'chaser', score: 260 });
   alienEntities.add(entity);
