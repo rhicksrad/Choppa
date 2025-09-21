@@ -1407,7 +1407,7 @@ const loop = new GameLoop({
           y: spawnY,
           vx: dirX * speedM,
           vy: dirY * speedM,
-          ttl: ev.ttl ?? 0.7,
+          ttl: ev.ttl ?? 0.6,
           radius: ev.radius ?? 0.08,
           damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.12 },
         });
@@ -1440,7 +1440,7 @@ const loop = new GameLoop({
           y: spawnY,
           vx: dirX * speedH,
           vy: dirY * speedH,
-          ttl: ev.ttl ?? 7.5,
+          ttl: ev.ttl ?? 3.2,
           radius: ev.radius ?? 0.3,
           seek: { targetX: ev.targetX, targetY: ev.targetY, turnRate: Math.PI * 0.8 },
           damage: { amount: ev.damage ?? 36, radius: ev.damageRadius ?? 1.9 },
