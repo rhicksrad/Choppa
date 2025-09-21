@@ -17,17 +17,15 @@ interface FogRenderParams {
 export class FogOfWar {
   private overlay: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private alpha: number;
   private mapWidth = 0;
   private mapHeight = 0;
   private discovered: Uint8Array = new Uint8Array(0);
 
-  constructor(alpha = 0.88) {
+  constructor() {
     this.overlay = document.createElement('canvas');
     const ctx = this.overlay.getContext('2d');
     if (!ctx) throw new Error('2D context unavailable for FogOfWar');
     this.ctx = ctx;
-    this.alpha = alpha;
   }
 
   public configure(mapWidth: number, mapHeight: number): void {
@@ -84,7 +82,7 @@ export class FogOfWar {
 
     ctx.clearRect(0, 0, w, h);
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = `rgba(0,0,0,${this.alpha})`;
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, w, h);
 
     if (this.discovered.length > 0) {
