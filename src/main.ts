@@ -219,6 +219,14 @@ const pickups = new ComponentStore<Pickup>();
 let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
 isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
+const MAP_BORDER = 8;
+function offsetTiles<T extends { tx: number; ty: number }>(items: T[]): T[] {
+  return items.map((item) => ({
+    ...item,
+    tx: item.tx + MAP_BORDER,
+    ty: item.ty + MAP_BORDER,
+  }));
+}
 const pad = {
   tx: runtimeMap.width - 5,
   ty: runtimeMap.height - 5,
@@ -336,13 +344,13 @@ const pickupEntities: Entity[] = [];
 const survivorEntities: Entity[] = [];
 const alienEntities: Set<Entity> = new Set();
 const rescueRunners: RescueRunner[] = [];
-const waveSpawnPoints = [
+const waveSpawnPoints = offsetTiles([
   { tx: 7, ty: 7 },
   { tx: 28, ty: 9 },
   { tx: 12, ty: 28 },
   { tx: 20, ty: 6 },
-];
-const campusSites: BuildingSite[] = [
+]);
+const campusSites: BuildingSite[] = offsetTiles([
   {
     tx: 18,
     ty: 16,
@@ -403,18 +411,18 @@ const campusSites: BuildingSite[] = [
     category: 'campus',
     triggersAlarm: true,
   },
-];
+]);
 
 let civilianHouseSites: BuildingSite[] = [];
 let buildingSites: BuildingSite[] = [];
 
 function generateCivilianHouses(): BuildingSite[] {
-  const clusters = [
+  const clusters = offsetTiles([
     { tx: 9.4, ty: 24.2, spread: 1.4, count: 3 },
     { tx: 24.6, ty: 27.5, spread: 1.6, count: 3 },
     { tx: 6.4, ty: 15.2, spread: 1.1, count: 2 },
     { tx: 28.4, ty: 20.6, spread: 1.2, count: 2 },
-  ];
+  ]);
   const palettes = [
     { body: '#7c95a3', roof: '#2f3f4d', ruin: '#3b2b2b' },
     { body: '#9a7c6a', roof: '#4c3324', ruin: '#3c2018' },
@@ -462,24 +470,24 @@ function regenerateWorldStructures(): void {
 
 const SURVIVOR_CAPACITY = 4;
 
-const survivorSites: SurvivorSite[] = [
+const survivorSites: SurvivorSite[] = offsetTiles([
   { tx: 18.2, ty: 17.4, count: 3, radius: 0.85, duration: 1.6 },
   { tx: 20.4, ty: 18.8, count: 2, radius: 0.85, duration: 1.6 },
   { tx: 16.1, ty: 19.6, count: 3, radius: 0.9, duration: 1.7 },
   { tx: 18.7, ty: 21.2, count: 2, radius: 0.9, duration: 1.7 },
   { tx: 15.4, ty: 17.8, count: 2, radius: 0.85, duration: 1.5 },
-];
+]);
 
-const alienSpawnPoints: { tx: number; ty: number }[] = [
+const alienSpawnPoints: { tx: number; ty: number }[] = offsetTiles([
   { tx: 17.2, ty: 14.6 },
   { tx: 21.1, ty: 16.3 },
   { tx: 14.4, ty: 18.4 },
   { tx: 19.6, ty: 21.3 },
   { tx: 16.2, ty: 22.1 },
   { tx: 22.4, ty: 19.2 },
-];
+]);
 
-const pickupSites: PickupSite[] = [
+const pickupSites: PickupSite[] = offsetTiles([
   { tx: 15.2, ty: 18.4, kind: 'fuel', fuelAmount: 55 },
   { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { missiles: 90, rockets: 3, hellfires: 1 } },
   { tx: 10.4, ty: 12.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 1 } },
@@ -490,7 +498,7 @@ const pickupSites: PickupSite[] = [
   { tx: 7.4, ty: 22.3, kind: 'ammo', ammo: { missiles: 80, rockets: 3, hellfires: 1 } },
   { tx: 31.2, ty: 14.4, kind: 'ammo', ammo: { missiles: 95, rockets: 3, hellfires: 1 } },
   { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
-];
+]);
 
 const rescueState = {
   carrying: 0,
@@ -1407,7 +1415,7 @@ const loop = new GameLoop({
           y: spawnY,
           vx: dirX * speedM,
           vy: dirY * speedM,
-          ttl: ev.ttl ?? 0.7,
+          ttl: ev.ttl ?? 0.6,
           radius: ev.radius ?? 0.08,
           damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.12 },
         });
@@ -1440,7 +1448,7 @@ const loop = new GameLoop({
           y: spawnY,
           vx: dirX * speedH,
           vy: dirY * speedH,
-          ttl: ev.ttl ?? 7.5,
+          ttl: ev.ttl ?? 3.2,
           radius: ev.radius ?? 0.3,
           seek: { targetX: ev.targetX, targetY: ev.targetY, turnRate: Math.PI * 0.8 },
           damage: { amount: ev.damage ?? 36, radius: ev.damageRadius ?? 1.9 },
