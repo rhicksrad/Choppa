@@ -27,6 +27,23 @@ export class SpeedboatBehaviorSystem implements System {
       const phys = this.physics.get(entity);
       if (!t || !phys) return;
 
+      const px = player.x - t.tx;
+      const py = player.y - t.ty;
+      const pDist = Math.hypot(px, py);
+
+      if (!boat.activated) {
+        if (pDist <= boat.activationRange) {
+          boat.activated = true;
+        } else {
+          phys.vx = 0;
+          phys.vy = 0;
+          phys.ax = 0;
+          phys.ay = 0;
+          boat.cooldown = Math.max(0, boat.cooldown - dt);
+          return;
+        }
+      }
+
       const dx = boat.targetX - t.tx;
       const dy = boat.targetY - t.ty;
       const dist = Math.hypot(dx, dy);
@@ -42,9 +59,6 @@ export class SpeedboatBehaviorSystem implements System {
       phys.ay = (desiredVy - phys.vy) * boat.acceleration;
 
       boat.cooldown = Math.max(0, boat.cooldown - dt);
-      const px = player.x - t.tx;
-      const py = player.y - t.ty;
-      const pDist = Math.hypot(px, py);
       if (pDist <= boat.fireRange && boat.cooldown <= 0) {
         boat.cooldown = boat.fireInterval;
         const jitter = (this.rng.float01() - 0.5) * 0.18;

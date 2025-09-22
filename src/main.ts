@@ -58,7 +58,7 @@ import type { Building } from './game/components/Building';
 import type { Pickup } from './game/components/Pickup';
 import type { Speedboat } from './game/components/Speedboat';
 import { drawHUD } from './ui/hud/hud';
-import { loadJson, saveJson } from './core/util/storage';
+import { loadJson, saveJson, removeKey } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
 import { AudioBus } from './core/audio/audio';
 import {
@@ -301,12 +301,14 @@ interface MissionProgressData {
 
 const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
 
+removeKey('choppa:progress');
+
 function findMissionIndex(id?: string): number {
   if (!id) return -1;
   return missionDefs.findIndex((def) => def.id === id);
 }
 
-const savedProgress = loadJson<MissionProgressData>('choppa:progress', {});
+const savedProgress: MissionProgressData = {};
 let currentMissionIndex = findMissionIndex(savedProgress.current);
 if (currentMissionIndex < 0) {
   currentMissionIndex = findMissionIndex(savedProgress.mission);
@@ -330,7 +332,7 @@ const missionProgress: MissionProgressData = {
 };
 
 function persistMissionProgress(): void {
-  saveJson('choppa:progress', missionProgress);
+  removeKey('choppa:progress');
 }
 
 let missionDef: MissionDef = missionDefs[currentMissionIndex];
@@ -760,6 +762,7 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
   const entity = entities.create();
   const entryJitter = (rng.float01() - 0.5) * 0.6;
   const entryJitterY = (rng.float01() - 0.5) * 0.4;
+  const cruiseSpeed = 2.4 + wave * 0.18;
   transforms.set(entity, {
     tx: lane.entry.tx + entryJitter,
     ty: lane.entry.ty + entryJitterY,
@@ -771,7 +774,7 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
     ax: 0,
     ay: 0,
     drag: 0.78,
-    maxSpeed: 3.6 + wave * 0.25,
+    maxSpeed: cruiseSpeed + 0.4,
     turnRate: Math.PI,
   });
   healths.set(entity, { current: 24 + wave * 4, max: 24 + wave * 4 });
@@ -779,12 +782,14 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
   speedboats.set(entity, {
     targetX: lane.target.tx + (rng.float01() - 0.5) * 0.5,
     targetY: lane.target.ty + (rng.float01() - 0.5) * 0.5,
-    speed: 3.6 + wave * 0.25,
-    acceleration: 3.4,
+    speed: cruiseSpeed,
+    acceleration: 2.6,
     fireRange: 6.2,
     fireInterval: Math.max(0.95, 1.3 - wave * 0.08),
     cooldown: 0,
     arrivalRadius: 0.6,
+    activationRange: 7.5,
+    activated: false,
   });
   registerEnemy(entity, { kind: 'speedboat', score: 220 + wave * 25, wave });
 }
