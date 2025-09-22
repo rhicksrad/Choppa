@@ -73,28 +73,27 @@ import { CameraShake } from './render/camera/shake';
 import { getCanvasViewMetrics } from './render/canvas/metrics';
 import { drawPickupCrate } from './render/sprites/pickups';
 import { SpeedboatBehaviorSystem } from './game/systems/SpeedboatBehavior';
+import {
+  createMissionOneLayout,
+  createMissionTwoLayout,
+  cloneBuildingSite,
+  clonePadConfig,
+  clonePickupSite,
+  clonePoint,
+  cloneSafeHouseParams,
+  cloneSurvivorSite,
+  type PadConfig,
+  type BuildingSite,
+  type PickupSite,
+  type SurvivorSite,
+  type BoatLane,
+  type BoatWave,
+} from './game/scenarios/layouts';
 
 interface EnemyMeta {
   kind: 'aaa' | 'sam' | 'patrol' | 'chaser' | 'speedboat';
   score: number;
   wave?: number;
-}
-
-interface BuildingSite {
-  tx: number;
-  ty: number;
-  width: number;
-  depth: number;
-  height: number;
-  health: number;
-  colliderRadius: number;
-  bodyColor: string;
-  roofColor: string;
-  ruinColor?: string;
-  score?: number;
-  drop?: { kind: 'armor'; amount: number };
-  category?: 'campus' | 'stronghold' | 'civilian';
-  triggersAlarm?: boolean;
 }
 
 interface BuildingMeta {
@@ -104,71 +103,7 @@ interface BuildingMeta {
   triggersAlarm: boolean;
 }
 
-interface PickupSite {
-  tx: number;
-  ty: number;
-  kind: 'fuel' | 'ammo' | 'armor';
-  radius?: number;
-  duration?: number;
-  fuelAmount?: number;
-  ammo?: { missiles?: number; rockets?: number; hellfires?: number };
-  armorAmount?: number;
-}
-
-interface SurvivorSite {
-  tx: number;
-  ty: number;
-  count: number;
-  radius?: number;
-  duration?: number;
-}
-
-function cloneBuildingSite(site: BuildingSite): BuildingSite {
-  return {
-    ...site,
-    drop: site.drop ? { ...site.drop } : undefined,
-  };
-}
-
-function clonePickupSite(site: PickupSite): PickupSite {
-  return {
-    ...site,
-    ammo: site.ammo ? { ...site.ammo } : undefined,
-  };
-}
-
-function cloneSurvivorSite(site: SurvivorSite): SurvivorSite {
-  return { ...site };
-}
-
-function clonePadConfig(config: PadConfig): PadConfig {
-  return { ...config };
-}
-
-function clonePoint(point: { tx: number; ty: number }): { tx: number; ty: number } {
-  return { tx: point.tx, ty: point.ty };
-}
-
-function cloneSafeHouseParams(params: SafeHouseParams): SafeHouseParams {
-  return { ...params };
-}
-
-function offsetBoatLane(
-  seed: {
-    entry: { tx: number; ty: number };
-    target: { tx: number; ty: number };
-  },
-  border: number = MAP_BORDER,
-): BoatLane {
-  return {
-    entry: { tx: seed.entry.tx + border, ty: seed.entry.ty + border },
-    target: { tx: seed.target.tx + border, ty: seed.target.ty + border },
-  };
-}
-
 type ObjectiveLabelFn = (objective: ObjectiveState) => string;
-
-type PadConfig = { tx: number; ty: number; radius: number };
 
 interface ScenarioConfig {
   pad: PadConfig;
@@ -188,15 +123,6 @@ interface ScenarioConfig {
   onApply?: () => void;
   onReset?: () => void;
   spawnExtraEnemies?: () => void;
-}
-
-interface BoatLane {
-  entry: { tx: number; ty: number };
-  target: { tx: number; ty: number };
-}
-
-interface BoatWave {
-  count: number;
 }
 
 interface BoatScenarioConfig {
@@ -237,6 +163,7 @@ interface PlayerState {
   respawnTimer: number;
   invulnerable: boolean;
 }
+
 const canvas = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('Canvas element with id "game" not found');
 const context = canvas.getContext('2d');
@@ -309,36 +236,12 @@ const speedboats = new ComponentStore<Speedboat>();
 let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
 isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
-const MAP_BORDER = 8;
-function offsetTiles<T extends { tx: number; ty: number }>(
-  items: T[],
-  border: number = MAP_BORDER,
-): T[] {
-  return items.map((item) => ({
-    ...item,
-    tx: item.tx + border,
-    ty: item.ty + border,
-  }));
-}
-let pad: PadConfig = {
-  tx: runtimeMap.width - 5,
-  ty: runtimeMap.height - 5,
-  radius: 1.2,
-};
 
-let safeHouse: SafeHouseParams = {
-  tx: pad.tx - 1.4,
-  ty: pad.ty + 0.55,
-  width: 1.18,
-  depth: 1.02,
-  height: 22,
-  bodyColor: '#d8d2c6',
-  roofColor: '#6e7b88',
-  trimColor: '#f4f0e6',
-  doorColor: '#394758',
-  windowColor: '#cfe4ff',
-  walkwayColor: '#d6d0c4',
-};
+const missionOneLayout = createMissionOneLayout(runtimeMap);
+const missionTwoLayout = createMissionTwoLayout();
+let pad: PadConfig = clonePadConfig(missionOneLayout.pad);
+
+let safeHouse: SafeHouseParams = cloneSafeHouseParams(missionOneLayout.safeHouse);
 
 fog.configure(runtimeMap.width, runtimeMap.height);
 
@@ -524,99 +427,8 @@ let boatsEscaped = 0;
 let boatObjectiveComplete = false;
 let boatObjectiveFailed = false;
 
-const MISSION_ONE_PAD: PadConfig = {
-  tx: runtimeMap.width - 5,
-  ty: runtimeMap.height - 5,
-  radius: 1.2,
-};
-const MISSION_ONE_SAFEHOUSE: SafeHouseParams = {
-  tx: MISSION_ONE_PAD.tx - 1.4,
-  ty: MISSION_ONE_PAD.ty + 0.55,
-  width: 1.18,
-  depth: 1.02,
-  height: 22,
-  bodyColor: '#d8d2c6',
-  roofColor: '#6e7b88',
-  trimColor: '#f4f0e6',
-  doorColor: '#394758',
-  windowColor: '#cfe4ff',
-  walkwayColor: '#d6d0c4',
-};
-const MISSION_ONE_WAVE_SPAWNS = offsetTiles([
-  { tx: 7, ty: 7 },
-  { tx: 28, ty: 9 },
-  { tx: 12, ty: 28 },
-  { tx: 20, ty: 6 },
-]);
-const MISSION_ONE_CAMPUS_SITES = offsetTiles([
-  {
-    tx: 18,
-    ty: 16,
-    width: 1.8,
-    depth: 1.35,
-    height: 36,
-    health: 140,
-    colliderRadius: 0.92,
-    bodyColor: '#372a54',
-    roofColor: '#52e0c6',
-    ruinColor: '#2a1b33',
-    score: 260,
-    category: 'campus',
-    triggersAlarm: true,
-  },
-  {
-    tx: 21,
-    ty: 19.2,
-    width: 1.55,
-    depth: 1.45,
-    height: 30,
-    health: 120,
-    colliderRadius: 0.86,
-    bodyColor: '#3d244f',
-    roofColor: '#60f2d4',
-    ruinColor: '#311a3f',
-    score: 230,
-    category: 'campus',
-    triggersAlarm: true,
-  },
-  {
-    tx: 15,
-    ty: 20.5,
-    width: 1.9,
-    depth: 1.15,
-    height: 26,
-    health: 110,
-    colliderRadius: 0.9,
-    bodyColor: '#3f2b59',
-    roofColor: '#4ad1b7',
-    ruinColor: '#2b1a39',
-    score: 200,
-    category: 'campus',
-    triggersAlarm: true,
-  },
-  {
-    tx: 13.6,
-    ty: 17.8,
-    width: 1.4,
-    depth: 1.4,
-    height: 32,
-    health: 125,
-    colliderRadius: 0.84,
-    bodyColor: '#352c60',
-    roofColor: '#48c7b8',
-    ruinColor: '#291d40',
-    score: 210,
-    category: 'campus',
-    triggersAlarm: true,
-  },
-]);
 function generateMissionOneCivilianHouses(): BuildingSite[] {
-  const clusters = offsetTiles([
-    { tx: 9.4, ty: 24.2, spread: 1.4, count: 3 },
-    { tx: 24.6, ty: 27.5, spread: 1.6, count: 3 },
-    { tx: 6.4, ty: 15.2, spread: 1.1, count: 2 },
-    { tx: 28.4, ty: 20.6, spread: 1.2, count: 2 },
-  ]);
+  const clusters = missionOneLayout.civilianClusters ?? [];
   const palettes = [
     { body: '#7c95a3', roof: '#2f3f4d', ruin: '#3b2b2b' },
     { body: '#9a7c6a', roof: '#4c3324', ruin: '#3c2018' },
@@ -656,228 +468,19 @@ function generateMissionOneCivilianHouses(): BuildingSite[] {
   }
   return houses;
 }
-const MISSION_ONE_SURVIVOR_SITES = offsetTiles([
-  { tx: 18.2, ty: 17.4, count: 3, radius: 0.85, duration: 1.6 },
-  { tx: 20.4, ty: 18.8, count: 2, radius: 0.85, duration: 1.6 },
-  { tx: 16.1, ty: 19.6, count: 3, radius: 0.9, duration: 1.7 },
-  { tx: 18.7, ty: 21.2, count: 2, radius: 0.9, duration: 1.7 },
-  { tx: 15.4, ty: 17.8, count: 2, radius: 0.85, duration: 1.5 },
-]);
-const MISSION_ONE_ALIEN_SPAWNS = offsetTiles([
-  { tx: 17.2, ty: 14.6 },
-  { tx: 21.1, ty: 16.3 },
-  { tx: 14.4, ty: 18.4 },
-  { tx: 19.6, ty: 21.3 },
-  { tx: 16.2, ty: 22.1 },
-  { tx: 22.4, ty: 19.2 },
-]);
-const MISSION_ONE_PICKUP_SITES = offsetTiles([
-  { tx: 15.2, ty: 18.4, kind: 'fuel', fuelAmount: 55 },
-  { tx: 18.6, ty: 16.1, kind: 'ammo', ammo: { missiles: 90, rockets: 3, hellfires: 1 } },
-  { tx: 10.4, ty: 12.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 1 } },
-  { tx: 22.5, ty: 12.2, kind: 'fuel', fuelAmount: 60 },
-  { tx: 25.3, ty: 19.4, kind: 'ammo', ammo: { missiles: 100, rockets: 5, hellfires: 1 } },
-  { tx: 28.2, ty: 27.1, kind: 'fuel', fuelAmount: 65 },
-  { tx: 13.2, ty: 26.4, kind: 'fuel', fuelAmount: 58 },
-  { tx: 7.4, ty: 22.3, kind: 'ammo', ammo: { missiles: 80, rockets: 3, hellfires: 1 } },
-  { tx: 31.2, ty: 14.4, kind: 'ammo', ammo: { missiles: 95, rockets: 3, hellfires: 1 } },
-  { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
-]);
 
-const MISSION_TWO_PAD: PadConfig = { tx: 22, ty: 36, radius: 1.3 };
-const MISSION_TWO_SAFEHOUSE: SafeHouseParams = {
-  tx: MISSION_TWO_PAD.tx - 0.9,
-  ty: MISSION_TWO_PAD.ty + 0.5,
-  width: 1.6,
-  depth: 1.18,
-  height: 28,
-  bodyColor: '#b0bcc9',
-  roofColor: '#3e4c5d',
-  trimColor: '#d9e4ef',
-  doorColor: '#243241',
-  windowColor: '#9ed4ff',
-  walkwayColor: '#6f7c89',
-};
-const MISSION_TWO_STRONGHOLDS = offsetTiles(
-  [
-    {
-      tx: 18.4,
-      ty: 8.2,
-      width: 2.4,
-      depth: 1.5,
-      height: 34,
-      health: 150,
-      colliderRadius: 1.18,
-      bodyColor: '#1f2e57',
-      roofColor: '#83d3ff',
-      ruinColor: '#15213d',
-      score: 320,
-      category: 'stronghold',
-      triggersAlarm: true,
-    },
-    {
-      tx: 24.5,
-      ty: 9.4,
-      width: 2.2,
-      depth: 1.4,
-      height: 30,
-      health: 140,
-      colliderRadius: 1.05,
-      bodyColor: '#243961',
-      roofColor: '#76d1ff',
-      ruinColor: '#1a2642',
-      score: 310,
-      category: 'stronghold',
-      triggersAlarm: true,
-    },
-    {
-      tx: 29.2,
-      ty: 11.6,
-      width: 2.1,
-      depth: 1.6,
-      height: 28,
-      health: 135,
-      colliderRadius: 1.02,
-      bodyColor: '#1c2f4a',
-      roofColor: '#8bd0ff',
-      ruinColor: '#152438',
-      score: 290,
-      category: 'stronghold',
-      triggersAlarm: true,
-    },
-  ],
-  0,
-);
-const MISSION_TWO_STATIC_STRUCTURES = offsetTiles(
-  [
-    {
-      tx: 21.8,
-      ty: 13.4,
-      width: 1.6,
-      depth: 1.2,
-      height: 20,
-      health: 95,
-      colliderRadius: 0.9,
-      bodyColor: '#36485e',
-      roofColor: '#5fa1c7',
-      ruinColor: '#243542',
-      score: 180,
-      category: 'civilian',
-      triggersAlarm: false,
-      drop: { kind: 'armor', amount: 35 },
-    },
-    {
-      tx: 27.2,
-      ty: 14.1,
-      width: 1.5,
-      depth: 1.2,
-      height: 22,
-      health: 100,
-      colliderRadius: 0.88,
-      bodyColor: '#3a4c62',
-      roofColor: '#58a7d4',
-      ruinColor: '#27374a',
-      score: 190,
-      category: 'civilian',
-      triggersAlarm: false,
-    },
-    {
-      tx: 23.6,
-      ty: 10.9,
-      width: 1.2,
-      depth: 1.1,
-      height: 18,
-      health: 80,
-      colliderRadius: 0.76,
-      bodyColor: '#28384c',
-      roofColor: '#6fb7dd',
-      ruinColor: '#1c2835',
-      score: 160,
-      category: 'civilian',
-      triggersAlarm: false,
-    },
-    {
-      tx: 31.4,
-      ty: 16.2,
-      width: 1.8,
-      depth: 1.3,
-      height: 24,
-      health: 110,
-      colliderRadius: 0.94,
-      bodyColor: '#2e4054',
-      roofColor: '#72b9df',
-      ruinColor: '#1f2b38',
-      score: 210,
-      category: 'stronghold',
-      triggersAlarm: true,
-    },
-  ],
-  0,
-);
-const MISSION_TWO_PICKUP_SITES = offsetTiles(
-  [
-    { tx: 26.8, ty: 35.4, kind: 'fuel', fuelAmount: 70 },
-    { tx: 30.1, ty: 34.8, kind: 'ammo', ammo: { missiles: 120, rockets: 5, hellfires: 2 } },
-    { tx: 22.6, ty: 12.4, kind: 'ammo', ammo: { missiles: 105, rockets: 4, hellfires: 1 } },
-    { tx: 28.4, ty: 12.8, kind: 'fuel', fuelAmount: 65 },
-    { tx: 33.2, ty: 17.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 2 } },
-    { tx: 19.4, ty: 32.8, kind: 'fuel', fuelAmount: 68 },
-  ],
-  0,
-);
-const MISSION_TWO_SURVIVOR_SITES: SurvivorSite[] = [];
-const MISSION_TWO_ALIEN_SPAWNS = offsetTiles(
-  [
-    { tx: 18.2, ty: 9.6 },
-    { tx: 24.6, ty: 11.2 },
-    { tx: 29.8, ty: 13 },
-    { tx: 22.8, ty: 15.4 },
-  ],
-  0,
-);
-const MISSION_TWO_WAVE_SPAWNS = offsetTiles(
-  [
-    { tx: 16.5, ty: 2.4 },
-    { tx: 24.2, ty: 1.8 },
-    { tx: 31.1, ty: 3.1 },
-  ],
-  0,
-);
-const MISSION_TWO_GUARD_POSTS = offsetTiles(
-  [
-    { tx: 20.2, ty: 13 },
-    { tx: 26.1, ty: 14.1 },
-    { tx: 30.6, ty: 15.2 },
-  ],
-  0,
-);
-const MISSION_TWO_PATROL_ROUTES = offsetTiles(
-  [
-    { tx: 22.6, ty: 13.8, axis: 'x' as const, range: 1.6 },
-    { tx: 28.2, ty: 14.5, axis: 'x' as const, range: 1.8 },
-    { tx: 24.8, ty: 11.4, axis: 'y' as const, range: 1.4 },
-  ],
-  0,
-);
-const MISSION_TWO_BOAT_LANES: BoatLane[] = [
-  offsetBoatLane({ entry: { tx: 16.5, ty: 2.4 }, target: { tx: 20.4, ty: 13.5 } }, 0),
-  offsetBoatLane({ entry: { tx: 24.2, ty: 1.8 }, target: { tx: 26.8, ty: 13.9 } }, 0),
-  offsetBoatLane({ entry: { tx: 31.1, ty: 3.1 }, target: { tx: 32.9, ty: 14.4 } }, 0),
-];
-const MISSION_TWO_BOAT_WAVES: BoatWave[] = [{ count: 4 }, { count: 5 }, { count: 6 }];
-const MISSION_TWO_MAX_ESCAPES = 3;
-const MISSION_TWO_WAVE_DELAY = 7.2;
+const missionTwoBoat = missionTwoLayout.boat;
 
 const scenarioConfigs: Record<string, ScenarioConfig> = {
   m01: {
-    pad: MISSION_ONE_PAD,
-    safeHouse: MISSION_ONE_SAFEHOUSE,
-    campusSites: MISSION_ONE_CAMPUS_SITES,
+    pad: missionOneLayout.pad,
+    safeHouse: missionOneLayout.safeHouse,
+    campusSites: missionOneLayout.campusSites,
     civilianGenerator: generateMissionOneCivilianHouses,
-    pickupSites: MISSION_ONE_PICKUP_SITES,
-    survivorSites: MISSION_ONE_SURVIVOR_SITES,
-    alienSpawnPoints: MISSION_ONE_ALIEN_SPAWNS,
-    waveSpawnPoints: MISSION_ONE_WAVE_SPAWNS,
+    pickupSites: missionOneLayout.pickupSites,
+    survivorSites: missionOneLayout.survivorSites,
+    alienSpawnPoints: missionOneLayout.alienSpawnPoints,
+    waveSpawnPoints: missionOneLayout.waveSpawnPoints,
     initialWaveCountdown: 3.5,
     waveCooldown: defaultWaveCooldown,
     waveSpawner: spawnDefaultWave,
@@ -891,14 +494,14 @@ const scenarioConfigs: Record<string, ScenarioConfig> = {
     },
   },
   m02: {
-    pad: MISSION_TWO_PAD,
-    safeHouse: MISSION_TWO_SAFEHOUSE,
-    campusSites: MISSION_TWO_STRONGHOLDS,
-    staticStructures: MISSION_TWO_STATIC_STRUCTURES,
-    pickupSites: MISSION_TWO_PICKUP_SITES,
-    survivorSites: MISSION_TWO_SURVIVOR_SITES,
-    alienSpawnPoints: MISSION_TWO_ALIEN_SPAWNS,
-    waveSpawnPoints: MISSION_TWO_WAVE_SPAWNS,
+    pad: missionTwoLayout.pad,
+    safeHouse: missionTwoLayout.safeHouse,
+    campusSites: missionTwoLayout.campusSites,
+    staticStructures: missionTwoLayout.staticStructures,
+    pickupSites: missionTwoLayout.pickupSites,
+    survivorSites: missionTwoLayout.survivorSites,
+    alienSpawnPoints: missionTwoLayout.alienSpawnPoints,
+    waveSpawnPoints: missionTwoLayout.waveSpawnPoints,
     initialWaveCountdown: 4.5,
     waveCooldown: boatWaveCooldown,
     waveSpawner: spawnBoatWave,
@@ -1046,11 +649,13 @@ function setupMissionTwoObjectiveLabels(): void {
 }
 
 function spawnMissionTwoGuards(): void {
-  for (let i = 0; i < MISSION_TWO_GUARD_POSTS.length; i += 1) {
-    spawnCoastGuard(MISSION_TWO_GUARD_POSTS[i]!, 9.2);
+  const guardPosts = missionTwoLayout.guardPosts ?? [];
+  for (let i = 0; i < guardPosts.length; i += 1) {
+    spawnCoastGuard(guardPosts[i]!, 9.2);
   }
-  for (let i = 0; i < MISSION_TWO_PATROL_ROUTES.length; i += 1) {
-    spawnShorePatrol(MISSION_TWO_PATROL_ROUTES[i]!);
+  const patrolRoutes = missionTwoLayout.patrolRoutes ?? [];
+  for (let i = 0; i < patrolRoutes.length; i += 1) {
+    spawnShorePatrol(patrolRoutes[i]!);
   }
 }
 
@@ -1116,11 +721,18 @@ function spawnShorePatrol(route: { tx: number; ty: number; axis: 'x' | 'y'; rang
 }
 
 function activateBoatScenario(): void {
+  if (!missionTwoBoat) {
+    boatScenario = null;
+    return;
+  }
   boatScenario = {
-    lanes: MISSION_TWO_BOAT_LANES,
-    waves: MISSION_TWO_BOAT_WAVES,
-    maxEscapes: MISSION_TWO_MAX_ESCAPES,
-    nextWaveDelay: MISSION_TWO_WAVE_DELAY,
+    lanes: missionTwoBoat.lanes.map((lane) => ({
+      entry: { ...lane.entry },
+      target: { ...lane.target },
+    })),
+    waves: missionTwoBoat.waves.map((wave) => ({ ...wave })),
+    maxEscapes: missionTwoBoat.maxEscapes,
+    nextWaveDelay: missionTwoBoat.nextWaveDelay,
   };
   boatsEscaped = 0;
   boatObjectiveComplete = false;
@@ -1858,9 +1470,6 @@ function updateWave(dt: number): void {
 }
 
 setMission(currentMissionIndex);
-spawnBuildings();
-spawnMissionEnemies();
-spawnPickups();
 const loop = new GameLoop({
   update: (dt) => {
     lastStepDt = dt;
@@ -2059,17 +1668,17 @@ const loop = new GameLoop({
               pickup.progress = 0;
               beginPickupCraneSound(entity, pickup);
             }
-          } else if (pickup.kind === 'armor') {
-            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
-            if (needsArmor) {
-              pickup.collectingBy = player;
-              pickup.progress = 0;
-              beginPickupCraneSound(entity, pickup);
-            }
           } else if (pickup.kind === 'survivor') {
             const survivors = pickup.survivorCount ?? 1;
             const remainingCapacity = SURVIVOR_CAPACITY - rescueState.carrying;
             if (remainingCapacity >= survivors) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
+            }
+          } else if (pickup.kind === 'armor') {
+            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
+            if (needsArmor) {
               pickup.collectingBy = player;
               pickup.progress = 0;
               beginPickupCraneSound(entity, pickup);
