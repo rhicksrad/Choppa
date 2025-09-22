@@ -7,4 +7,6 @@ export interface Speedboat {
   fireInterval: number;
   cooldown: number;
   arrivalRadius: number;
+  activationRange: number;
+  activated: boolean;
 }

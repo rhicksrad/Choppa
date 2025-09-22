@@ -762,6 +762,7 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
   const entity = entities.create();
   const entryJitter = (rng.float01() - 0.5) * 0.6;
   const entryJitterY = (rng.float01() - 0.5) * 0.4;
+  const cruiseSpeed = 2.4 + wave * 0.18;
   transforms.set(entity, {
     tx: lane.entry.tx + entryJitter,
     ty: lane.entry.ty + entryJitterY,
@@ -773,7 +774,7 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
     ax: 0,
     ay: 0,
     drag: 0.78,
-    maxSpeed: 3.6 + wave * 0.25,
+    maxSpeed: cruiseSpeed + 0.4,
     turnRate: Math.PI,
   });
   healths.set(entity, { current: 24 + wave * 4, max: 24 + wave * 4 });
@@ -781,12 +782,14 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
   speedboats.set(entity, {
     targetX: lane.target.tx + (rng.float01() - 0.5) * 0.5,
     targetY: lane.target.ty + (rng.float01() - 0.5) * 0.5,
-    speed: 3.6 + wave * 0.25,
-    acceleration: 3.4,
+    speed: cruiseSpeed,
+    acceleration: 2.6,
     fireRange: 6.2,
     fireInterval: Math.max(0.95, 1.3 - wave * 0.08),
     cooldown: 0,
     arrivalRadius: 0.6,
+    activationRange: 7.5,
+    activated: false,
   });
   registerEnemy(entity, { kind: 'speedboat', score: 220 + wave * 25, wave });
 }
