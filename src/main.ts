@@ -58,7 +58,7 @@ import type { Building } from './game/components/Building';
 import type { Pickup } from './game/components/Pickup';
 import type { Speedboat } from './game/components/Speedboat';
 import { drawHUD } from './ui/hud/hud';
-import { loadJson, saveJson } from './core/util/storage';
+import { loadJson, saveJson, removeKey } from './core/util/storage';
 import { loadBindings, isDown } from './ui/input-remap/bindings';
 import { AudioBus } from './core/audio/audio';
 import {
@@ -301,12 +301,14 @@ interface MissionProgressData {
 
 const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
 
+removeKey('choppa:progress');
+
 function findMissionIndex(id?: string): number {
   if (!id) return -1;
   return missionDefs.findIndex((def) => def.id === id);
 }
 
-const savedProgress = loadJson<MissionProgressData>('choppa:progress', {});
+const savedProgress: MissionProgressData = {};
 let currentMissionIndex = findMissionIndex(savedProgress.current);
 if (currentMissionIndex < 0) {
   currentMissionIndex = findMissionIndex(savedProgress.mission);
@@ -330,7 +332,7 @@ const missionProgress: MissionProgressData = {
 };
 
 function persistMissionProgress(): void {
-  saveJson('choppa:progress', missionProgress);
+  removeKey('choppa:progress');
 }
 
 let missionDef: MissionDef = missionDefs[currentMissionIndex];
