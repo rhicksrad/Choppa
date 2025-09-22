@@ -2,48 +2,48 @@
   "id": "m02",
   "title": "Operation Stormbreak",
   "briefing": "With the valley secure, alien reinforcements are racing in over the ocean. Launch from the carrier, smash their shoreline command nodes, and stop the speedboat strike teams before they overrun our forward radar relays.",
-  "startPos": { "tx": 12, "ty": 41 },
+  "startPos": { "tx": 22, "ty": 36 },
   "objectives": [
     {
       "id": "obj1",
       "type": "destroy",
       "name": "Level the breakwater command spire",
-      "at": { "tx": 9.1, "ty": 28.6 },
+      "at": { "tx": 18.4, "ty": 8.2 },
       "radiusTiles": 1.8
     },
     {
       "id": "obj2",
       "type": "destroy",
       "name": "Destroy the harbor missile silo",
-      "at": { "tx": 13.4, "ty": 27.8 },
+      "at": { "tx": 24.5, "ty": 9.4 },
       "radiusTiles": 1.8
     },
     {
       "id": "obj3",
       "type": "destroy",
       "name": "Cripple the shoreline uplink tower",
-      "at": { "tx": 17.2, "ty": 30.4 },
+      "at": { "tx": 29.2, "ty": 11.6 },
       "radiusTiles": 1.9
     },
     {
       "id": "boats",
       "type": "custom",
       "name": "Hold the coastal perimeter",
-      "at": { "tx": 12.4, "ty": 32.2 },
-      "radiusTiles": 6.3
+      "at": { "tx": 26.8, "ty": 14.0 },
+      "radiusTiles": 6.5
     },
     {
       "id": "obj6",
       "type": "reach",
       "name": "Return to the carrier deck",
       "requires": ["obj1", "obj2", "obj3", "boats"],
-      "at": { "tx": 12, "ty": 41 },
+      "at": { "tx": 22, "ty": 36 },
       "radiusTiles": 1.5
     }
   ],
   "enemySpawns": [
-    { "type": "AAA", "at": { "tx": 9.5, "ty": 28.2 } },
-    { "type": "SAM", "at": { "tx": 13.8, "ty": 27.6 } },
-    { "type": "SAM", "at": { "tx": 16.8, "ty": 30.8 } }
+    { "type": "AAA", "at": { "tx": 20, "ty": 13 } },
+    { "type": "SAM", "at": { "tx": 26, "ty": 11 } },
+    { "type": "SAM", "at": { "tx": 32, "ty": 14 } }
   ]
 }

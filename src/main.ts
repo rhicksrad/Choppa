@@ -163,6 +163,7 @@ interface PlayerState {
   respawnTimer: number;
   invulnerable: boolean;
 }
+
 const canvas = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('Canvas element with id "game" not found');
 const context = canvas.getContext('2d');
@@ -1667,17 +1668,17 @@ const loop = new GameLoop({
               pickup.progress = 0;
               beginPickupCraneSound(entity, pickup);
             }
-          } else if (pickup.kind === 'armor') {
-            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
-            if (needsArmor) {
-              pickup.collectingBy = player;
-              pickup.progress = 0;
-              beginPickupCraneSound(entity, pickup);
-            }
           } else if (pickup.kind === 'survivor') {
             const survivors = pickup.survivorCount ?? 1;
             const remainingCapacity = SURVIVOR_CAPACITY - rescueState.carrying;
             if (remainingCapacity >= survivors) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
+            }
+          } else if (pickup.kind === 'armor') {
+            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
+            if (needsArmor) {
               pickup.collectingBy = player;
               pickup.progress = 0;
               beginPickupCraneSound(entity, pickup);
