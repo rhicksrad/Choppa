@@ -165,6 +165,7 @@ interface PlayerState {
   respawnTimer: number;
   invulnerable: boolean;
 }
+
 const canvas = document.getElementById('game') as HTMLCanvasElement | null;
 if (!canvas) throw new Error('Canvas element with id "game" not found');
 const context = canvas.getContext('2d');
@@ -234,6 +235,7 @@ const buildings = new ComponentStore<Building>();
 const pickups = new ComponentStore<Pickup>();
 const speedboats = new ComponentStore<Speedboat>();
 
+// Use mission-specific tilemaps so level transitions can swap maps at runtime.
 const missionTilemaps: Record<string, RuntimeTilemap> = {
   m01: parseTiled(sampleMapJson as unknown),
   m02: parseTiled(oceanMapJson as unknown),
@@ -1683,17 +1685,17 @@ const loop = new GameLoop({
               pickup.progress = 0;
               beginPickupCraneSound(entity, pickup);
             }
-          } else if (pickup.kind === 'armor') {
-            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
-            if (needsArmor) {
-              pickup.collectingBy = player;
-              pickup.progress = 0;
-              beginPickupCraneSound(entity, pickup);
-            }
           } else if (pickup.kind === 'survivor') {
             const survivors = pickup.survivorCount ?? 1;
             const remainingCapacity = SURVIVOR_CAPACITY - rescueState.carrying;
             if (remainingCapacity >= survivors) {
+              pickup.collectingBy = player;
+              pickup.progress = 0;
+              beginPickupCraneSound(entity, pickup);
+            }
+          } else if (pickup.kind === 'armor') {
+            const needsArmor = playerHealth.current < playerHealth.max - 0.5;
+            if (needsArmor) {
               pickup.collectingBy = player;
               pickup.progress = 0;
               beginPickupCraneSound(entity, pickup);
@@ -2231,3 +2233,4 @@ const loop = new GameLoop({
 });
 
 loop.start();
+
