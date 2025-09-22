@@ -153,7 +153,10 @@ function cloneSafeHouseParams(params: SafeHouseParams): SafeHouseParams {
   return { ...params };
 }
 
-function offsetBoatLane(seed: { entry: { tx: number; ty: number }; target: { tx: number; ty: number } }): BoatLane {
+function offsetBoatLane(seed: {
+  entry: { tx: number; ty: number };
+  target: { tx: number; ty: number };
+}): BoatLane {
   return {
     entry: { tx: seed.entry.tx + MAP_BORDER, ty: seed.entry.ty + MAP_BORDER },
     target: { tx: seed.target.tx + MAP_BORDER, ty: seed.target.ty + MAP_BORDER },
@@ -373,14 +376,47 @@ const projectilePool = new ProjectilePool();
 const fireEvents: FireEvent[] = [];
 const weaponFire = new WeaponFireSystem(transforms, physics, weapons, ammos, fireEvents, rng);
 const damage = new DamageSystem(transforms, colliders, healths);
-const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
-const savedProgress = loadJson<{ mission?: string }>('choppa:progress', {});
-let currentMissionIndex = 0;
-if (savedProgress.mission) {
-  const savedIndex = missionDefs.findIndex((def) => def.id === savedProgress.mission);
-  if (savedIndex >= 0) currentMissionIndex = Math.min(savedIndex + 1, missionDefs.length - 1);
+interface MissionProgressData {
+  current?: string;
+  unlocked?: string;
+  lastWin?: number;
+  mission?: string; // legacy field
 }
-let nextMissionIndex = currentMissionIndex;
+
+const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
+
+function findMissionIndex(id?: string): number {
+  if (!id) return -1;
+  return missionDefs.findIndex((def) => def.id === id);
+}
+
+const savedProgress = loadJson<MissionProgressData>('choppa:progress', {});
+let currentMissionIndex = findMissionIndex(savedProgress.current);
+if (currentMissionIndex < 0) {
+  currentMissionIndex = findMissionIndex(savedProgress.mission);
+}
+if (currentMissionIndex < 0) currentMissionIndex = 0;
+
+let highestUnlockedMissionIndex = findMissionIndex(savedProgress.unlocked);
+if (highestUnlockedMissionIndex < 0) {
+  const legacyIndex = findMissionIndex(savedProgress.mission);
+  if (legacyIndex >= 0)
+    highestUnlockedMissionIndex = Math.min(legacyIndex + 1, missionDefs.length - 1);
+}
+if (highestUnlockedMissionIndex < 0) highestUnlockedMissionIndex = currentMissionIndex;
+highestUnlockedMissionIndex = Math.max(highestUnlockedMissionIndex, currentMissionIndex);
+
+let nextMissionIndex = Math.min(currentMissionIndex + 1, highestUnlockedMissionIndex);
+const missionProgress: MissionProgressData = {
+  current: missionDefs[currentMissionIndex]?.id ?? missionDefs[0]?.id,
+  unlocked: missionDefs[highestUnlockedMissionIndex]?.id ?? missionDefs[0]?.id,
+  lastWin: savedProgress.lastWin,
+};
+
+function persistMissionProgress(): void {
+  saveJson('choppa:progress', missionProgress);
+}
+
 let missionDef: MissionDef = missionDefs[currentMissionIndex];
 let missionState = loadMission(missionDef);
 const missionHandlers: Record<string, () => boolean> = {};
@@ -414,10 +450,18 @@ scheduler.add(
   })),
 );
 scheduler.add(
-  new SpeedboatBehaviorSystem(transforms, physics, speedboats, fireEvents, rng, () => ({
-    x: transforms.get(player)!.tx,
-    y: transforms.get(player)!.ty,
-  }), handleBoatLanding),
+  new SpeedboatBehaviorSystem(
+    transforms,
+    physics,
+    speedboats,
+    fireEvents,
+    rng,
+    () => ({
+      x: transforms.get(player)!.tx,
+      y: transforms.get(player)!.ty,
+    }),
+    handleBoatLanding,
+  ),
 );
 
 const playerState: PlayerState = { lives: 3, respawnTimer: 0, invulnerable: false };
@@ -474,7 +518,11 @@ let boatsEscaped = 0;
 let boatObjectiveComplete = false;
 let boatObjectiveFailed = false;
 
-const MISSION_ONE_PAD: PadConfig = { tx: runtimeMap.width - 5, ty: runtimeMap.height - 5, radius: 1.2 };
+const MISSION_ONE_PAD: PadConfig = {
+  tx: runtimeMap.width - 5,
+  ty: runtimeMap.height - 5,
+  radius: 1.2,
+};
 const MISSION_ONE_SAFEHOUSE: SafeHouseParams = {
   tx: MISSION_ONE_PAD.tx - 1.4,
   ty: MISSION_ONE_PAD.ty + 0.55,
@@ -905,12 +953,21 @@ function applyScenario(id: string): void {
 }
 
 function setMission(index: number): void {
-  currentMissionIndex = index;
+  const clampedIndex = Math.min(Math.max(index, 0), missionDefs.length - 1);
+  currentMissionIndex = clampedIndex;
+  if (highestUnlockedMissionIndex < currentMissionIndex) {
+    highestUnlockedMissionIndex = currentMissionIndex;
+  }
   missionDef = missionDefs[currentMissionIndex];
   missionState = loadMission(missionDef);
   mission.state = missionState;
   missionBriefingInfo = createMissionBriefing(missionDef);
   applyScenario(missionDef.id);
+  nextMissionIndex = Math.min(currentMissionIndex + 1, highestUnlockedMissionIndex);
+  missionProgress.current = missionDefs[currentMissionIndex]?.id ?? missionProgress.current;
+  missionProgress.unlocked =
+    missionDefs[highestUnlockedMissionIndex]?.id ?? missionProgress.unlocked;
+  persistMissionProgress();
 }
 
 function setupMissionOneHandlers(): void {
@@ -941,12 +998,18 @@ function setupMissionTwoObjectiveLabels(): void {
   objectiveLabelOverrides.boats = (objective) => {
     if (!boatScenario) return objective.name;
     const totalWaves = boatScenario.waves.length;
-    const currentWave = waveState.active ? waveState.index : Math.min(waveState.index + 1, totalWaves);
+    const currentWave = waveState.active
+      ? waveState.index
+      : Math.min(waveState.index + 1, totalWaves);
     let label = `${objective.name} (Escaped: ${boatsEscaped}/${boatScenario.maxEscapes}`;
     if (!objective.complete) {
       const clampedWave = Math.min(Math.max(currentWave, 1), totalWaves);
       label += ` | Wave ${clampedWave} of ${totalWaves}`;
-      if (!waveState.active && waveState.index < totalWaves && Number.isFinite(waveState.countdown)) {
+      if (
+        !waveState.active &&
+        waveState.index < totalWaves &&
+        Number.isFinite(waveState.countdown)
+      ) {
         label += ` | Next wave in: ${Math.max(0, waveState.countdown).toFixed(1)}s`;
       }
     }
@@ -1041,7 +1104,11 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
   const entity = entities.create();
   const entryJitter = (rng.float01() - 0.5) * 0.6;
   const entryJitterY = (rng.float01() - 0.5) * 0.4;
-  transforms.set(entity, { tx: lane.entry.tx + entryJitter, ty: lane.entry.ty + entryJitterY, rot: 0 });
+  transforms.set(entity, {
+    tx: lane.entry.tx + entryJitter,
+    ty: lane.entry.ty + entryJitterY,
+    rot: 0,
+  });
   physics.set(entity, {
     vx: 0,
     vy: 0,
@@ -1627,8 +1694,11 @@ function resetPlayer(): void {
 }
 
 function resetGame(targetMissionIndex?: number): void {
-  const missionIndex = targetMissionIndex ?? currentMissionIndex;
-  setMission(missionIndex);
+  const clampedTarget = Math.min(
+    targetMissionIndex ?? currentMissionIndex,
+    highestUnlockedMissionIndex,
+  );
+  setMission(clampedTarget);
   clearEnemies();
   projectilePool.clear();
   damage.reset();
@@ -1736,7 +1806,9 @@ function updateWave(dt: number): void {
     waveState.timeInWave += dt;
     if (waveState.enemies.size === 0) {
       waveState.active = false;
-      const delay = computeWaveCooldown ? computeWaveCooldown(waveState.index) : Number.POSITIVE_INFINITY;
+      const delay = computeWaveCooldown
+        ? computeWaveCooldown(waveState.index)
+        : Number.POSITIVE_INFINITY;
       waveState.countdown = delay;
       if (boatScenario && waveState.index >= boatScenario.waves.length && !boatObjectiveFailed) {
         boatObjectiveComplete = true;
@@ -2113,8 +2185,15 @@ const loop = new GameLoop({
     mission.update();
     if (mission.state.complete && ui.state === 'in-game') {
       ui.state = 'win';
-      nextMissionIndex = Math.min(currentMissionIndex + 1, missionDefs.length - 1);
-      saveJson('choppa:progress', { lastWin: Date.now(), mission: mission.state.def.id });
+      const candidate = Math.min(currentMissionIndex + 1, missionDefs.length - 1);
+      if (candidate > highestUnlockedMissionIndex) {
+        highestUnlockedMissionIndex = candidate;
+      }
+      nextMissionIndex = Math.min(candidate, highestUnlockedMissionIndex);
+      missionProgress.unlocked =
+        missionDefs[highestUnlockedMissionIndex]?.id ?? missionProgress.unlocked;
+      missionProgress.lastWin = Date.now();
+      persistMissionProgress();
     }
 
     updateWave(dt);
@@ -2365,7 +2444,9 @@ const loop = new GameLoop({
     });
 
     const nextWaveCountdown =
-      !waveState.active && Number.isFinite(waveState.countdown) ? Math.max(0, waveState.countdown) : null;
+      !waveState.active && Number.isFinite(waveState.countdown)
+        ? Math.max(0, waveState.countdown)
+        : null;
 
     drawHUD(
       context,
