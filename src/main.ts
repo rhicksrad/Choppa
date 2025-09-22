@@ -153,7 +153,10 @@ function cloneSafeHouseParams(params: SafeHouseParams): SafeHouseParams {
   return { ...params };
 }
 
-function offsetBoatLane(seed: { entry: { tx: number; ty: number }; target: { tx: number; ty: number } }): BoatLane {
+function offsetBoatLane(seed: {
+  entry: { tx: number; ty: number };
+  target: { tx: number; ty: number };
+}): BoatLane {
   return {
     entry: { tx: seed.entry.tx + MAP_BORDER, ty: seed.entry.ty + MAP_BORDER },
     target: { tx: seed.target.tx + MAP_BORDER, ty: seed.target.ty + MAP_BORDER },
@@ -373,14 +376,47 @@ const projectilePool = new ProjectilePool();
 const fireEvents: FireEvent[] = [];
 const weaponFire = new WeaponFireSystem(transforms, physics, weapons, ammos, fireEvents, rng);
 const damage = new DamageSystem(transforms, colliders, healths);
-const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
-const savedProgress = loadJson<{ mission?: string }>('choppa:progress', {});
-let currentMissionIndex = 0;
-if (savedProgress.mission) {
-  const savedIndex = missionDefs.findIndex((def) => def.id === savedProgress.mission);
-  if (savedIndex >= 0) currentMissionIndex = Math.min(savedIndex + 1, missionDefs.length - 1);
+interface MissionProgressData {
+  current?: string;
+  unlocked?: string;
+  lastWin?: number;
+  mission?: string; // legacy field
 }
-let nextMissionIndex = currentMissionIndex;
+
+const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
+
+function findMissionIndex(id?: string): number {
+  if (!id) return -1;
+  return missionDefs.findIndex((def) => def.id === id);
+}
+
+const savedProgress = loadJson<MissionProgressData>('choppa:progress', {});
+let currentMissionIndex = findMissionIndex(savedProgress.current);
+if (currentMissionIndex < 0) {
+  currentMissionIndex = findMissionIndex(savedProgress.mission);
+}
+if (currentMissionIndex < 0) currentMissionIndex = 0;
+
+let highestUnlockedMissionIndex = findMissionIndex(savedProgress.unlocked);
+if (highestUnlockedMissionIndex < 0) {
+  const legacyIndex = findMissionIndex(savedProgress.mission);
+  if (legacyIndex >= 0)
+    highestUnlockedMissionIndex = Math.min(legacyIndex + 1, missionDefs.length - 1);
+}
+if (highestUnlockedMissionIndex < 0) highestUnlockedMissionIndex = currentMissionIndex;
+highestUnlockedMissionIndex = Math.max(highestUnlockedMissionIndex, currentMissionIndex);
+
+let nextMissionIndex = Math.min(currentMissionIndex + 1, highestUnlockedMissionIndex);
+const missionProgress: MissionProgressData = {
+  current: missionDefs[currentMissionIndex]?.id ?? missionDefs[0]?.id,
+  unlocked: missionDefs[highestUnlockedMissionIndex]?.id ?? missionDefs[0]?.id,
+  lastWin: savedProgress.lastWin,
+};
+
+function persistMissionProgress(): void {
+  saveJson('choppa:progress', missionProgress);
+}
+
 let missionDef: MissionDef = missionDefs[currentMissionIndex];
 let missionState = loadMission(missionDef);
 const missionHandlers: Record<string, () => boolean> = {};
@@ -414,10 +450,18 @@ scheduler.add(
   })),
 );
 scheduler.add(
-  new SpeedboatBehaviorSystem(transforms, physics, speedboats, fireEvents, rng, () => ({
-    x: transforms.get(player)!.tx,
-    y: transforms.get(player)!.ty,
-  }), handleBoatLanding),
+  new SpeedboatBehaviorSystem(
+    transforms,
+    physics,
+    speedboats,
+    fireEvents,
+    rng,
+    () => ({
+      x: transforms.get(player)!.tx,
+      y: transforms.get(player)!.ty,
+    }),
+    handleBoatLanding,
+  ),
 );
 
 const playerState: PlayerState = { lives: 3, respawnTimer: 0, invulnerable: false };
@@ -474,7 +518,11 @@ let boatsEscaped = 0;
 let boatObjectiveComplete = false;
 let boatObjectiveFailed = false;
 
-const MISSION_ONE_PAD: PadConfig = { tx: runtimeMap.width - 5, ty: runtimeMap.height - 5, radius: 1.2 };
+const MISSION_ONE_PAD: PadConfig = {
+  tx: runtimeMap.width - 5,
+  ty: runtimeMap.height - 5,
+  radius: 1.2,
+};
 const MISSION_ONE_SAFEHOUSE: SafeHouseParams = {
   tx: MISSION_ONE_PAD.tx - 1.4,
   ty: MISSION_ONE_PAD.ty + 0.55,
@@ -630,164 +678,287 @@ const MISSION_ONE_PICKUP_SITES = offsetTiles([
   { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
 ]);
 
-const MISSION_TWO_PAD: PadConfig = { tx: 30, ty: 44, radius: 1.3 };
+const MISSION_TWO_PAD: PadConfig = { tx: 30, ty: 44, radius: 1.4 };
 const MISSION_TWO_SAFEHOUSE: SafeHouseParams = {
-  tx: MISSION_TWO_PAD.tx - 0.9,
-  ty: MISSION_TWO_PAD.ty + 0.5,
-  width: 1.6,
-  depth: 1.18,
-  height: 28,
-  bodyColor: '#b0bcc9',
-  roofColor: '#3e4c5d',
-  trimColor: '#d9e4ef',
-  doorColor: '#243241',
-  windowColor: '#9ed4ff',
-  walkwayColor: '#6f7c89',
+  tx: MISSION_TWO_PAD.tx - 0.95,
+  ty: MISSION_TWO_PAD.ty + 0.55,
+  width: 1.7,
+  depth: 1.22,
+  height: 30,
+  bodyColor: '#8b96a2',
+  roofColor: '#2c333c',
+  trimColor: '#d4dbe2',
+  doorColor: '#1b242f',
+  windowColor: '#8fd0ff',
+  walkwayColor: '#3c4752',
 };
-const MISSION_TWO_STRONGHOLDS = offsetTiles([
+const MISSION_TWO_MORTAR_PLATFORMS: BuildingSite[] = offsetTiles([
   {
-    tx: 18.4,
-    ty: 8.2,
-    width: 2.4,
-    depth: 1.5,
-    height: 34,
-    health: 150,
-    colliderRadius: 1.18,
-    bodyColor: '#1f2e57',
-    roofColor: '#83d3ff',
-    ruinColor: '#15213d',
-    score: 320,
+    tx: 16.6,
+    ty: 12.3,
+    width: 2.8,
+    depth: 2.6,
+    height: 26,
+    health: 185,
+    colliderRadius: 1.44,
+    bodyColor: '#151c23',
+    roofColor: '#3a4c5e',
+    ruinColor: '#0b1016',
+    score: 360,
+    drop: { kind: 'armor', amount: 35 },
     category: 'stronghold',
     triggersAlarm: true,
   },
   {
-    tx: 24.5,
-    ty: 9.4,
-    width: 2.2,
-    depth: 1.4,
-    height: 30,
-    health: 140,
-    colliderRadius: 1.05,
-    bodyColor: '#243961',
-    roofColor: '#76d1ff',
-    ruinColor: '#1a2642',
-    score: 310,
-    category: 'stronghold',
-    triggersAlarm: true,
-  },
-  {
-    tx: 29.2,
-    ty: 11.6,
-    width: 2.1,
-    depth: 1.6,
+    tx: 22.8,
+    ty: 15.5,
+    width: 3.2,
+    depth: 2.7,
     height: 28,
-    health: 135,
-    colliderRadius: 1.02,
-    bodyColor: '#1c2f4a',
-    roofColor: '#8bd0ff',
-    ruinColor: '#152438',
-    score: 290,
+    health: 195,
+    colliderRadius: 1.52,
+    bodyColor: '#181f28',
+    roofColor: '#45586b',
+    ruinColor: '#0d1118',
+    score: 400,
+    drop: { kind: 'armor', amount: 45 },
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+  {
+    tx: 28.9,
+    ty: 18.7,
+    width: 2.9,
+    depth: 2.6,
+    height: 27,
+    health: 190,
+    colliderRadius: 1.48,
+    bodyColor: '#131920',
+    roofColor: '#3f5164',
+    ruinColor: '#0a0f14',
+    score: 380,
+    drop: { kind: 'armor', amount: 35 },
     category: 'stronghold',
     triggersAlarm: true,
   },
 ]);
-const MISSION_TWO_STATIC_STRUCTURES = offsetTiles([
+const MISSION_TWO_BREAKWATER_STRUCTURES: BuildingSite[] = offsetTiles([
   {
-    tx: 21.8,
-    ty: 13.4,
-    width: 1.6,
-    depth: 1.2,
-    height: 20,
-    health: 95,
-    colliderRadius: 0.9,
-    bodyColor: '#36485e',
-    roofColor: '#5fa1c7',
-    ruinColor: '#243542',
-    score: 180,
-    category: 'civilian',
-    triggersAlarm: false,
-    drop: { kind: 'armor', amount: 35 },
+    tx: 17.2,
+    ty: 13.8,
+    width: 2.7,
+    depth: 1.4,
+    height: 18,
+    health: 150,
+    colliderRadius: 1.22,
+    bodyColor: '#1f3042',
+    roofColor: '#476b88',
+    ruinColor: '#152230',
+    score: 210,
+    category: 'campus',
+    triggersAlarm: true,
   },
   {
-    tx: 27.2,
-    ty: 14.1,
+    tx: 22.0,
+    ty: 16.6,
+    width: 2.8,
+    depth: 1.4,
+    height: 18,
+    health: 155,
+    colliderRadius: 1.24,
+    bodyColor: '#203449',
+    roofColor: '#4c7290',
+    ruinColor: '#172536',
+    score: 220,
+    category: 'campus',
+    triggersAlarm: true,
+  },
+  {
+    tx: 26.6,
+    ty: 19.4,
+    width: 2.6,
+    depth: 1.4,
+    height: 18,
+    health: 150,
+    colliderRadius: 1.2,
+    bodyColor: '#1d2f43',
+    roofColor: '#426681',
+    ruinColor: '#121f2d',
+    score: 205,
+    category: 'campus',
+    triggersAlarm: true,
+  },
+]);
+const MISSION_TWO_BUNKER_STRUCTURES: BuildingSite[] = offsetTiles([
+  {
+    tx: 32.2,
+    ty: 8.4,
+    width: 1.9,
+    depth: 1.6,
+    height: 22,
+    health: 160,
+    colliderRadius: 0.96,
+    bodyColor: '#2b3c2f',
+    roofColor: '#52694f',
+    ruinColor: '#1c271f',
+    score: 265,
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+  {
+    tx: 35.0,
+    ty: 10.6,
+    width: 2.0,
+    depth: 1.6,
+    height: 24,
+    health: 165,
+    colliderRadius: 1,
+    bodyColor: '#2f4333',
+    roofColor: '#5a7456',
+    ruinColor: '#202e22',
+    score: 270,
+    drop: { kind: 'armor', amount: 30 },
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+  {
+    tx: 37.4,
+    ty: 13.0,
+    width: 2.1,
+    depth: 1.7,
+    height: 24,
+    health: 170,
+    colliderRadius: 1.04,
+    bodyColor: '#324736',
+    roofColor: '#5f7a59',
+    ruinColor: '#222f24',
+    score: 280,
+    category: 'stronghold',
+    triggersAlarm: true,
+  },
+]);
+const MISSION_TWO_CARRIER_STRUCTURES: BuildingSite[] = offsetTiles([
+  {
+    tx: 20.8,
+    ty: 35.4,
+    width: 6.6,
+    depth: 2.7,
+    height: 16,
+    health: 320,
+    colliderRadius: 3.1,
+    bodyColor: '#4d565f',
+    roofColor: '#2c343c',
+    ruinColor: '#1b2026',
+    score: 0,
+    category: 'civilian',
+    triggersAlarm: false,
+  },
+  {
+    tx: 18.2,
+    ty: 33.0,
+    width: 3.4,
+    depth: 2.0,
+    height: 12,
+    health: 240,
+    colliderRadius: 1.8,
+    bodyColor: '#585f69',
+    roofColor: '#323840',
+    ruinColor: '#1d2228',
+    score: 0,
+    category: 'civilian',
+    triggersAlarm: false,
+  },
+  {
+    tx: 23.3,
+    ty: 34.6,
+    width: 1.6,
+    depth: 1.4,
+    height: 28,
+    health: 200,
+    colliderRadius: 0.92,
+    bodyColor: '#59646f',
+    roofColor: '#27303a',
+    ruinColor: '#1a2026',
+    score: 0,
+    category: 'civilian',
+    triggersAlarm: false,
+  },
+]);
+const MISSION_TWO_SUPPORT_STRUCTURES: BuildingSite[] = offsetTiles([
+  {
+    tx: 30.4,
+    ty: 21.6,
     width: 1.5,
     depth: 1.2,
-    height: 22,
-    health: 100,
-    colliderRadius: 0.88,
-    bodyColor: '#3a4c62',
-    roofColor: '#58a7d4',
-    ruinColor: '#27374a',
-    score: 190,
-    category: 'civilian',
-    triggersAlarm: false,
+    height: 20,
+    health: 110,
+    colliderRadius: 0.82,
+    bodyColor: '#223343',
+    roofColor: '#5d82a1',
+    ruinColor: '#162330',
+    score: 185,
+    category: 'campus',
+    triggersAlarm: true,
   },
   {
-    tx: 23.6,
-    ty: 10.9,
-    width: 1.2,
+    tx: 33.8,
+    ty: 17.2,
+    width: 1.4,
     depth: 1.1,
     height: 18,
-    health: 80,
+    health: 105,
     colliderRadius: 0.76,
-    bodyColor: '#28384c',
-    roofColor: '#6fb7dd',
-    ruinColor: '#1c2835',
-    score: 160,
-    category: 'civilian',
-    triggersAlarm: false,
-  },
-  {
-    tx: 31.4,
-    ty: 16.2,
-    width: 1.8,
-    depth: 1.3,
-    height: 24,
-    health: 110,
-    colliderRadius: 0.94,
-    bodyColor: '#2e4054',
-    roofColor: '#72b9df',
-    ruinColor: '#1f2b38',
-    score: 210,
+    bodyColor: '#2c3d2f',
+    roofColor: '#5e7a5e',
+    ruinColor: '#1f2b20',
+    score: 190,
     category: 'stronghold',
     triggersAlarm: true,
   },
 ]);
+const MISSION_TWO_STRONGHOLDS = MISSION_TWO_MORTAR_PLATFORMS;
+const MISSION_TWO_STATIC_STRUCTURES: BuildingSite[] = [
+  ...MISSION_TWO_CARRIER_STRUCTURES,
+  ...MISSION_TWO_BREAKWATER_STRUCTURES,
+  ...MISSION_TWO_BUNKER_STRUCTURES,
+  ...MISSION_TWO_SUPPORT_STRUCTURES,
+];
 const MISSION_TWO_PICKUP_SITES = offsetTiles([
-  { tx: 26.8, ty: 35.4, kind: 'fuel', fuelAmount: 70 },
-  { tx: 30.1, ty: 34.8, kind: 'ammo', ammo: { missiles: 120, rockets: 5, hellfires: 2 } },
-  { tx: 22.6, ty: 12.4, kind: 'ammo', ammo: { missiles: 105, rockets: 4, hellfires: 1 } },
-  { tx: 28.4, ty: 12.8, kind: 'fuel', fuelAmount: 65 },
-  { tx: 33.2, ty: 17.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 2 } },
-  { tx: 19.4, ty: 32.8, kind: 'fuel', fuelAmount: 68 },
+  { tx: 20.4, ty: 33.8, kind: 'fuel', fuelAmount: 70 },
+  { tx: 23.4, ty: 33.4, kind: 'ammo', ammo: { missiles: 120, rockets: 6, hellfires: 2 } },
+  { tx: 16.8, ty: 13.0, kind: 'ammo', ammo: { missiles: 95, rockets: 4, hellfires: 1 } },
+  { tx: 22.8, ty: 16.0, kind: 'fuel', fuelAmount: 65 },
+  { tx: 28.4, ty: 18.0, kind: 'ammo', ammo: { missiles: 110, rockets: 5, hellfires: 2 } },
+  { tx: 33.2, ty: 12.6, kind: 'fuel', fuelAmount: 70 },
 ]);
 const MISSION_TWO_SURVIVOR_SITES: SurvivorSite[] = [];
 const MISSION_TWO_ALIEN_SPAWNS = offsetTiles([
-  { tx: 18.2, ty: 9.6 },
-  { tx: 24.6, ty: 11.2 },
-  { tx: 29.8, ty: 13 },
-  { tx: 22.8, ty: 15.4 },
+  { tx: 15.0, ty: 11.0 },
+  { tx: 20.2, ty: 14.2 },
+  { tx: 25.8, ty: 17.0 },
+  { tx: 30.6, ty: 14.6 },
+  { tx: 33.4, ty: 10.8 },
 ]);
 const MISSION_TWO_WAVE_SPAWNS = offsetTiles([
-  { tx: 16.5, ty: 2.4 },
-  { tx: 24.2, ty: 1.8 },
-  { tx: 31.1, ty: 3.1 },
+  { tx: 14.2, ty: 3.2 },
+  { tx: 22.6, ty: 1.8 },
+  { tx: 29.4, ty: 3.6 },
 ]);
 const MISSION_TWO_GUARD_POSTS = offsetTiles([
-  { tx: 20.2, ty: 13 },
-  { tx: 26.1, ty: 14.1 },
-  { tx: 30.6, ty: 15.2 },
+  { tx: 18.2, ty: 17.6 },
+  { tx: 23.4, ty: 19.8 },
+  { tx: 27.8, ty: 19.0 },
+  { tx: 32.2, ty: 15.4 },
 ]);
 const MISSION_TWO_PATROL_ROUTES = offsetTiles([
-  { tx: 22.6, ty: 13.8, axis: 'x' as const, range: 1.6 },
-  { tx: 28.2, ty: 14.5, axis: 'x' as const, range: 1.8 },
-  { tx: 24.8, ty: 11.4, axis: 'y' as const, range: 1.4 },
+  { tx: 25.4, ty: 19.2, axis: 'x' as const, range: 2.1 },
+  { tx: 30.8, ty: 14.0, axis: 'y' as const, range: 2 },
+  { tx: 21.6, ty: 16.8, axis: 'x' as const, range: 1.8 },
 ]);
 const MISSION_TWO_BOAT_LANES: BoatLane[] = [
-  offsetBoatLane({ entry: { tx: 16.5, ty: 2.4 }, target: { tx: 20.4, ty: 13.5 } }),
-  offsetBoatLane({ entry: { tx: 24.2, ty: 1.8 }, target: { tx: 26.8, ty: 13.9 } }),
-  offsetBoatLane({ entry: { tx: 31.1, ty: 3.1 }, target: { tx: 32.9, ty: 14.4 } }),
+  offsetBoatLane({ entry: { tx: 14.0, ty: 0.8 }, target: { tx: 19.0, ty: 19.2 } }),
+  offsetBoatLane({ entry: { tx: 21.8, ty: 0.0 }, target: { tx: 24.6, ty: 20.0 } }),
+  offsetBoatLane({ entry: { tx: 29.2, ty: 1.4 }, target: { tx: 29.8, ty: 21.0 } }),
 ];
 const MISSION_TWO_BOAT_WAVES: BoatWave[] = [{ count: 4 }, { count: 5 }, { count: 6 }];
 const MISSION_TWO_MAX_ESCAPES = 3;
@@ -905,12 +1076,21 @@ function applyScenario(id: string): void {
 }
 
 function setMission(index: number): void {
-  currentMissionIndex = index;
+  const clampedIndex = Math.min(Math.max(index, 0), missionDefs.length - 1);
+  currentMissionIndex = clampedIndex;
+  if (highestUnlockedMissionIndex < currentMissionIndex) {
+    highestUnlockedMissionIndex = currentMissionIndex;
+  }
   missionDef = missionDefs[currentMissionIndex];
   missionState = loadMission(missionDef);
   mission.state = missionState;
   missionBriefingInfo = createMissionBriefing(missionDef);
   applyScenario(missionDef.id);
+  nextMissionIndex = Math.min(currentMissionIndex + 1, highestUnlockedMissionIndex);
+  missionProgress.current = missionDefs[currentMissionIndex]?.id ?? missionProgress.current;
+  missionProgress.unlocked =
+    missionDefs[highestUnlockedMissionIndex]?.id ?? missionProgress.unlocked;
+  persistMissionProgress();
 }
 
 function setupMissionOneHandlers(): void {
@@ -941,12 +1121,18 @@ function setupMissionTwoObjectiveLabels(): void {
   objectiveLabelOverrides.boats = (objective) => {
     if (!boatScenario) return objective.name;
     const totalWaves = boatScenario.waves.length;
-    const currentWave = waveState.active ? waveState.index : Math.min(waveState.index + 1, totalWaves);
+    const currentWave = waveState.active
+      ? waveState.index
+      : Math.min(waveState.index + 1, totalWaves);
     let label = `${objective.name} (Escaped: ${boatsEscaped}/${boatScenario.maxEscapes}`;
     if (!objective.complete) {
       const clampedWave = Math.min(Math.max(currentWave, 1), totalWaves);
       label += ` | Wave ${clampedWave} of ${totalWaves}`;
-      if (!waveState.active && waveState.index < totalWaves && Number.isFinite(waveState.countdown)) {
+      if (
+        !waveState.active &&
+        waveState.index < totalWaves &&
+        Number.isFinite(waveState.countdown)
+      ) {
         label += ` | Next wave in: ${Math.max(0, waveState.countdown).toFixed(1)}s`;
       }
     }
@@ -1041,7 +1227,11 @@ function spawnSpeedboat(lane: BoatLane, wave: number): void {
   const entity = entities.create();
   const entryJitter = (rng.float01() - 0.5) * 0.6;
   const entryJitterY = (rng.float01() - 0.5) * 0.4;
-  transforms.set(entity, { tx: lane.entry.tx + entryJitter, ty: lane.entry.ty + entryJitterY, rot: 0 });
+  transforms.set(entity, {
+    tx: lane.entry.tx + entryJitter,
+    ty: lane.entry.ty + entryJitterY,
+    rot: 0,
+  });
   physics.set(entity, {
     vx: 0,
     vy: 0,
@@ -1627,8 +1817,11 @@ function resetPlayer(): void {
 }
 
 function resetGame(targetMissionIndex?: number): void {
-  const missionIndex = targetMissionIndex ?? currentMissionIndex;
-  setMission(missionIndex);
+  const clampedTarget = Math.min(
+    targetMissionIndex ?? currentMissionIndex,
+    highestUnlockedMissionIndex,
+  );
+  setMission(clampedTarget);
   clearEnemies();
   projectilePool.clear();
   damage.reset();
@@ -1736,7 +1929,9 @@ function updateWave(dt: number): void {
     waveState.timeInWave += dt;
     if (waveState.enemies.size === 0) {
       waveState.active = false;
-      const delay = computeWaveCooldown ? computeWaveCooldown(waveState.index) : Number.POSITIVE_INFINITY;
+      const delay = computeWaveCooldown
+        ? computeWaveCooldown(waveState.index)
+        : Number.POSITIVE_INFINITY;
       waveState.countdown = delay;
       if (boatScenario && waveState.index >= boatScenario.waves.length && !boatObjectiveFailed) {
         boatObjectiveComplete = true;
@@ -2113,8 +2308,15 @@ const loop = new GameLoop({
     mission.update();
     if (mission.state.complete && ui.state === 'in-game') {
       ui.state = 'win';
-      nextMissionIndex = Math.min(currentMissionIndex + 1, missionDefs.length - 1);
-      saveJson('choppa:progress', { lastWin: Date.now(), mission: mission.state.def.id });
+      const candidate = Math.min(currentMissionIndex + 1, missionDefs.length - 1);
+      if (candidate > highestUnlockedMissionIndex) {
+        highestUnlockedMissionIndex = candidate;
+      }
+      nextMissionIndex = Math.min(candidate, highestUnlockedMissionIndex);
+      missionProgress.unlocked =
+        missionDefs[highestUnlockedMissionIndex]?.id ?? missionProgress.unlocked;
+      missionProgress.lastWin = Date.now();
+      persistMissionProgress();
     }
 
     updateWave(dt);
@@ -2365,7 +2567,9 @@ const loop = new GameLoop({
     });
 
     const nextWaveCountdown =
-      !waveState.active && Number.isFinite(waveState.countdown) ? Math.max(0, waveState.countdown) : null;
+      !waveState.active && Number.isFinite(waveState.countdown)
+        ? Math.max(0, waveState.countdown)
+        : null;
 
     drawHUD(
       context,
