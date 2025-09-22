@@ -153,13 +153,16 @@ function cloneSafeHouseParams(params: SafeHouseParams): SafeHouseParams {
   return { ...params };
 }
 
-function offsetBoatLane(seed: {
-  entry: { tx: number; ty: number };
-  target: { tx: number; ty: number };
-}): BoatLane {
+function offsetBoatLane(
+  seed: {
+    entry: { tx: number; ty: number };
+    target: { tx: number; ty: number };
+  },
+  border: number = MAP_BORDER,
+): BoatLane {
   return {
-    entry: { tx: seed.entry.tx + MAP_BORDER, ty: seed.entry.ty + MAP_BORDER },
-    target: { tx: seed.target.tx + MAP_BORDER, ty: seed.target.ty + MAP_BORDER },
+    entry: { tx: seed.entry.tx + border, ty: seed.entry.ty + border },
+    target: { tx: seed.target.tx + border, ty: seed.target.ty + border },
   };
 }
 
@@ -307,11 +310,14 @@ let isoParams = { tileWidth: 64, tileHeight: 32 };
 const runtimeMap = parseTiled(sampleMapJson as unknown);
 isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
 const MAP_BORDER = 8;
-function offsetTiles<T extends { tx: number; ty: number }>(items: T[]): T[] {
+function offsetTiles<T extends { tx: number; ty: number }>(
+  items: T[],
+  border: number = MAP_BORDER,
+): T[] {
   return items.map((item) => ({
     ...item,
-    tx: item.tx + MAP_BORDER,
-    ty: item.ty + MAP_BORDER,
+    tx: item.tx + border,
+    ty: item.ty + border,
   }));
 }
 let pad: PadConfig = {
@@ -678,7 +684,7 @@ const MISSION_ONE_PICKUP_SITES = offsetTiles([
   { tx: 20.4, ty: 29.1, kind: 'fuel', fuelAmount: 62 },
 ]);
 
-const MISSION_TWO_PAD: PadConfig = { tx: 30, ty: 44, radius: 1.3 };
+const MISSION_TWO_PAD: PadConfig = { tx: 22, ty: 36, radius: 1.3 };
 const MISSION_TWO_SAFEHOUSE: SafeHouseParams = {
   tx: MISSION_TWO_PAD.tx - 0.9,
   ty: MISSION_TWO_PAD.ty + 0.5,
@@ -692,150 +698,171 @@ const MISSION_TWO_SAFEHOUSE: SafeHouseParams = {
   windowColor: '#9ed4ff',
   walkwayColor: '#6f7c89',
 };
-const MISSION_TWO_STRONGHOLDS = offsetTiles([
-  {
-    tx: 18.4,
-    ty: 8.2,
-    width: 2.4,
-    depth: 1.5,
-    height: 34,
-    health: 150,
-    colliderRadius: 1.18,
-    bodyColor: '#1f2e57',
-    roofColor: '#83d3ff',
-    ruinColor: '#15213d',
-    score: 320,
-    category: 'stronghold',
-    triggersAlarm: true,
-  },
-  {
-    tx: 24.5,
-    ty: 9.4,
-    width: 2.2,
-    depth: 1.4,
-    height: 30,
-    health: 140,
-    colliderRadius: 1.05,
-    bodyColor: '#243961',
-    roofColor: '#76d1ff',
-    ruinColor: '#1a2642',
-    score: 310,
-    category: 'stronghold',
-    triggersAlarm: true,
-  },
-  {
-    tx: 29.2,
-    ty: 11.6,
-    width: 2.1,
-    depth: 1.6,
-    height: 28,
-    health: 135,
-    colliderRadius: 1.02,
-    bodyColor: '#1c2f4a',
-    roofColor: '#8bd0ff',
-    ruinColor: '#152438',
-    score: 290,
-    category: 'stronghold',
-    triggersAlarm: true,
-  },
-]);
-const MISSION_TWO_STATIC_STRUCTURES = offsetTiles([
-  {
-    tx: 21.8,
-    ty: 13.4,
-    width: 1.6,
-    depth: 1.2,
-    height: 20,
-    health: 95,
-    colliderRadius: 0.9,
-    bodyColor: '#36485e',
-    roofColor: '#5fa1c7',
-    ruinColor: '#243542',
-    score: 180,
-    category: 'civilian',
-    triggersAlarm: false,
-    drop: { kind: 'armor', amount: 35 },
-  },
-  {
-    tx: 27.2,
-    ty: 14.1,
-    width: 1.5,
-    depth: 1.2,
-    height: 22,
-    health: 100,
-    colliderRadius: 0.88,
-    bodyColor: '#3a4c62',
-    roofColor: '#58a7d4',
-    ruinColor: '#27374a',
-    score: 190,
-    category: 'civilian',
-    triggersAlarm: false,
-  },
-  {
-    tx: 23.6,
-    ty: 10.9,
-    width: 1.2,
-    depth: 1.1,
-    height: 18,
-    health: 80,
-    colliderRadius: 0.76,
-    bodyColor: '#28384c',
-    roofColor: '#6fb7dd',
-    ruinColor: '#1c2835',
-    score: 160,
-    category: 'civilian',
-    triggersAlarm: false,
-  },
-  {
-    tx: 31.4,
-    ty: 16.2,
-    width: 1.8,
-    depth: 1.3,
-    height: 24,
-    health: 110,
-    colliderRadius: 0.94,
-    bodyColor: '#2e4054',
-    roofColor: '#72b9df',
-    ruinColor: '#1f2b38',
-    score: 210,
-    category: 'stronghold',
-    triggersAlarm: true,
-  },
-]);
-const MISSION_TWO_PICKUP_SITES = offsetTiles([
-  { tx: 26.8, ty: 35.4, kind: 'fuel', fuelAmount: 70 },
-  { tx: 30.1, ty: 34.8, kind: 'ammo', ammo: { missiles: 120, rockets: 5, hellfires: 2 } },
-  { tx: 22.6, ty: 12.4, kind: 'ammo', ammo: { missiles: 105, rockets: 4, hellfires: 1 } },
-  { tx: 28.4, ty: 12.8, kind: 'fuel', fuelAmount: 65 },
-  { tx: 33.2, ty: 17.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 2 } },
-  { tx: 19.4, ty: 32.8, kind: 'fuel', fuelAmount: 68 },
-]);
+const MISSION_TWO_STRONGHOLDS = offsetTiles(
+  [
+    {
+      tx: 18.4,
+      ty: 8.2,
+      width: 2.4,
+      depth: 1.5,
+      height: 34,
+      health: 150,
+      colliderRadius: 1.18,
+      bodyColor: '#1f2e57',
+      roofColor: '#83d3ff',
+      ruinColor: '#15213d',
+      score: 320,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+    {
+      tx: 24.5,
+      ty: 9.4,
+      width: 2.2,
+      depth: 1.4,
+      height: 30,
+      health: 140,
+      colliderRadius: 1.05,
+      bodyColor: '#243961',
+      roofColor: '#76d1ff',
+      ruinColor: '#1a2642',
+      score: 310,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+    {
+      tx: 29.2,
+      ty: 11.6,
+      width: 2.1,
+      depth: 1.6,
+      height: 28,
+      health: 135,
+      colliderRadius: 1.02,
+      bodyColor: '#1c2f4a',
+      roofColor: '#8bd0ff',
+      ruinColor: '#152438',
+      score: 290,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+  ],
+  0,
+);
+const MISSION_TWO_STATIC_STRUCTURES = offsetTiles(
+  [
+    {
+      tx: 21.8,
+      ty: 13.4,
+      width: 1.6,
+      depth: 1.2,
+      height: 20,
+      health: 95,
+      colliderRadius: 0.9,
+      bodyColor: '#36485e',
+      roofColor: '#5fa1c7',
+      ruinColor: '#243542',
+      score: 180,
+      category: 'civilian',
+      triggersAlarm: false,
+      drop: { kind: 'armor', amount: 35 },
+    },
+    {
+      tx: 27.2,
+      ty: 14.1,
+      width: 1.5,
+      depth: 1.2,
+      height: 22,
+      health: 100,
+      colliderRadius: 0.88,
+      bodyColor: '#3a4c62',
+      roofColor: '#58a7d4',
+      ruinColor: '#27374a',
+      score: 190,
+      category: 'civilian',
+      triggersAlarm: false,
+    },
+    {
+      tx: 23.6,
+      ty: 10.9,
+      width: 1.2,
+      depth: 1.1,
+      height: 18,
+      health: 80,
+      colliderRadius: 0.76,
+      bodyColor: '#28384c',
+      roofColor: '#6fb7dd',
+      ruinColor: '#1c2835',
+      score: 160,
+      category: 'civilian',
+      triggersAlarm: false,
+    },
+    {
+      tx: 31.4,
+      ty: 16.2,
+      width: 1.8,
+      depth: 1.3,
+      height: 24,
+      health: 110,
+      colliderRadius: 0.94,
+      bodyColor: '#2e4054',
+      roofColor: '#72b9df',
+      ruinColor: '#1f2b38',
+      score: 210,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+  ],
+  0,
+);
+const MISSION_TWO_PICKUP_SITES = offsetTiles(
+  [
+    { tx: 26.8, ty: 35.4, kind: 'fuel', fuelAmount: 70 },
+    { tx: 30.1, ty: 34.8, kind: 'ammo', ammo: { missiles: 120, rockets: 5, hellfires: 2 } },
+    { tx: 22.6, ty: 12.4, kind: 'ammo', ammo: { missiles: 105, rockets: 4, hellfires: 1 } },
+    { tx: 28.4, ty: 12.8, kind: 'fuel', fuelAmount: 65 },
+    { tx: 33.2, ty: 17.6, kind: 'ammo', ammo: { missiles: 110, rockets: 4, hellfires: 2 } },
+    { tx: 19.4, ty: 32.8, kind: 'fuel', fuelAmount: 68 },
+  ],
+  0,
+);
 const MISSION_TWO_SURVIVOR_SITES: SurvivorSite[] = [];
-const MISSION_TWO_ALIEN_SPAWNS = offsetTiles([
-  { tx: 18.2, ty: 9.6 },
-  { tx: 24.6, ty: 11.2 },
-  { tx: 29.8, ty: 13 },
-  { tx: 22.8, ty: 15.4 },
-]);
-const MISSION_TWO_WAVE_SPAWNS = offsetTiles([
-  { tx: 16.5, ty: 2.4 },
-  { tx: 24.2, ty: 1.8 },
-  { tx: 31.1, ty: 3.1 },
-]);
-const MISSION_TWO_GUARD_POSTS = offsetTiles([
-  { tx: 20.2, ty: 13 },
-  { tx: 26.1, ty: 14.1 },
-  { tx: 30.6, ty: 15.2 },
-]);
-const MISSION_TWO_PATROL_ROUTES = offsetTiles([
-  { tx: 22.6, ty: 13.8, axis: 'x' as const, range: 1.6 },
-  { tx: 28.2, ty: 14.5, axis: 'x' as const, range: 1.8 },
-  { tx: 24.8, ty: 11.4, axis: 'y' as const, range: 1.4 },
-]);
+const MISSION_TWO_ALIEN_SPAWNS = offsetTiles(
+  [
+    { tx: 18.2, ty: 9.6 },
+    { tx: 24.6, ty: 11.2 },
+    { tx: 29.8, ty: 13 },
+    { tx: 22.8, ty: 15.4 },
+  ],
+  0,
+);
+const MISSION_TWO_WAVE_SPAWNS = offsetTiles(
+  [
+    { tx: 16.5, ty: 2.4 },
+    { tx: 24.2, ty: 1.8 },
+    { tx: 31.1, ty: 3.1 },
+  ],
+  0,
+);
+const MISSION_TWO_GUARD_POSTS = offsetTiles(
+  [
+    { tx: 20.2, ty: 13 },
+    { tx: 26.1, ty: 14.1 },
+    { tx: 30.6, ty: 15.2 },
+  ],
+  0,
+);
+const MISSION_TWO_PATROL_ROUTES = offsetTiles(
+  [
+    { tx: 22.6, ty: 13.8, axis: 'x' as const, range: 1.6 },
+    { tx: 28.2, ty: 14.5, axis: 'x' as const, range: 1.8 },
+    { tx: 24.8, ty: 11.4, axis: 'y' as const, range: 1.4 },
+  ],
+  0,
+);
 const MISSION_TWO_BOAT_LANES: BoatLane[] = [
-  offsetBoatLane({ entry: { tx: 16.5, ty: 2.4 }, target: { tx: 20.4, ty: 13.5 } }),
-  offsetBoatLane({ entry: { tx: 24.2, ty: 1.8 }, target: { tx: 26.8, ty: 13.9 } }),
-  offsetBoatLane({ entry: { tx: 31.1, ty: 3.1 }, target: { tx: 32.9, ty: 14.4 } }),
+  offsetBoatLane({ entry: { tx: 16.5, ty: 2.4 }, target: { tx: 20.4, ty: 13.5 } }, 0),
+  offsetBoatLane({ entry: { tx: 24.2, ty: 1.8 }, target: { tx: 26.8, ty: 13.9 } }, 0),
+  offsetBoatLane({ entry: { tx: 31.1, ty: 3.1 }, target: { tx: 32.9, ty: 14.4 } }, 0),
 ];
 const MISSION_TWO_BOAT_WAVES: BoatWave[] = [{ count: 4 }, { count: 5 }, { count: 6 }];
 const MISSION_TWO_MAX_ESCAPES = 3;
