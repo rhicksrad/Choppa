@@ -1,12 +1,13 @@
 import { GameLoop } from './core/time/loop';
 import { InputManager } from './core/input/input';
 import { DebugOverlay } from './render/debug/overlay';
-import { parseTiled } from './world/tiles/tiled';
+import { parseTiled, type RuntimeTilemap } from './world/tiles/tiled';
 import { IsoTilemapRenderer } from './render/draw/tilemap';
 import { isoMapBounds, tileToIso, screenToApproxTile } from './render/iso/projection';
 import { Camera2D } from './render/camera/camera';
 import { ParallaxSky } from './render/draw/parallax';
 import sampleMapJson from './world/tiles/sample_map.json';
+import oceanMapJson from './world/tiles/ocean_map.json';
 import { EntityRegistry, type Entity } from './core/ecs/entities';
 import { ComponentStore } from './core/ecs/components';
 import type { Transform } from './game/components/Transform';
@@ -106,6 +107,7 @@ interface BuildingMeta {
 type ObjectiveLabelFn = (objective: ObjectiveState) => string;
 
 interface ScenarioConfig {
+  map: RuntimeTilemap;
   pad: PadConfig;
   safeHouse: SafeHouseParams;
   campusSites: BuildingSite[];
@@ -233,11 +235,16 @@ const buildings = new ComponentStore<Building>();
 const pickups = new ComponentStore<Pickup>();
 const speedboats = new ComponentStore<Speedboat>();
 
-let isoParams = { tileWidth: 64, tileHeight: 32 };
-const runtimeMap = parseTiled(sampleMapJson as unknown);
-isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
+// Use mission-specific tilemaps so level transitions can swap maps at runtime.
+const missionTilemaps: Record<string, RuntimeTilemap> = {
+  m01: parseTiled(sampleMapJson as unknown),
+  m02: parseTiled(oceanMapJson as unknown),
+};
 
-const missionOneLayout = createMissionOneLayout(runtimeMap);
+let runtimeMap: RuntimeTilemap = missionTilemaps.m01;
+let isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
+
+const missionOneLayout = createMissionOneLayout(missionTilemaps.m01);
 const missionTwoLayout = createMissionTwoLayout();
 let pad: PadConfig = clonePadConfig(missionOneLayout.pad);
 
@@ -473,6 +480,7 @@ const missionTwoBoat = missionTwoLayout.boat;
 
 const scenarioConfigs: Record<string, ScenarioConfig> = {
   m01: {
+    map: missionTilemaps.m01,
     pad: missionOneLayout.pad,
     safeHouse: missionOneLayout.safeHouse,
     campusSites: missionOneLayout.campusSites,
@@ -494,6 +502,7 @@ const scenarioConfigs: Record<string, ScenarioConfig> = {
     },
   },
   m02: {
+    map: missionTilemaps.m02,
     pad: missionTwoLayout.pad,
     safeHouse: missionTwoLayout.safeHouse,
     campusSites: missionTwoLayout.campusSites,
@@ -546,6 +555,14 @@ function regenerateWorldStructures(): void {
 function applyScenario(id: string): void {
   const config = scenarioConfigs[id];
   if (!config) throw new Error(`Unknown mission scenario: ${id}`);
+  runtimeMap = config.map;
+  isoParams = { tileWidth: runtimeMap.tileWidth, tileHeight: runtimeMap.tileHeight };
+  fog.configure(runtimeMap.width, runtimeMap.height);
+  const playerTransform = transforms.get(player);
+  if (playerTransform) {
+    playerTransform.tx = mission.state.def.startPos.tx;
+    playerTransform.ty = mission.state.def.startPos.ty;
+  }
   pad = clonePadConfig(config.pad);
   safeHouse = cloneSafeHouseParams(config.safeHouse);
   campusSites = config.campusSites.map((site) => cloneBuildingSite(site));
@@ -2216,3 +2233,4 @@ const loop = new GameLoop({
 });
 
 loop.start();
+
