@@ -202,6 +202,7 @@ export function drawHUD(
     drawScoreBlock(infoColumnX, infoColumnTop + statsSpacingTop);
   }
 
+  // Objectives panel below the HUD panel
   const objectivePanelPaddingX = panelPadding;
   const objectivePanelPaddingY = 14;
   const objectiveHeaderHeight = 20;
@@ -281,3 +282,4 @@ function drawBar(
   ctx.fillText(label, x, y - 2);
   ctx.restore();
 }
+
