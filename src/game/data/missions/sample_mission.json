@@ -5,6 +5,7 @@
   "introDialog": [
     "Ops: Recon spots survivors pinned between the alien towers.",
     "XO: Take down their guns, hold the quad, and get our people out.",
+    "Ops: Quick refresher—WASD or arrows fly, Q/E strafes, Space fires guns, Shift launches missiles, Ctrl drops hellfires.",
     "Pilot: Copy. Rotors spun and missiles hot."
   ],
   "startPos": { "tx": 47, "ty": 47 },
