@@ -32,7 +32,8 @@ export function drawRescueRunner(
     ctx.restore();
   }
 
-  ctx.rotate(params.angle - Math.PI / 2);
+  // Rotate 90° counter-clockwise so runners face the safe house correctly.
+  ctx.rotate(params.angle - Math.PI);
 
   // Legs
   const legOffset = Math.sin(params.stepPhase) * bodyWidth * 0.55;
