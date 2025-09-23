@@ -259,6 +259,7 @@ export function createEnemyFactory({
       arrivalRadius: 0.6,
       activationRange: 7.5,
       activated: false,
+      squadId: lane.squadId,
     });
     registerEnemy(entity, { kind: 'speedboat', score: 220 + wave * 25, wave });
   };
