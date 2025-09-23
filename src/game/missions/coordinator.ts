@@ -445,7 +445,7 @@ class MissionCoordinatorImpl implements MissionCoordinator {
     this.state.rescue.rescued = 0;
     this.state.rescue.survivorsSpawned = false;
     this.state.rescue.total = this.scenario.survivorSites.reduce(
-      (sum, site) => sum + site.count,
+      (sum, site) => sum + Math.max(0, Math.round(site.count)),
       0,
     );
 

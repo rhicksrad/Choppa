@@ -95,20 +95,45 @@ export function createPickupFactory({
     state.rescue.survivorsSpawned = true;
     for (let i = 0; i < sites.length; i += 1) {
       const site = sites[i]!;
-      const entity = entities.create();
-      stores.transforms.set(entity, { tx: site.tx, ty: site.ty, rot: 0 });
-      stores.pickups.set(entity, {
-        kind: 'survivor',
-        radius: site.radius ?? 0.9,
-        duration: site.duration ?? 1.6,
-        fuelAmount: undefined,
-        ammo: undefined,
-        survivorCount: site.count,
-        collectingBy: null,
-        progress: 0,
-      });
-      state.pickupEntities.push(entity);
-      state.survivorEntities.push(entity);
+      const desiredCount = Math.max(0, Math.round(site.count));
+      if (desiredCount === 0) continue;
+      const spacing = Math.min(0.42, (site.radius ?? 0.9) * 0.45);
+      const perRow = Math.max(1, Math.ceil(Math.sqrt(desiredCount)));
+      const totalRows = Math.max(1, Math.ceil(desiredCount / perRow));
+      for (let n = 0; n < desiredCount; n += 1) {
+        const row = Math.floor(n / perRow);
+        let columnsInRow = perRow;
+        if (row === totalRows - 1) {
+          columnsInRow = Math.min(perRow, desiredCount - row * perRow);
+        }
+        const columnIndex = Math.min(n % perRow, columnsInRow - 1);
+        const rowCenter = (totalRows - 1) / 2;
+        const columnCenter = (columnsInRow - 1) / 2;
+        const baseOffsetX = (columnIndex - columnCenter) * spacing;
+        const baseOffsetY = (row - rowCenter) * spacing * 0.85;
+        const jitterSeed = site.tx * 17.23 + site.ty * 11.17 + n * 5.91;
+        const jitterStrength = desiredCount > 1 ? spacing * 0.18 : 0;
+        const jitterX = Math.sin(jitterSeed) * jitterStrength;
+        const jitterY = Math.cos(jitterSeed) * jitterStrength * 0.9;
+        const entity = entities.create();
+        stores.transforms.set(entity, {
+          tx: site.tx + baseOffsetX + jitterX,
+          ty: site.ty + baseOffsetY + jitterY,
+          rot: 0,
+        });
+        stores.pickups.set(entity, {
+          kind: 'survivor',
+          radius: site.radius ?? 0.9,
+          duration: site.duration ?? 1.6,
+          fuelAmount: undefined,
+          ammo: undefined,
+          survivorCount: 1,
+          collectingBy: null,
+          progress: 0,
+        });
+        state.pickupEntities.push(entity);
+        state.survivorEntities.push(entity);
+      }
     }
   };
 

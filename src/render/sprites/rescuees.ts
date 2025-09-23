@@ -6,6 +6,7 @@ export interface RescueRunnerDrawParams {
   bob: number;
   fade: number;
   scale: number;
+  drawShadow?: boolean;
 }
 
 export function drawRescueRunner(
@@ -21,15 +22,17 @@ export function drawRescueRunner(
   ctx.globalAlpha = Math.max(0, Math.min(1, params.fade));
 
   // Drop shadow
-  ctx.save();
-  ctx.translate(0, bodyHeight * 0.95);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, bodyWidth * 0.9, bodyWidth * 0.55, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (params.drawShadow !== false) {
+    ctx.save();
+    ctx.translate(0, bodyHeight * 0.95);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, bodyWidth * 0.9, bodyWidth * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
-  ctx.rotate(params.angle);
+  ctx.rotate(params.angle - Math.PI / 2);
 
   // Legs
   const legOffset = Math.sin(params.stepPhase) * bodyWidth * 0.55;

@@ -321,7 +321,10 @@ export function createCombatProcessor({
     if (!state.rescue.survivorsSpawned && state.flags.campusLeveled && state.flags.aliensDefeated) {
       spawnSurvivors(scenario.survivorSites);
       state.rescue.survivorsSpawned = true;
-      state.rescue.total = scenario.survivorSites.reduce((sum, site) => sum + site.count, 0);
+      state.rescue.total = scenario.survivorSites.reduce(
+        (sum, site) => sum + Math.max(0, Math.round(site.count)),
+        0,
+      );
     }
 
     mission.update();

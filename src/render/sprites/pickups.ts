@@ -1,6 +1,7 @@
 import type { IsoParams } from '../iso/projection';
 import { tileToIso } from '../iso/projection';
 import type { PickupKind } from '../../game/components/Pickup';
+import { drawRescueRunner } from './rescuees';
 
 interface PickupDrawParams {
   tx: number;
@@ -22,39 +23,57 @@ export function drawPickupCrate(
   const baseX = originX + isoPos.x;
   const baseY = originY + isoPos.y;
 
-  const palette = getPalette(params.kind);
   const halfTileW = iso.tileWidth / 2;
   const halfTileH = iso.tileHeight / 2;
-  const crateSx = halfTileW * 0.35;
-  const crateSy = halfTileH * 0.35;
 
   const extendPhase = params.collecting ? Math.min(1, params.progress / 0.45) : 0;
   const haulPhase = params.collecting ? Math.max(0, (params.progress - 0.45) / 0.55) : 0;
   const lift = haulPhase * 26;
 
-  const isFuel = params.kind === 'fuel';
-  const shadowRadiusX = isFuel ? halfTileW * 0.32 : crateSx * 0.9;
-  const shadowRadiusY = isFuel ? halfTileH * 0.3 : crateSy * 0.9;
+  let attachX = baseX;
+  let attachY = baseY - lift;
 
-  // Drop shadow
-  ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-  ctx.beginPath();
-  ctx.ellipse(baseX, baseY + 8, shadowRadiusX, shadowRadiusY, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (params.kind === 'survivor') {
+    const survivorAnchor = drawSurvivorPickup(
+      ctx,
+      iso,
+      baseX,
+      baseY,
+      halfTileW,
+      halfTileH,
+      haulPhase,
+      lift,
+      params,
+    );
+    attachX = survivorAnchor.attachX;
+    attachY = survivorAnchor.attachY;
+  } else {
+    const palette = getPalette(params.kind);
+    const crateSx = halfTileW * 0.35;
+    const crateSy = halfTileH * 0.35;
+    const isFuel = params.kind === 'fuel';
+    const shadowRadiusX = isFuel ? halfTileW * 0.32 : crateSx * 0.9;
+    const shadowRadiusY = isFuel ? halfTileH * 0.3 : crateSy * 0.9;
 
-  ctx.save();
-  ctx.translate(baseX, baseY - lift);
+    // Drop shadow
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(baseX, baseY + 8, shadowRadiusX, shadowRadiusY, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
-  const attachYOffset = isFuel
-    ? drawFuelBarrel(ctx, palette, halfTileW, halfTileH)
-    : drawSupplyCrate(ctx, palette, params, crateSx, crateSy);
+    ctx.save();
+    ctx.translate(baseX, baseY - lift);
 
-  ctx.restore();
+    const attachYOffset = isFuel
+      ? drawFuelBarrel(ctx, palette, halfTileW, halfTileH)
+      : drawSupplyCrate(ctx, palette, params, crateSx, crateSy);
 
-  const attachX = baseX;
-  const attachY = baseY - lift + attachYOffset;
+    ctx.restore();
+
+    attachY = baseY - lift + attachYOffset;
+  }
 
   if (params.collecting && params.collectorIso) {
     const collectorX = originX + params.collectorIso.x;
@@ -85,6 +104,51 @@ export function drawPickupCrate(
   }
 
   return { attachX, attachY };
+}
+
+function drawSurvivorPickup(
+  ctx: CanvasRenderingContext2D,
+  iso: IsoParams,
+  baseX: number,
+  baseY: number,
+  halfTileW: number,
+  halfTileH: number,
+  haulPhase: number,
+  lift: number,
+  params: PickupDrawParams,
+): { attachX: number; attachY: number } {
+  const runnerScale = iso.tileHeight / 32;
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const rawPhase = ((params.tx * 12.345 + params.ty * 5.678) % (Math.PI * 2)) + Math.PI * 2;
+  const phaseSeed = rawPhase % (Math.PI * 2);
+  const stepPhase = now / 180 + phaseSeed;
+  const calmFactor = 1 - Math.min(1, haulPhase * 1.1);
+  const bob = Math.sin(stepPhase) * runnerScale * 1.2 * calmFactor;
+
+  const shadowAlpha = Math.max(0, Math.min(0.24, 0.24 * (1 - haulPhase * 0.6)));
+  ctx.save();
+  ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
+  ctx.beginPath();
+  ctx.ellipse(baseX, baseY + 6, halfTileW * 0.22, halfTileH * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  drawRescueRunner(ctx, {
+    x: baseX,
+    y: baseY - lift,
+    angle: Math.PI / 2,
+    stepPhase,
+    bob,
+    fade: 1,
+    scale: runnerScale,
+    drawShadow: false,
+  });
+
+  const bodyHeight = 12 * runnerScale;
+  const headRadius = 2.4 * runnerScale;
+  const attachYOffset = -bodyHeight * 0.9 - headRadius - bob * 0.2;
+
+  return { attachX: baseX, attachY: baseY - lift + attachYOffset };
 }
 
 function drawSupplyCrate(

@@ -339,7 +339,10 @@ const resetGame = (targetMissionIndex?: number): void => {
   state.player.invulnerable = false;
   state.rescue.carrying = 0;
   state.rescue.rescued = 0;
-  state.rescue.total = scenario.survivorSites.reduce((sum, site) => sum + site.count, 0);
+  state.rescue.total = scenario.survivorSites.reduce(
+    (sum, site) => sum + Math.max(0, Math.round(site.count)),
+    0,
+  );
   state.rescue.survivorsSpawned = false;
   state.boat.boatsEscaped = 0;
   state.boat.objectiveComplete = false;
