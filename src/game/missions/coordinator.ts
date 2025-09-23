@@ -3,7 +3,7 @@ import missionJson from '../data/missions/sample_mission.json';
 import oceanMissionJson from '../data/missions/ocean_mission.json';
 import sampleMapJson from '../../world/tiles/sample_map.json';
 import oceanMapJson from '../../world/tiles/ocean_map.json';
-import { loadJson, saveJson } from '../../core/util/storage';
+import { loadJson, saveJson, removeKey } from '../../core/util/storage';
 import type { MissionTracker } from './tracker';
 import { loadMission } from './loader';
 import type { MissionDef, ObjectiveState } from './types';
@@ -134,6 +134,7 @@ export interface MissionCoordinator {
   getBriefing(): MissionBriefing;
   getMissionIndices(): { current: number; next: number; highestUnlocked: number };
   onMissionWin(): void;
+  resetProgress(): void;
   getMissionDefs(): MissionDef[];
   spawnMissionEnemies(): void;
 }
@@ -370,6 +371,14 @@ class MissionCoordinatorImpl implements MissionCoordinator {
       missionDefs[this.highestUnlockedMissionIndex]?.id ?? this.missionProgress.unlocked;
     this.missionProgress.lastWin = Date.now();
     this.persistProgress();
+  }
+
+  public resetProgress(): void {
+    removeKey(PROGRESS_KEY);
+    this.highestUnlockedMissionIndex = 0;
+    this.nextMissionIndex = 0;
+    this.missionProgress = {};
+    this.setMission(0);
   }
 
   public getMissionDefs(): MissionDef[] {

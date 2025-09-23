@@ -2,34 +2,34 @@
   "id": "m02",
   "title": "Operation Stormbreak",
   "briefing": "Enemy mortar platforms have seized the breakwater beyond our carrier. Launch from the deck, silence every battery, and hold the coastal bunkers long enough for the convoy to escape.",
-  "startPos": { "tx": 12, "ty": 41 },
+  "startPos": { "tx": 26, "ty": 2 },
   "objectives": [
     {
       "id": "obj1",
       "type": "destroy",
       "name": "Silence the western mortar battery",
-      "at": { "tx": 24.6, "ty": 20.3 },
+      "at": { "tx": 12.2, "ty": 46.3 },
       "radiusTiles": 2.1
     },
     {
       "id": "obj2",
       "type": "destroy",
       "name": "Neutralize the mid-ocean mortar platform",
-      "at": { "tx": 30.8, "ty": 23.5 },
+      "at": { "tx": 26.0, "ty": 47.1 },
       "radiusTiles": 2.1
     },
     {
       "id": "obj3",
       "type": "destroy",
       "name": "Shut down the eastern mortar nest",
-      "at": { "tx": 36.9, "ty": 26.7 },
+      "at": { "tx": 39.8, "ty": 46.2 },
       "radiusTiles": 2.1
     },
     {
       "id": "boats",
       "type": "custom",
       "name": "Contain the strike boat assaults",
-      "at": { "tx": 33.8, "ty": 28.8 },
+      "at": { "tx": 26.0, "ty": 44.9 },
       "radiusTiles": 6.8
     },
     {
@@ -37,14 +37,14 @@
       "type": "reach",
       "name": "Return to the carrier deck",
       "requires": ["obj1", "obj2", "obj3", "boats"],
-      "at": { "tx": 12, "ty": 41 },
+      "at": { "tx": 26, "ty": 2 },
       "radiusTiles": 1.6
     }
   ],
   "enemySpawns": [
-    { "type": "AAA", "at": { "tx": 25.4, "ty": 21.0 } },
-    { "type": "SAM", "at": { "tx": 31.2, "ty": 24.4 } },
-    { "type": "AAA", "at": { "tx": 36.2, "ty": 26.2 } },
-    { "type": "SAM", "at": { "tx": 41.0, "ty": 20.4 } }
+    { "type": "AAA", "at": { "tx": 12.6, "ty": 45.7 } },
+    { "type": "SAM", "at": { "tx": 26.2, "ty": 47.8 } },
+    { "type": "AAA", "at": { "tx": 39.4, "ty": 45.9 } },
+    { "type": "SAM", "at": { "tx": 26.8, "ty": 43.8 } }
   ]
 }
