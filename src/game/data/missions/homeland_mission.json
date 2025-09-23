@@ -1,0 +1,61 @@
+{
+  "id": "m04",
+  "title": "Operation Black Sun",
+  "briefing": "Our breach team pierced the alien portal. Their homeland is a living lattice of synapse towers feeding a single hivemind well. Level the outer synapse clusters, shatter the shield pylons, and hold the core long enough to plant a nuke that will break their control for good.",
+  "introDialog": [
+    "Science: Ambient psi readings are off the charts—this world is the hive's brain.",
+    "XO: Three synapse clusters keep the core shielded. Drop them and keep the skies clear.",
+    "Pilot: Copy. I'll carve a path and light the fuse when you give the word."
+  ],
+  "startPos": { "tx": 32, "ty": 58 },
+  "objectives": [
+    {
+      "id": "spire-west",
+      "type": "destroy",
+      "name": "Sever the western synapse cluster",
+      "at": { "tx": 24.5, "ty": 26.2 },
+      "radiusTiles": 2.1
+    },
+    {
+      "id": "spire-east",
+      "type": "destroy",
+      "name": "Sever the eastern synapse cluster",
+      "at": { "tx": 39.5, "ty": 26.2 },
+      "radiusTiles": 2.1
+    },
+    {
+      "id": "core-shield",
+      "type": "destroy",
+      "name": "Disable the hivemind shield pylons",
+      "at": { "tx": 32.0, "ty": 18.4 },
+      "radiusTiles": 2.0
+    },
+    {
+      "id": "plant-nuke",
+      "type": "custom",
+      "name": "Plant the nuke in the hivemind well",
+      "requires": ["spire-west", "spire-east", "core-shield"],
+      "at": { "tx": 32.0, "ty": 21.0 },
+      "radiusTiles": 2.2
+    },
+    {
+      "id": "extract",
+      "type": "reach",
+      "name": "Return to the extraction pad",
+      "requires": ["plant-nuke"],
+      "at": { "tx": 32, "ty": 58 },
+      "radiusTiles": 1.9
+    }
+  ],
+  "enemySpawns": [
+    { "type": "SAM", "at": { "tx": 24.2, "ty": 28.0 } },
+    { "type": "AAA", "at": { "tx": 39.8, "ty": 28.0 } },
+    { "type": "SAM", "at": { "tx": 32.0, "ty": 16.2 } },
+    { "type": "AAA", "at": { "tx": 32.0, "ty": 33.2 } }
+  ],
+  "successDialog": [
+    "Science: Nuke planted. The hivemind lattice is collapsing across the spectrum.",
+    "XO: All craft, punch out! That blast will rewrite their planet in seconds.",
+    "Press Enter to relaunch or Esc for title"
+  ]
+}

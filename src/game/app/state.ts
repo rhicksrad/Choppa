@@ -62,6 +62,13 @@ export interface BoatState {
   objectiveFailed: boolean;
 }
 
+export interface HiveState {
+  planting: boolean;
+  progress: number;
+  target: number;
+  armed: boolean;
+}
+
 export interface PickupCompleteEvent {
   entity: Entity;
   kind: Pickup['kind'];
@@ -95,6 +102,7 @@ export interface GameState {
     campusLeveled: boolean;
   };
   boat: BoatState;
+  hive: HiveState;
 }
 
 export function createGameState(): GameState {
@@ -116,5 +124,6 @@ export function createGameState(): GameState {
     rescue: { carrying: 0, rescued: 0, total: 0, survivorsSpawned: false },
     flags: { aliensTriggered: false, aliensDefeated: false, campusLeveled: false },
     boat: { scenario: null, boatsEscaped: 0, objectiveComplete: false, objectiveFailed: false },
+    hive: { planting: false, progress: 0, target: 0, armed: false },
   };
 }

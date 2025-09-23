@@ -25,6 +25,8 @@ import type { MissionCoordinator } from '../../missions/coordinator';
 import type { SurvivorSite } from '../../scenarios/layouts';
 import type { UIStore } from '../../../ui/menus/scenes';
 
+const NUKE_PLANT_TIME = 8;
+
 export interface CombatProcessorDeps {
   state: GameState;
   ui: UIStore;
@@ -228,6 +230,61 @@ export function createCombatProcessor({
     }
   };
 
+  const updateHivePlanting = (dt: number): void => {
+    const missionState = mission.state;
+    const missionId = missionState.def.id;
+    if (missionId !== 'm04') {
+      if (!missionState.complete) {
+        state.hive.planting = false;
+        if (!state.hive.armed) state.hive.progress = 0;
+      }
+      return;
+    }
+
+    const objective = missionState.objectives.find((o) => o.id === 'plant-nuke');
+    if (!objective) return;
+    if (objective.complete) {
+      state.hive.planting = false;
+      state.hive.progress = state.hive.target > 0 ? state.hive.target : NUKE_PLANT_TIME;
+      state.hive.armed = true;
+      return;
+    }
+
+    const prereqsMet = !objective.requires
+      ? true
+      : objective.requires.every((id) => {
+          const required = missionState.objectives.find((o) => o.id === id);
+          return Boolean(required && required.complete);
+        });
+    if (!prereqsMet) {
+      state.hive.planting = false;
+      state.hive.progress = 0;
+      state.hive.armed = false;
+      return;
+    }
+
+    if (state.hive.target <= 0) state.hive.target = NUKE_PLANT_TIME;
+
+    const transform = transforms.get(player);
+    if (!transform) return;
+    const dx = transform.tx - objective.at.tx;
+    const dy = transform.ty - objective.at.ty;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= objective.radiusTiles) {
+      state.hive.planting = true;
+      state.hive.progress = Math.min(state.hive.target, state.hive.progress + dt);
+      if (state.hive.progress >= state.hive.target) {
+        state.hive.armed = true;
+      }
+    } else {
+      state.hive.planting = false;
+      state.hive.progress = Math.max(0, state.hive.progress - dt * 0.75);
+      if (state.hive.progress < state.hive.target) {
+        state.hive.armed = false;
+      }
+    }
+  };
+
   const update = (dt: number): void => {
     const scenario = missionCoordinator.getScenario();
     scheduler.update(dt);
@@ -351,6 +408,8 @@ export function createCombatProcessor({
         0,
       );
     }
+
+    updateHivePlanting(dt);
 
     mission.update();
     if (mission.state.complete && ui.state === 'in-game') {
