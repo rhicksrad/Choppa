@@ -46,6 +46,7 @@ export interface CombatProcessorDeps {
   destroyEntity: (entity: Entity) => void;
   engine: EngineSound;
   spawnAlienUnit: (point: { tx: number; ty: number }) => void;
+  getRescueCueBuffer?: () => AudioBuffer | null;
 }
 
 export interface CombatProcessor {
@@ -76,6 +77,7 @@ export function createCombatProcessor({
   destroyEntity,
   engine,
   spawnAlienUnit,
+  getRescueCueBuffer = () => null,
 }: CombatProcessorDeps): CombatProcessor {
   const spawnExplosion = (tx: number, ty: number, radius = 0.9, duration = 0.6): void => {
     state.explosions.push({ tx, ty, age: 0, duration, radius });
@@ -320,6 +322,8 @@ export function createCombatProcessor({
 
     if (!state.rescue.survivorsSpawned && state.flags.campusLeveled && state.flags.aliensDefeated) {
       spawnSurvivors(scenario.survivorSites);
+      const rescueCue = getRescueCueBuffer();
+      if (rescueCue) bus.playSfx(rescueCue);
       state.rescue.survivorsSpawned = true;
       state.rescue.total = scenario.survivorSites.reduce(
         (sum, site) => sum + Math.max(0, Math.round(site.count)),
