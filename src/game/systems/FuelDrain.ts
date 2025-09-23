@@ -7,7 +7,7 @@ export class FuelDrainSystem implements System {
 
   update(dt: number): void {
     this.fuels.forEach((_e, f) => {
-      f.current = Math.max(0, f.current - dt * 0.4); // baseline drain
+      f.current = Math.max(0, f.current - dt * 0.85); // steeper baseline drain
     });
   }
 }
