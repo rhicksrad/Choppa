@@ -43,38 +43,163 @@ export function drawHUD(
   const { width: w } = getCanvasViewMetrics(ctx);
   ctx.save();
 
-  // Minimap top-right (orthographic)
-  const minimapVisible = minimap.enabled;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  const showMinimap = minimap.enabled;
   const mmW = 140;
   const mmH = 100;
-  const mmX = minimapVisible ? w - mmW - 16 : w - 16;
-  const mmY = 16;
 
-  // Resource & ammo bars to the left of the minimap
+  const margin = 16;
+  const panelPadding = 16;
+  const columnGap = 24;
+  const sectionGap = 16;
+
   const barW = 220;
   const barH = 16;
-  const barGap = barH + 12;
-  const barX = minimapVisible ? Math.max(16, mmX - barW - 24) : w - barW - 16;
-  let barY = mmY;
+  const barSpacing = 12;
+  const barsSpacingTop = 12;
+  const livesLineHeight = 20;
 
-  ctx.textAlign = 'left';
+  const ammoCount = ammoDisplayOrder.length;
+  const barsCount = 2 + ammoCount;
+  const barsColumnHeight =
+    livesLineHeight + barsSpacingTop + barsCount * barH + Math.max(0, barsCount - 1) * barSpacing;
 
-  // Lives and resource bars
-  ctx.fillStyle = '#c8d7e1';
-  ctx.font = '14px system-ui, sans-serif';
-  ctx.fillText(`Lives: ${bars.lives}`, barX, barY - 8);
+  const statsLineHeight = 18;
+  const statsSpacingTop = 12;
+  const statsLines = bars.nextWaveIn !== null ? 3 : 2;
+  const statsHeight = statsLines * statsLineHeight;
 
-  drawBar(ctx, barX, barY, barW, barH, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
-  barY += barGap;
-  drawBar(ctx, barX, barY, barW, barH, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
-  barY += barGap;
+  const minimapSectionHeight = showMinimap
+    ? mmH + statsSpacingTop + statsHeight
+    : statsSpacingTop + statsHeight;
+
+  const desiredInnerWidth = showMinimap ? barW + columnGap + mmW : barW;
+  const availableWidth = w - margin * 2;
+  let useTwoColumn = showMinimap && availableWidth >= desiredInnerWidth + panelPadding * 2;
+  let panelInnerHeight: number;
+  let panelW: number;
+
+  if (useTwoColumn) {
+    panelInnerHeight = Math.max(barsColumnHeight, minimapSectionHeight);
+    panelW = desiredInnerWidth + panelPadding * 2;
+  } else if (showMinimap) {
+    panelInnerHeight = barsColumnHeight + sectionGap + minimapSectionHeight;
+    panelW = Math.max(barW, mmW) + panelPadding * 2;
+  } else {
+    panelInnerHeight = barsColumnHeight + sectionGap + minimapSectionHeight;
+    panelW = desiredInnerWidth + panelPadding * 2;
+    useTwoColumn = false;
+  }
+
+  const panelH = panelInnerHeight + panelPadding * 2;
+  const rawPanelX = w - panelW - margin;
+  const panelX = rawPanelX < margin ? margin : rawPanelX;
+  const panelY = margin;
+
+  ctx.fillStyle = 'rgba(7, 16, 24, 0.88)';
+  ctx.fillRect(panelX, panelY, panelW, panelH);
+  ctx.strokeStyle = 'rgba(146, 255, 166, 0.12)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+  const leftColumnX = panelX + panelPadding;
+  const leftColumnTop = panelY + panelPadding;
+  let columnY = leftColumnTop;
+
+  ctx.fillStyle = '#e6eef5';
+  ctx.font = 'bold 16px system-ui, sans-serif';
+  ctx.fillText(`Lives: ${bars.lives}`, leftColumnX, columnY + 16);
+  columnY += livesLineHeight + barsSpacingTop;
+
+  drawBar(ctx, leftColumnX, columnY, barW, barH, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
+  columnY += barH + barSpacing;
+  drawBar(ctx, leftColumnX, columnY, barW, barH, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
+  columnY += barH + barSpacing;
 
   for (const ammoInfo of ammoDisplayOrder) {
     const current = bars.ammo[ammoInfo.key];
     const max = bars.ammoMax[ammoInfo.key];
     const ammo01 = max > 0 ? current / max : 0;
-    drawBar(ctx, barX, barY, barW, barH, ammo01, ammoInfo.color, ammoInfo.bg, ammoInfo.label);
-    barY += barGap;
+    drawBar(
+      ctx,
+      leftColumnX,
+      columnY,
+      barW,
+      barH,
+      ammo01,
+      ammoInfo.color,
+      ammoInfo.bg,
+      ammoInfo.label,
+    );
+    columnY += barH + barSpacing;
+  }
+
+  const drawScoreBlock = (x: number, top: number) => {
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#c8d7e1';
+    ctx.font = '14px system-ui, sans-serif';
+    let lineY = top + 14;
+    ctx.fillText(`Score: ${Math.floor(bars.score)}`, x, lineY);
+    lineY += statsLineHeight;
+    ctx.fillText(`Wave: ${bars.wave}  Remaining: ${bars.enemiesRemaining}`, x, lineY);
+    if (bars.nextWaveIn !== null) {
+      lineY += statsLineHeight;
+      ctx.fillText(`Next wave in: ${bars.nextWaveIn.toFixed(1)}s`, x, lineY);
+    }
+    ctx.restore();
+  };
+
+  const drawMinimapPanel = (x: number, y: number) => {
+    ctx.save();
+    ctx.fillStyle = '#11202b';
+    ctx.fillRect(x - 2, y - 2, mmW + 4, mmH + 4);
+    ctx.fillStyle = '#0b1720';
+    ctx.fillRect(x, y, mmW, mmH);
+
+    ctx.strokeStyle = '#142a3a';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx <= minimap.mapW; gx += 4) {
+      const gxNorm = (gx / minimap.mapW) * mmW;
+      ctx.beginPath();
+      ctx.moveTo(x + gxNorm, y);
+      ctx.lineTo(x + gxNorm, y + mmH);
+      ctx.stroke();
+    }
+    for (let gy = 0; gy <= minimap.mapH; gy += 4) {
+      const gyNorm = (gy / minimap.mapH) * mmH;
+      ctx.beginPath();
+      ctx.moveTo(x, y + gyNorm);
+      ctx.lineTo(x + mmW, y + gyNorm);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#ef476f';
+    for (let i = 0; i < minimap.enemies.length; i += 1) {
+      const e = minimap.enemies[i]!;
+      const px = x + (e.tx / minimap.mapW) * mmW;
+      const py = y + (e.ty / minimap.mapH) * mmH;
+      ctx.fillRect(px - 2, py - 2, 4, 4);
+    }
+
+    ctx.fillStyle = '#92ffa6';
+    const ppx = x + (minimap.player.tx / minimap.mapW) * mmW;
+    const ppy = y + (minimap.player.ty / minimap.mapH) * mmH;
+    ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
+    ctx.restore();
+  };
+
+  const barsBottom = leftColumnTop + barsColumnHeight;
+  const infoColumnX = useTwoColumn ? panelX + panelPadding + barW + columnGap : leftColumnX;
+  const infoColumnTop = useTwoColumn ? leftColumnTop : barsBottom + sectionGap;
+
+  if (showMinimap) {
+    drawMinimapPanel(infoColumnX, infoColumnTop);
+    drawScoreBlock(infoColumnX, infoColumnTop + mmH + statsSpacingTop);
+  } else {
+    drawScoreBlock(infoColumnX, infoColumnTop + statsSpacingTop);
   }
 
   // Objective list top-left
@@ -86,65 +211,6 @@ export function drawHUD(
   ctx.font = '14px system-ui, sans-serif';
   for (let i = 0; i < objectiveLines.length; i += 1)
     ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
-
-  // Minimap panel & stats
-  const mmRight = minimapVisible ? mmX + mmW : w - 16;
-  let statsStartY = minimapVisible ? mmY + mmH + 20 : barY + 20;
-
-  if (minimapVisible) {
-    ctx.fillStyle = '#11202b';
-    ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-    ctx.fillStyle = '#0b1720';
-    ctx.fillRect(mmX, mmY, mmW, mmH);
-
-    // Grid/terrain hint
-    ctx.strokeStyle = '#142a3a';
-    ctx.lineWidth = 1;
-    for (let gx = 0; gx <= minimap.mapW; gx += 4) {
-      const x = mmX + (gx / minimap.mapW) * mmW;
-      ctx.beginPath();
-      ctx.moveTo(x, mmY);
-      ctx.lineTo(x, mmY + mmH);
-      ctx.stroke();
-    }
-    for (let gy = 0; gy <= minimap.mapH; gy += 4) {
-      const y = mmY + (gy / minimap.mapH) * mmH;
-      ctx.beginPath();
-      ctx.moveTo(mmX, y);
-      ctx.lineTo(mmX + mmW, y);
-      ctx.stroke();
-    }
-
-    // Enemies
-    ctx.fillStyle = '#ef476f';
-    for (let i = 0; i < minimap.enemies.length; i += 1) {
-      const e = minimap.enemies[i]!;
-      const px = mmX + (e.tx / minimap.mapW) * mmW;
-      const py = mmY + (e.ty / minimap.mapH) * mmH;
-      ctx.fillRect(px - 2, py - 2, 4, 4);
-    }
-
-    // Player
-    ctx.fillStyle = '#92ffa6';
-    const ppx = mmX + (minimap.player.tx / minimap.mapW) * mmW;
-    const ppy = mmY + (minimap.player.ty / minimap.mapH) * mmH;
-    ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
-
-    statsStartY = mmY + mmH + 20;
-  }
-
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#c8d7e1';
-  ctx.font = '14px system-ui, sans-serif';
-  ctx.fillText(`Score: ${Math.floor(bars.score)}`, mmRight, statsStartY);
-  ctx.fillText(
-    `Wave: ${bars.wave}  Remaining: ${bars.enemiesRemaining}`,
-    mmRight,
-    statsStartY + 20,
-  );
-  if (bars.nextWaveIn !== null) {
-    ctx.fillText(`Next wave in: ${bars.nextWaveIn.toFixed(1)}s`, mmRight, statsStartY + 40);
-  }
 
   // Compass top-center
   if (compassDir) {
