@@ -2,7 +2,7 @@ import type { System } from '../../core/ecs/systems';
 import type { ComponentStore } from '../../core/ecs/components';
 import type { Transform } from '../components/Transform';
 import type { Physics } from '../components/Physics';
-import type { WeaponHolder, WeaponKind } from '../components/Weapon';
+import type { WeaponHolder } from '../components/Weapon';
 import type { Ammo } from '../components/Ammo';
 import type { InputSnapshot } from '../../core/input/input';
 import { RNG } from '../../core/util/rng';
@@ -58,7 +58,6 @@ export class WeaponFireSystem implements System {
   private aimTileY = 0;
   private eventsOut: FireEvent[];
   private rng: RNG;
-  private switchHeld = false;
 
   constructor(
     private transforms: ComponentStore<Transform>,
@@ -89,27 +88,17 @@ export class WeaponFireSystem implements System {
     const snap = this.input;
     if (!snap) return;
 
-    // Cycle weapon
-    const switchDown =
-      snap.keys['r'] || snap.keys['R'] || snap.keys['f'] || snap.keys['F'] || snap.keys['Tab'];
-    if (switchDown && !this.switchHeld) {
-      this.weapons.forEach((_, w) => {
-        w.active = nextWeapon(w.active);
-      });
-    }
-    this.switchHeld = switchDown;
-
     // Fire inputs
     const isLmb = (snap.mouseButtons & (1 << 0)) !== 0;
     const isMmb = (snap.mouseButtons & (1 << 1)) !== 0;
     const isRmb = (snap.mouseButtons & (1 << 2)) !== 0;
-    const primaryKey = snap.keys[' '] || snap.keys['Space'] || snap.keys['Enter'] || snap.keys['z'];
-    const secondaryKey =
-      snap.keys['Shift'] ||
-      snap.keys['ShiftLeft'] ||
-      snap.keys['ShiftRight'] ||
-      snap.keys['Control'];
-    const specialKey = snap.keys['c'] || snap.keys['C'] || snap.keys['x'] || snap.keys['X'];
+    const machineGunKey = snap.keys[' '] || snap.keys['Space'] || snap.keys['Spacebar'];
+    const missileKey = snap.keys['Shift'] || snap.keys['ShiftLeft'] || snap.keys['ShiftRight'];
+    const hellfireKey =
+      snap.keys['Control'] || snap.keys['ControlLeft'] || snap.keys['ControlRight'];
+    const machineGunDown = isLmb || machineGunKey;
+    const missileDown = isRmb || missileKey;
+    const hellfireDown = isMmb || hellfireKey;
 
     this.weapons.forEach((entity, w) => {
       const t = this.transforms.get(entity);
@@ -118,9 +107,7 @@ export class WeaponFireSystem implements System {
       const ammo = this.ammo.get(entity);
       if (!ph || !ammo) return;
 
-      if (snap.keys['1']) w.active = 'missile';
-      else if (snap.keys['2']) w.active = 'rocket';
-      else if (snap.keys['3']) w.active = 'hellfire';
+      w.active = hellfireDown ? 'hellfire' : missileDown ? 'rocket' : 'missile';
 
       // Aim direction from entity to aim tile
       const ax = this.aimTileX - t.tx;
@@ -129,8 +116,8 @@ export class WeaponFireSystem implements System {
       const dirX = ax / ad;
       const dirY = ay / ad;
 
-      // Missiles (LMB / primary)
-      if ((w.active === 'missile' && (isLmb || primaryKey)) || isLmb || primaryKey) {
+      // Machine gun (LMB / Space)
+      if (machineGunDown) {
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
           w.cooldownMissile = 0.1;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
@@ -158,8 +145,8 @@ export class WeaponFireSystem implements System {
         }
       }
 
-      // Rockets (RMB / secondary)
-      if ((w.active === 'rocket' && (isRmb || secondaryKey)) || isRmb || secondaryKey) {
+      // Missiles (RMB / Shift)
+      if (missileDown) {
         if (w.cooldownRocket <= 0 && ammo.rockets > 0) {
           w.cooldownRocket = 0.4;
           ammo.rockets = Math.max(0, ammo.rockets - 1);
@@ -179,8 +166,8 @@ export class WeaponFireSystem implements System {
         }
       }
 
-      // Hellfire (MMB / special)
-      if ((w.active === 'hellfire' && (isMmb || specialKey)) || isMmb || specialKey) {
+      // Hellfires (MMB / Ctrl)
+      if (hellfireDown) {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
           w.cooldownHellfire = 1.25;
           ammo.hellfires = Math.max(0, ammo.hellfires - 1);
@@ -206,10 +193,4 @@ export class WeaponFireSystem implements System {
       }
     });
   }
-}
-
-function nextWeapon(k: WeaponKind): WeaponKind {
-  if (k === 'missile') return 'rocket';
-  if (k === 'rocket') return 'hellfire';
-  return 'missile';
 }

@@ -60,6 +60,13 @@ export class DamageSystem implements System {
     return out;
   }
 
+  public kill(entity: Entity): void {
+    const health = this.healths.get(entity);
+    if (!health) return;
+    health.current = 0;
+    this.markDead(entity);
+  }
+
   private markDead(entity: Entity): void {
     if (this.deadSet.has(entity)) return;
     this.deadSet.add(entity);

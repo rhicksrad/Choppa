@@ -1,6 +1,5 @@
 import type { IsoParams } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
-import type { WeaponKind } from '../../game/components/Weapon';
 
 export interface BarsData {
   fuel01: number;
@@ -9,7 +8,6 @@ export interface BarsData {
   armor01: number;
   ammo: { missiles: number; rockets: number; hellfires: number };
   ammoMax: { missiles: number; rockets: number; hellfires: number };
-  activeWeapon: WeaponKind;
   lives: number;
   score: number;
   wave: number;
@@ -22,11 +20,10 @@ const ammoDisplayOrder: {
   label: string;
   color: string;
   bg: string;
-  weapon: WeaponKind;
 }[] = [
-  { key: 'missiles', label: 'Machine gun', color: '#ffd166', bg: '#2b1f08', weapon: 'missile' },
-  { key: 'rockets', label: 'ROCKETS', color: '#ff8a5c', bg: '#2b1208', weapon: 'rocket' },
-  { key: 'hellfires', label: 'HELLFIRES', color: '#f94144', bg: '#2a090b', weapon: 'hellfire' },
+  { key: 'missiles', label: 'Machine Gun (LMB / Space)', color: '#ffd166', bg: '#2b1f08' },
+  { key: 'rockets', label: 'Missiles (RMB / Shift)', color: '#ff8a5c', bg: '#2b1208' },
+  { key: 'hellfires', label: 'Hellfires (MMB / Ctrl)', color: '#f94144', bg: '#2a090b' },
 ];
 
 export function drawHUD(
@@ -35,6 +32,7 @@ export function drawHUD(
   objectiveLines: string[],
   compassDir: { dx: number; dy: number } | null,
   minimap: {
+    enabled: boolean;
     mapW: number;
     mapH: number;
     player: { tx: number; ty: number };
@@ -46,16 +44,17 @@ export function drawHUD(
   ctx.save();
 
   // Minimap top-right (orthographic)
+  const minimapVisible = minimap.enabled;
   const mmW = 140;
   const mmH = 100;
-  const mmX = w - mmW - 16;
+  const mmX = minimapVisible ? w - mmW - 16 : w - 16;
   const mmY = 16;
 
   // Resource & ammo bars to the left of the minimap
   const barW = 220;
   const barH = 16;
   const barGap = barH + 12;
-  const barX = Math.max(16, mmX - barW - 24);
+  const barX = minimapVisible ? Math.max(16, mmX - barW - 24) : w - barW - 16;
   let barY = mmY;
 
   ctx.textAlign = 'left';
@@ -74,9 +73,7 @@ export function drawHUD(
     const current = bars.ammo[ammoInfo.key];
     const max = bars.ammoMax[ammoInfo.key];
     const ammo01 = max > 0 ? current / max : 0;
-    const label =
-      ammoInfo.weapon === bars.activeWeapon ? `${ammoInfo.label} [ACTIVE]` : ammoInfo.label;
-    drawBar(ctx, barX, barY, barW, barH, ammo01, ammoInfo.color, ammoInfo.bg, label);
+    drawBar(ctx, barX, barY, barW, barH, ammo01, ammoInfo.color, ammoInfo.bg, ammoInfo.label);
     barY += barGap;
   }
 
@@ -90,57 +87,63 @@ export function drawHUD(
   for (let i = 0; i < objectiveLines.length; i += 1)
     ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
 
-  // Minimap panel
-  ctx.fillStyle = '#11202b';
-  ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-  ctx.fillStyle = '#0b1720';
-  ctx.fillRect(mmX, mmY, mmW, mmH);
+  // Minimap panel & stats
+  const mmRight = minimapVisible ? mmX + mmW : w - 16;
+  let statsStartY = minimapVisible ? mmY + mmH + 20 : barY + 20;
 
-  // Grid/terrain hint
-  ctx.strokeStyle = '#142a3a';
-  ctx.lineWidth = 1;
-  for (let gx = 0; gx <= minimap.mapW; gx += 4) {
-    const x = mmX + (gx / minimap.mapW) * mmW;
-    ctx.beginPath();
-    ctx.moveTo(x, mmY);
-    ctx.lineTo(x, mmY + mmH);
-    ctx.stroke();
+  if (minimapVisible) {
+    ctx.fillStyle = '#11202b';
+    ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
+    ctx.fillStyle = '#0b1720';
+    ctx.fillRect(mmX, mmY, mmW, mmH);
+
+    // Grid/terrain hint
+    ctx.strokeStyle = '#142a3a';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx <= minimap.mapW; gx += 4) {
+      const x = mmX + (gx / minimap.mapW) * mmW;
+      ctx.beginPath();
+      ctx.moveTo(x, mmY);
+      ctx.lineTo(x, mmY + mmH);
+      ctx.stroke();
+    }
+    for (let gy = 0; gy <= minimap.mapH; gy += 4) {
+      const y = mmY + (gy / minimap.mapH) * mmH;
+      ctx.beginPath();
+      ctx.moveTo(mmX, y);
+      ctx.lineTo(mmX + mmW, y);
+      ctx.stroke();
+    }
+
+    // Enemies
+    ctx.fillStyle = '#ef476f';
+    for (let i = 0; i < minimap.enemies.length; i += 1) {
+      const e = minimap.enemies[i]!;
+      const px = mmX + (e.tx / minimap.mapW) * mmW;
+      const py = mmY + (e.ty / minimap.mapH) * mmH;
+      ctx.fillRect(px - 2, py - 2, 4, 4);
+    }
+
+    // Player
+    ctx.fillStyle = '#92ffa6';
+    const ppx = mmX + (minimap.player.tx / minimap.mapW) * mmW;
+    const ppy = mmY + (minimap.player.ty / minimap.mapH) * mmH;
+    ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
+
+    statsStartY = mmY + mmH + 20;
   }
-  for (let gy = 0; gy <= minimap.mapH; gy += 4) {
-    const y = mmY + (gy / minimap.mapH) * mmH;
-    ctx.beginPath();
-    ctx.moveTo(mmX, y);
-    ctx.lineTo(mmX + mmW, y);
-    ctx.stroke();
-  }
 
-  // Enemies
-  ctx.fillStyle = '#ef476f';
-  for (let i = 0; i < minimap.enemies.length; i += 1) {
-    const e = minimap.enemies[i]!;
-    const px = mmX + (e.tx / minimap.mapW) * mmW;
-    const py = mmY + (e.ty / minimap.mapH) * mmH;
-    ctx.fillRect(px - 2, py - 2, 4, 4);
-  }
-
-  // Player
-  ctx.fillStyle = '#92ffa6';
-  const ppx = mmX + (minimap.player.tx / minimap.mapW) * mmW;
-  const ppy = mmY + (minimap.player.ty / minimap.mapH) * mmH;
-  ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
-
-  // Score & wave stats near minimap
   ctx.textAlign = 'right';
   ctx.fillStyle = '#c8d7e1';
   ctx.font = '14px system-ui, sans-serif';
-  ctx.fillText(`Score: ${Math.floor(bars.score)}`, mmX + mmW, mmY + mmH + 20);
+  ctx.fillText(`Score: ${Math.floor(bars.score)}`, mmRight, statsStartY);
   ctx.fillText(
     `Wave: ${bars.wave}  Remaining: ${bars.enemiesRemaining}`,
-    mmX + mmW,
-    mmY + mmH + 40,
+    mmRight,
+    statsStartY + 20,
   );
   if (bars.nextWaveIn !== null) {
-    ctx.fillText(`Next wave in: ${bars.nextWaveIn.toFixed(1)}s`, mmX + mmW, mmY + mmH + 60);
+    ctx.fillText(`Next wave in: ${bars.nextWaveIn.toFixed(1)}s`, mmRight, statsStartY + 40);
   }
 
   // Compass top-center
