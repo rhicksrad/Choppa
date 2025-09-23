@@ -223,7 +223,7 @@ function setupSystems(
   const damage = new DamageSystem(stores.transforms, stores.colliders, stores.healths);
   scheduler.add(new MovementSystem(stores.transforms, stores.physics));
   scheduler.add(new RotorSpinSystem(stores.sprites));
-  scheduler.add(new FuelDrainSystem(stores.fuels));
+  scheduler.add(new FuelDrainSystem(stores.fuels, stores.healths, damage));
   scheduler.add(weaponFire);
 
   let playerLocator: () => { x: number; y: number } = () => ({ x: 0, y: 0 });
