@@ -53,6 +53,14 @@ export function createEnemyFactory({
   spawnChaserEnemy: (point: { tx: number; ty: number }, wave: number) => Entity;
   spawnAlienUnit: (point: { tx: number; ty: number }) => void;
   spawnSpeedboat: (lane: BoatLane, wave: number) => void;
+  spawnSentinel: (
+    point: { tx: number; ty: number },
+    options?: { holdRadius?: number; leashRange?: number; fireRange?: number },
+  ) => void;
+  spawnObelisk: (
+    point: { tx: number; ty: number },
+    options?: { fireRange?: number; damage?: number },
+  ) => void;
   spawnDefaultWave: (waveIndex: number, spawnPoints: Array<{ tx: number; ty: number }>) => boolean;
   spawnBoatWave: (
     waveIndex: number,
@@ -274,6 +282,99 @@ export function createEnemyFactory({
     registerEnemy(entity, { kind: 'speedboat', score: 220 + wave * 25, wave });
   };
 
+  const spawnSentinel = (
+    point: { tx: number; ty: number },
+    options: { holdRadius?: number; leashRange?: number; fireRange?: number } = {},
+  ): void => {
+    const entity = entities.create();
+    stores.transforms.set(entity, { tx: point.tx, ty: point.ty, rot: 0 });
+    stores.physics.set(entity, {
+      vx: 0,
+      vy: 0,
+      ax: 0,
+      ay: 0,
+      drag: 0.72,
+      maxSpeed: 3.1,
+      turnRate: Math.PI * 1.6,
+    });
+    stores.healths.set(entity, { current: 70, max: 70 });
+    stores.colliders.set(entity, { radius: 0.42, team: 'enemy' });
+    const fireRange = options.fireRange ?? 7.8;
+    stores.chasers.set(entity, {
+      speed: 2.9,
+      acceleration: 3.6,
+      fireRange,
+      fireInterval: 0.92,
+      cooldown: 0,
+      spread: 0.14,
+      guard: {
+        homeX: point.tx,
+        homeY: point.ty,
+        holdRadius: options.holdRadius ?? 1.0,
+        aggroRange: fireRange,
+        leashRange: options.leashRange ?? 8.8,
+        alerted: false,
+      },
+      weapon: {
+        kind: 'laser',
+        speed: 36,
+        ttl: 0.62,
+        radius: 0.07,
+        damage: 9,
+        damageRadius: 0.18,
+        launchOffset: 0.34,
+      },
+    });
+    registerEnemy(entity, { kind: 'sentinel', score: 360 });
+  };
+
+  const spawnObelisk = (
+    point: { tx: number; ty: number },
+    options: { fireRange?: number; damage?: number } = {},
+  ): void => {
+    const entity = entities.create();
+    stores.transforms.set(entity, { tx: point.tx, ty: point.ty, rot: 0 });
+    stores.physics.set(entity, {
+      vx: 0,
+      vy: 0,
+      ax: 0,
+      ay: 0,
+      drag: 0.92,
+      maxSpeed: 0.6,
+      turnRate: Math.PI,
+    });
+    const fireRange = options.fireRange ?? 9.4;
+    const damage = options.damage ?? 12;
+    stores.healths.set(entity, { current: 140, max: 140 });
+    stores.colliders.set(entity, { radius: 0.5, team: 'enemy' });
+    stores.chasers.set(entity, {
+      speed: 0.6,
+      acceleration: 3.2,
+      fireRange,
+      fireInterval: 1.35,
+      cooldown: 0,
+      spread: 0.05,
+      guard: {
+        homeX: point.tx,
+        homeY: point.ty,
+        holdRadius: 0.15,
+        aggroRange: fireRange + 0.6,
+        leashRange: fireRange + 2.5,
+        alerted: false,
+      },
+      weapon: {
+        kind: 'laser',
+        speed: 44,
+        ttl: 0.78,
+        radius: 0.09,
+        damage,
+        damageRadius: 0.24,
+        launchOffset: 0.4,
+      },
+    });
+    registerEnemy(entity, { kind: 'obelisk', score: 420 });
+  };
+
   const spawnMissionEnemies = (
     config: MissionSpawnConfig,
     spawnAlienStronghold: (type: 'AAA' | 'SAM', tx: number, ty: number) => void,
@@ -356,6 +457,8 @@ export function createEnemyFactory({
     spawnChaserEnemy,
     spawnAlienUnit,
     spawnSpeedboat,
+    spawnSentinel,
+    spawnObelisk,
     spawnDefaultWave,
     spawnBoatWave,
   };

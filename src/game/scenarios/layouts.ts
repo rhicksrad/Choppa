@@ -52,6 +52,21 @@ export interface BoatWave {
   count: number;
 }
 
+export interface SentinelPost {
+  tx: number;
+  ty: number;
+  holdRadius?: number;
+  leashRange?: number;
+  fireRange?: number;
+}
+
+export interface ObeliskSite {
+  tx: number;
+  ty: number;
+  fireRange?: number;
+  damage?: number;
+}
+
 export interface PatrolRoute {
   tx: number;
   ty: number;
@@ -77,6 +92,8 @@ export interface MissionLayout {
   waveSpawnPoints: Array<{ tx: number; ty: number }>;
   guardPosts?: Array<{ tx: number; ty: number }>;
   patrolRoutes?: PatrolRoute[];
+  sentinelPosts?: SentinelPost[];
+  obeliskSites?: ObeliskSite[];
   boat?: {
     lanes: BoatLane[];
     waves: BoatWave[];
@@ -454,5 +471,197 @@ export function createMissionTwoLayout(): MissionLayout {
     guardPosts,
     patrolRoutes,
     boat,
+  };
+}
+
+export function createMissionThreeLayout(map: { width: number; height: number }): MissionLayout {
+  const pad: PadConfig = { tx: Math.round(map.width / 2), ty: map.height - 7, radius: 1.8 };
+  const safeHouse: SafeHouseParams = {
+    tx: pad.tx - 1.2,
+    ty: pad.ty + 0.6,
+    width: 3,
+    depth: 1.8,
+    height: 32,
+    bodyColor: '#aeb6c9',
+    roofColor: '#2c3a4f',
+    trimColor: '#e8eef8',
+    doorColor: '#1a2533',
+    windowColor: '#96d9ff',
+    walkwayColor: '#657186',
+  };
+
+  const campusSites: BuildingSite[] = [
+    {
+      tx: 24.2,
+      ty: 30.2,
+      width: 2.2,
+      depth: 1.6,
+      height: 36,
+      health: 240,
+      colliderRadius: 1.45,
+      bodyColor: '#24143b',
+      roofColor: '#6ef6ff',
+      ruinColor: '#170d27',
+      score: 420,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+    {
+      tx: 35.8,
+      ty: 30.0,
+      width: 2.2,
+      depth: 1.6,
+      height: 36,
+      health: 240,
+      colliderRadius: 1.45,
+      bodyColor: '#23133a',
+      roofColor: '#74f9ff',
+      ruinColor: '#160d27',
+      score: 420,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+    {
+      tx: 30.0,
+      ty: 38.6,
+      width: 2.4,
+      depth: 1.6,
+      height: 34,
+      health: 250,
+      colliderRadius: 1.52,
+      bodyColor: '#27153f',
+      roofColor: '#63edf7',
+      ruinColor: '#190d29',
+      score: 430,
+      category: 'stronghold',
+      triggersAlarm: true,
+    },
+  ];
+
+  const staticStructures: BuildingSite[] = [
+    {
+      tx: 28.6,
+      ty: 27.4,
+      width: 1.35,
+      depth: 1.05,
+      height: 24,
+      health: 160,
+      colliderRadius: 0.92,
+      bodyColor: '#1a0e30',
+      roofColor: '#55d8ff',
+      ruinColor: '#0f061e',
+      score: 250,
+      category: 'stronghold',
+      triggersAlarm: false,
+    },
+    {
+      tx: 31.4,
+      ty: 27.4,
+      width: 1.35,
+      depth: 1.05,
+      height: 24,
+      health: 160,
+      colliderRadius: 0.92,
+      bodyColor: '#1a0e30',
+      roofColor: '#55d8ff',
+      ruinColor: '#0f061e',
+      score: 250,
+      category: 'stronghold',
+      triggersAlarm: false,
+    },
+    {
+      tx: 27.6,
+      ty: 24.8,
+      width: 1.25,
+      depth: 0.95,
+      height: 20,
+      health: 140,
+      colliderRadius: 0.82,
+      bodyColor: '#190c2b',
+      roofColor: '#6fe4ff',
+      ruinColor: '#0e051a',
+      score: 220,
+      category: 'stronghold',
+      triggersAlarm: false,
+    },
+    {
+      tx: 32.4,
+      ty: 24.8,
+      width: 1.25,
+      depth: 0.95,
+      height: 20,
+      health: 140,
+      colliderRadius: 0.82,
+      bodyColor: '#190c2b',
+      roofColor: '#6fe4ff',
+      ruinColor: '#0e051a',
+      score: 220,
+      category: 'stronghold',
+      triggersAlarm: false,
+    },
+  ];
+
+  const pickupSites: PickupSite[] = [
+    { tx: pad.tx - 2.6, ty: pad.ty + 1.3, kind: 'fuel', fuelAmount: 72 },
+    { tx: pad.tx + 2.6, ty: pad.ty + 1.3, kind: 'fuel', fuelAmount: 72 },
+    {
+      tx: pad.tx - 1.8,
+      ty: pad.ty - 0.6,
+      kind: 'ammo',
+      ammo: { missiles: 120, rockets: 6, hellfires: 2 },
+    },
+    {
+      tx: pad.tx + 1.8,
+      ty: pad.ty - 0.6,
+      kind: 'ammo',
+      ammo: { missiles: 126, rockets: 6, hellfires: 3 },
+    },
+  ];
+
+  const alienSpawnPoints = [
+    { tx: 24.0, ty: 32.5 },
+    { tx: 36.0, ty: 32.5 },
+    { tx: 30.0, ty: 34.5 },
+    { tx: 30.0, ty: 22.5 },
+  ];
+
+  const waveSpawnPoints = [
+    { tx: 24.5, ty: 45.0 },
+    { tx: 35.5, ty: 45.0 },
+    { tx: 30.0, ty: 40.5 },
+    { tx: 30.0, ty: 34.0 },
+  ];
+
+  const patrolRoutes: PatrolRoute[] = [
+    { tx: 26.4, ty: 33.8, axis: 'x', range: 2.6 },
+    { tx: 33.6, ty: 33.8, axis: 'x', range: 2.6 },
+    { tx: 30.0, ty: 41.8, axis: 'y', range: 3.4 },
+  ];
+
+  const sentinelPosts: SentinelPost[] = [
+    { tx: 24.2, ty: 32.8, holdRadius: 0.9, leashRange: 7.4, fireRange: 7.8 },
+    { tx: 35.8, ty: 32.8, holdRadius: 0.9, leashRange: 7.4, fireRange: 7.8 },
+    { tx: 30.0, ty: 35.6, holdRadius: 1.1, leashRange: 8.0, fireRange: 8.2 },
+    { tx: 30.0, ty: 24.2, holdRadius: 1.0, leashRange: 7.2, fireRange: 8.4 },
+  ];
+
+  const obeliskSites: ObeliskSite[] = [
+    { tx: 21.8, ty: 32.4, fireRange: 9.2, damage: 11 },
+    { tx: 38.2, ty: 32.4, fireRange: 9.2, damage: 11 },
+    { tx: 30.0, ty: 21.4, fireRange: 10.4, damage: 13 },
+  ];
+
+  return {
+    pad,
+    safeHouse,
+    campusSites,
+    staticStructures,
+    pickupSites,
+    survivorSites: [],
+    alienSpawnPoints,
+    waveSpawnPoints,
+    patrolRoutes,
+    sentinelPosts,
+    obeliskSites,
   };
 }

@@ -192,6 +192,101 @@ export function drawChaserDrone(
   ctx.restore();
 }
 
+export function drawSentinelDrone(
+  ctx: CanvasRenderingContext2D,
+  iso: IsoParams,
+  originX: number,
+  originY: number,
+  tx: number,
+  ty: number,
+): void {
+  const halfW = iso.tileWidth / 2;
+  const halfH = iso.tileHeight / 2;
+  const ix = (tx - ty) * halfW;
+  const iy = (tx + ty) * halfH;
+  ctx.save();
+  ctx.translate(originX + ix, originY + iy);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 10, 14, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#211733';
+  ctx.strokeStyle = '#8dfcff';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.roundRect(-6, -6, 12, 12, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#4be0ff';
+  ctx.beginPath();
+  ctx.arc(0, -2, 3.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#c6fff7';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-6, -2);
+  ctx.lineTo(-10, 2);
+  ctx.moveTo(6, -2);
+  ctx.lineTo(10, 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+export function drawObeliskTurret(
+  ctx: CanvasRenderingContext2D,
+  iso: IsoParams,
+  originX: number,
+  originY: number,
+  tx: number,
+  ty: number,
+): void {
+  const halfW = iso.tileWidth / 2;
+  const halfH = iso.tileHeight / 2;
+  const ix = (tx - ty) * halfW;
+  const iy = (tx + ty) * halfH;
+  ctx.save();
+  ctx.translate(originX + ix, originY + iy);
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 16, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#120b22';
+  ctx.beginPath();
+  ctx.moveTo(-8, 10);
+  ctx.lineTo(0, -20);
+  ctx.lineTo(8, 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#2b1b3f';
+  ctx.beginPath();
+  ctx.moveTo(-5, 8);
+  ctx.lineTo(0, -14);
+  ctx.lineTo(5, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#78f7ff';
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(0, -16);
+  ctx.lineTo(0, -26);
+  ctx.stroke();
+
+  ctx.fillStyle = '#9bffe8';
+  ctx.beginPath();
+  ctx.arc(0, -28, 4.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 export function drawSpeedboat(
   ctx: CanvasRenderingContext2D,
   iso: IsoParams,

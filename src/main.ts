@@ -171,6 +171,8 @@ const {
   spawnDefaultWave,
   spawnBoatWave,
   spawnAlienUnit,
+  spawnSentinel,
+  spawnObelisk,
 } = enemyFactory;
 
 const missionCoordinator = createMissionCoordinator({
@@ -185,6 +187,8 @@ const missionCoordinator = createMissionCoordinator({
     spawnSpeedboat,
     spawnDefaultWave,
     spawnBoatWave,
+    spawnSentinel,
+    spawnObelisk,
   },
   buildingSpawner: {
     spawnAlienStronghold: (type, tx, ty, spawnUnit) =>
@@ -197,6 +201,7 @@ missionCoordinator.initMissions();
 const missionMusicMap = {
   m01: 'level1',
   m02: 'level2',
+  m03: 'level3',
 } as const;
 
 const getMissionTrackId = (missionId: string): string =>
