@@ -140,6 +140,7 @@ function setupUI(): { ui: UIStore; titleMenu: Menu } {
     { id: 'settings', label: 'Settings' },
     { id: 'achievements', label: 'Achievements' },
     { id: 'about', label: 'About' },
+    { id: 'reset-progress', label: 'Reset Progress' },
   ]);
   return { ui, titleMenu };
 }

@@ -1,5 +1,5 @@
 import type { InputSnapshot } from '../../../core/input/input';
-import type { UIStore } from '../../../ui/menus/scenes';
+import type { UIState, UIStore } from '../../../ui/menus/scenes';
 import type { Menu } from '../../../ui/menus/menu';
 import type { KeyBindings } from '../../../ui/input-remap/bindings';
 import { isDown } from '../../../ui/input-remap/bindings';
@@ -11,6 +11,7 @@ export interface UIControllerDeps {
   saveUI: (ui: UIStore) => void;
   applyAudioSettings: (muted: boolean) => void;
   resetGame: (missionIndex?: number) => void;
+  resetCampaign: () => void;
   getNextMissionIndex: () => number;
   onStateChange?: (next: UIState, prev: UIState) => void;
 }
@@ -27,6 +28,7 @@ export function createUIController({
   saveUI,
   applyAudioSettings,
   resetGame,
+  resetCampaign,
   getNextMissionIndex,
   onStateChange,
 }: UIControllerDeps): UIController {
@@ -64,7 +66,10 @@ export function createUIController({
       } else if (action === 'settings') changeState('settings');
       else if (action === 'achievements') changeState('achievements');
       else if (action === 'about') changeState('about');
-      if (action) saveUI(ui);
+      else if (action === 'reset-progress') {
+        resetCampaign();
+      }
+      if (action && action !== 'reset-progress') saveUI(ui);
       return false;
     }
 
