@@ -301,14 +301,12 @@ interface MissionProgressData {
 
 const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
 
-removeKey('choppa:progress');
-
 function findMissionIndex(id?: string): number {
   if (!id) return -1;
   return missionDefs.findIndex((def) => def.id === id);
 }
 
-const savedProgress: MissionProgressData = {};
+const savedProgress = loadJson<MissionProgressData>('choppa:progress', {});
 let currentMissionIndex = findMissionIndex(savedProgress.current);
 if (currentMissionIndex < 0) {
   currentMissionIndex = findMissionIndex(savedProgress.mission);
@@ -332,7 +330,7 @@ const missionProgress: MissionProgressData = {
 };
 
 function persistMissionProgress(): void {
-  removeKey('choppa:progress');
+  saveJson('choppa:progress', missionProgress);
 }
 
 let missionDef: MissionDef = missionDefs[currentMissionIndex];
