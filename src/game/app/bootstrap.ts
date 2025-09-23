@@ -140,6 +140,7 @@ function setupUI(): { ui: UIStore; titleMenu: Menu } {
     { id: 'settings', label: 'Settings' },
     { id: 'achievements', label: 'Achievements' },
     { id: 'about', label: 'About' },
+    { id: 'reset-progress', label: 'Reset Progress' },
   ]);
   return { ui, titleMenu };
 }
@@ -156,10 +157,11 @@ function setupAudio(ui: UIStore): {
     sfxVolume: ui.settings.sfxVolume,
   });
   const engine = new EngineSound(bus);
+  const audioBase = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
   const music = new MusicController(bus, {
-    title: '/audio/title.mp3',
-    level1: '/audio/level1.mp3',
-    level2: '/audio/level2.mp3',
+    title: `${audioBase}audio/title.mp3`,
+    level1: `${audioBase}audio/level1.mp3`,
+    level2: `${audioBase}audio/level2.mp3`,
   });
   const applySettings = (muted: boolean): void => {
     bus.setMaster(muted ? 0 : ui.settings.masterVolume);
@@ -221,7 +223,7 @@ function setupSystems(
   const damage = new DamageSystem(stores.transforms, stores.colliders, stores.healths);
   scheduler.add(new MovementSystem(stores.transforms, stores.physics));
   scheduler.add(new RotorSpinSystem(stores.sprites));
-  scheduler.add(new FuelDrainSystem(stores.fuels));
+  scheduler.add(new FuelDrainSystem(stores.fuels, stores.healths, damage));
   scheduler.add(weaponFire);
 
   let playerLocator: () => { x: number; y: number } = () => ({ x: 0, y: 0 });

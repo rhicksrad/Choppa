@@ -40,10 +40,21 @@ export class InputManager {
   private deadzone = 0.15;
 
   public attach(target: HTMLElement | Window = window): void {
+    const isStickyModifier = (key: string): boolean =>
+      key === 'Shift' || key === 'ShiftLeft' || key === 'ShiftRight';
+
     const onKeyDown = (e: KeyboardEvent): void => {
+      if (isStickyModifier(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       this.pressed[e.key] = true;
     };
     const onKeyUp = (e: KeyboardEvent): void => {
+      if (isStickyModifier(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       this.pressed[e.key] = false;
     };
     const onMouseMove = (e: MouseEvent): void => {

@@ -1,5 +1,5 @@
 import { GameLoop } from './core/time/loop';
-import { saveJson } from './core/util/storage';
+import { removeKey, saveJson } from './core/util/storage';
 import { bootstrapApp } from './game/app/bootstrap';
 import { createGameState } from './game/app/state';
 import { createGameSceneRenderer } from './render/scene/gameScene';
@@ -16,7 +16,8 @@ import { createCombatProcessor } from './game/app/update/combat';
 import { loadMission } from './game/missions/loader';
 import missionJson from './game/data/missions/sample_mission.json';
 import type { MissionDef } from './game/missions/types';
-import type { UIState } from './ui/menus/scenes';
+import { defaultBindings } from './ui/input-remap/bindings';
+import { createUIStore, type UIState } from './ui/menus/scenes';
 
 const bootstrap = bootstrapApp();
 const state = createGameState();
@@ -338,7 +339,10 @@ const resetGame = (targetMissionIndex?: number): void => {
   state.player.invulnerable = false;
   state.rescue.carrying = 0;
   state.rescue.rescued = 0;
-  state.rescue.total = scenario.survivorSites.reduce((sum, site) => sum + site.count, 0);
+  state.rescue.total = scenario.survivorSites.reduce(
+    (sum, site) => sum + Math.max(0, Math.round(site.count)),
+    0,
+  );
   state.rescue.survivorsSpawned = false;
   state.boat.boatsEscaped = 0;
   state.boat.objectiveComplete = false;
@@ -357,13 +361,34 @@ const resetGame = (targetMissionIndex?: number): void => {
   transitionUIState('briefing');
 };
 
+const resetCampaignProgress = (): void => {
+  missionCoordinator.resetProgress();
+
+  const defaultUI = createUIStore();
+  removeKey('choppa:ui');
+  ui.settings = { ...defaultUI.settings };
+  ui.achievements = { ...defaultUI.achievements };
+
+  audio.applySettings(false);
+
+  removeKey('choppa:bindings');
+  const freshBindings = defaultBindings();
+  (Object.keys(freshBindings) as Array<keyof typeof freshBindings>).forEach((action) => {
+    bindings[action] = [...freshBindings[action]];
+  });
+
+  resetGame(0);
+};
+
 const uiController = createUIController({
   ui,
   titleMenu,
   bindings,
+  canvas,
   saveUI: (store) => saveJson('choppa:ui', store),
   applyAudioSettings: (muted) => audio.applySettings(muted),
   resetGame,
+  resetCampaign: resetCampaignProgress,
   getNextMissionIndex: () => missionCoordinator.getMissionIndices().next,
   onStateChange: handleUIStateChange,
 });

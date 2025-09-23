@@ -321,7 +321,6 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     const fuelComp = stores.fuels.get(player)!;
     const ammoComp = stores.ammos.get(player)!;
     const healthComp = stores.healths.get(player)!;
-    const weaponComp = stores.weapons.get(player)!;
 
     const objectiveLines = mission.state.objectives.map((objective) => {
       const labelFn = objectiveLabels[objective.id];
@@ -351,7 +350,6 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
           rockets: ammoComp.rocketsMax,
           hellfires: ammoComp.hellfiresMax,
         },
-        activeWeapon: weaponComp.active,
         lives: Math.max(0, state.player.lives),
         score: state.stats.score,
         wave: state.wave.active ? state.wave.index : Math.max(1, state.wave.index + 1),
@@ -361,6 +359,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       objectiveLines,
       null,
       {
+        enabled: ui.settings.minimap,
         mapW: args.runtimeMap.width,
         mapH: args.runtimeMap.height,
         player: { tx: playerTransform.tx, ty: playerTransform.ty },
