@@ -28,7 +28,7 @@
     {
       "id": "obj4",
       "type": "custom",
-      "name": "Break the alien counterattack",
+      "name": "Defeat all waves of the alien counterattack",
       "at": { "tx": 26, "ty": 26 },
       "radiusTiles": 6
     },
