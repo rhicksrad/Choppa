@@ -281,3 +281,4 @@ function drawBar(
   ctx.fillText(label, x, y - 2);
   ctx.restore();
 }
+
