@@ -25,6 +25,20 @@ export type FireEvent =
     }
   | {
       faction: 'player' | 'enemy';
+      kind: 'laser';
+      sx: number;
+      sy: number;
+      dx: number;
+      dy: number;
+      speed?: number;
+      ttl?: number;
+      radius?: number;
+      damage?: number;
+      damageRadius?: number;
+      launchOffset?: number;
+    }
+  | {
+      faction: 'player' | 'enemy';
       kind: 'rocket';
       x: number;
       y: number;

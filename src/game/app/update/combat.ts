@@ -8,6 +8,7 @@ import type { Building } from '../../components/Building';
 import type { GameState } from '../state';
 import {
   playMissile,
+  playAlienLaser,
   playRocket,
   playHellfire,
   playExplosion,
@@ -252,6 +253,26 @@ export function createCombatProcessor({
           ttl: ev.ttl ?? 0.6,
           radius: ev.radius ?? 0.08,
           damage: { amount: ev.damage ?? 10, radius: ev.damageRadius ?? 0.12 },
+        });
+      } else if (ev.kind === 'laser') {
+        playAlienLaser(bus);
+        const dirLen = Math.hypot(ev.dx, ev.dy) || 1;
+        const dirX = ev.dx / dirLen;
+        const dirY = ev.dy / dirLen;
+        const speedL = ev.speed ?? 30;
+        const launchOffset = ev.launchOffset ?? 0.3;
+        const spawnX = ev.sx + dirX * launchOffset;
+        const spawnY = ev.sy + dirY * launchOffset;
+        projectilePool.spawn({
+          kind: 'laser',
+          faction: ev.faction,
+          x: spawnX,
+          y: spawnY,
+          vx: dirX * speedL,
+          vy: dirY * speedL,
+          ttl: ev.ttl ?? 0.45,
+          radius: ev.radius ?? 0.04,
+          damage: { amount: ev.damage ?? 6, radius: ev.damageRadius ?? 0.08 },
         });
       } else if (ev.kind === 'rocket') {
         playRocket(bus);

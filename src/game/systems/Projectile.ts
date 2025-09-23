@@ -4,7 +4,7 @@ import type { Collider } from '../components/Collider';
 import type { DamageTag } from '../components/DamageTag';
 
 export interface Projectile {
-  kind: 'rocket' | 'hellfire' | 'missile';
+  kind: 'rocket' | 'hellfire' | 'missile' | 'laser';
   faction: 'player' | 'enemy';
   x: number; // tile-space
   y: number;
@@ -166,6 +166,31 @@ export class ProjectilePool {
         ctx.lineTo(bodyLength * 0.38, -halfWidth * 0.65);
         ctx.closePath();
         ctx.fill();
+      } else if (p.kind === 'laser') {
+        const beamLength = 9.2;
+        const beamWidth = 0.9;
+        const glow = ctx.createLinearGradient(-beamLength * 0.6, 0, beamLength * 0.8, 0);
+        glow.addColorStop(0, 'rgba(72, 149, 239, 0)');
+        glow.addColorStop(0.4, 'rgba(72, 201, 176, 0.35)');
+        glow.addColorStop(0.7, 'rgba(226, 252, 255, 0.65)');
+        glow.addColorStop(1, 'rgba(72, 149, 239, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, beamLength * 0.8, beamWidth * 1.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const coreGradient = ctx.createLinearGradient(-beamLength * 0.3, 0, beamLength * 0.7, 0);
+        coreGradient.addColorStop(0, 'rgba(64, 224, 208, 0.85)');
+        coreGradient.addColorStop(0.65, 'rgba(223, 249, 251, 0.95)');
+        coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.6)');
+        ctx.fillStyle = coreGradient;
+        ctx.fillRect(-beamLength * 0.3, -beamWidth * 0.32, beamLength, beamWidth * 0.64);
+
+        ctx.fillStyle = '#40c057';
+        ctx.fillRect(-beamLength * 0.34, -beamWidth * 0.18, beamLength * 0.32, beamWidth * 0.36);
+
+        ctx.fillStyle = '#d9480f';
+        ctx.fillRect(-beamLength * 0.44, -beamWidth * 0.12, beamLength * 0.16, beamWidth * 0.24);
       } else if (p.kind === 'rocket') {
         const bodyLength = 10.8;
         const halfWidth = 2.1;
