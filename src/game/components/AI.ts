@@ -37,6 +37,16 @@ export interface GuardBehavior {
   alerted: boolean;
 }
 
+export interface ChaserWeaponConfig {
+  kind: 'missile' | 'laser';
+  speed: number;
+  ttl: number;
+  radius: number;
+  damage: number;
+  damageRadius?: number;
+  launchOffset?: number;
+}
+
 export interface ChaserDrone {
   speed: number;
   acceleration: number;
@@ -45,4 +55,5 @@ export interface ChaserDrone {
   cooldown: number;
   spread: number;
   guard?: GuardBehavior;
+  weapon?: ChaserWeaponConfig;
 }

@@ -9,4 +9,5 @@ export interface Speedboat {
   arrivalRadius: number;
   activationRange: number;
   activated: boolean;
+  squadId?: string;
 }

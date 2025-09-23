@@ -45,6 +45,7 @@ export interface SurvivorSite {
 export interface BoatLane {
   entry: { tx: number; ty: number };
   target: { tx: number; ty: number };
+  squadId?: string;
 }
 
 export interface BoatWave {
@@ -102,12 +103,14 @@ function offsetBoatLane(
   seed: {
     entry: { tx: number; ty: number };
     target: { tx: number; ty: number };
+    squadId?: string;
   },
   border: number = MAP_BORDER,
 ): BoatLane {
   return {
     entry: { tx: seed.entry.tx + border, ty: seed.entry.ty + border },
     target: { tx: seed.target.tx + border, ty: seed.target.ty + border },
+    squadId: seed.squadId,
   };
 }
 
@@ -409,9 +412,30 @@ export function createMissionTwoLayout(): MissionLayout {
 
   const boat = {
     lanes: [
-      offsetBoatLane({ entry: { tx: 12.0, ty: 18.0 }, target: { tx: 12.0, ty: 45.0 } }, 0),
-      offsetBoatLane({ entry: { tx: 26.0, ty: 16.5 }, target: { tx: 26.0, ty: 45.6 } }, 0),
-      offsetBoatLane({ entry: { tx: 40.0, ty: 18.0 }, target: { tx: 40.0, ty: 45.0 } }, 0),
+      offsetBoatLane(
+        {
+          entry: { tx: 12.0, ty: 18.0 },
+          target: { tx: 12.0, ty: 45.0 },
+          squadId: 'm02-strikeboats',
+        },
+        0,
+      ),
+      offsetBoatLane(
+        {
+          entry: { tx: 26.0, ty: 16.5 },
+          target: { tx: 26.0, ty: 45.6 },
+          squadId: 'm02-strikeboats',
+        },
+        0,
+      ),
+      offsetBoatLane(
+        {
+          entry: { tx: 40.0, ty: 18.0 },
+          target: { tx: 40.0, ty: 45.0 },
+          squadId: 'm02-strikeboats',
+        },
+        0,
+      ),
     ],
     waves: [{ count: 4 }, { count: 5 }, { count: 6 }],
     maxEscapes: 3,

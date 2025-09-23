@@ -542,6 +542,7 @@ class MissionCoordinatorImpl implements MissionCoordinator {
       lanes: boat.lanes.map((lane) => ({
         entry: { ...lane.entry },
         target: { ...lane.target },
+        squadId: lane.squadId,
       })),
       waves: boat.waves.map((wave) => ({ ...wave })),
       maxEscapes: boat.maxEscapes,

@@ -115,19 +115,39 @@ export class EnemyBehaviorSystem implements System {
         const sn = Math.sin(jitter);
         const dirX = (dx / dist) * cs - (dy / dist) * sn;
         const dirY = (dx / dist) * sn + (dy / dist) * cs;
-        this.fireEvents.push({
-          faction: 'enemy',
-          kind: 'missile',
-          sx: t.tx,
-          sy: t.ty,
-          dx: dirX,
-          dy: dirY,
-          spread: chaser.spread,
-          speed: 20,
-          ttl: 1.0,
-          radius: 0.1,
-          damage: 5,
-        });
+        const weapon = chaser.weapon;
+        if (weapon && weapon.kind === 'laser') {
+          this.fireEvents.push({
+            faction: 'enemy',
+            kind: 'laser',
+            sx: t.tx,
+            sy: t.ty,
+            dx: dirX,
+            dy: dirY,
+            speed: weapon.speed,
+            ttl: weapon.ttl,
+            radius: weapon.radius,
+            damage: weapon.damage,
+            damageRadius: weapon.damageRadius,
+            launchOffset: weapon.launchOffset,
+          });
+        } else {
+          this.fireEvents.push({
+            faction: 'enemy',
+            kind: 'missile',
+            sx: t.tx,
+            sy: t.ty,
+            dx: dirX,
+            dy: dirY,
+            spread: chaser.spread,
+            speed: weapon?.speed ?? 20,
+            ttl: weapon?.ttl ?? 1.0,
+            radius: weapon?.radius ?? 0.1,
+            damage: weapon?.damage ?? 5,
+            damageRadius: weapon?.damageRadius,
+            launchOffset: weapon?.launchOffset,
+          });
+        }
       }
     });
   }

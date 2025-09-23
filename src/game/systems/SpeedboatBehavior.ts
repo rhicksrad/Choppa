@@ -21,6 +21,13 @@ export class SpeedboatBehaviorSystem implements System {
   update(dt: number): void {
     const player = this.getPlayer();
     const landed: Entity[] = [];
+    const squadAlerted = new Map<string, boolean>();
+
+    this.speedboats.forEach((entity, boat) => {
+      if (boat.squadId && boat.activated) {
+        squadAlerted.set(boat.squadId, true);
+      }
+    });
 
     this.speedboats.forEach((entity, boat) => {
       const t = this.transforms.get(entity);
@@ -32,8 +39,16 @@ export class SpeedboatBehaviorSystem implements System {
       const pDist = Math.hypot(px, py);
 
       if (!boat.activated) {
-        if (pDist <= boat.activationRange) {
+        const squadKey = boat.squadId;
+        const squadIsAlerted = squadKey ? squadAlerted.get(squadKey) === true : false;
+        const shouldActivate = squadKey
+          ? squadIsAlerted || pDist <= boat.activationRange
+          : pDist <= boat.activationRange;
+        if (shouldActivate) {
           boat.activated = true;
+          if (squadKey) {
+            squadAlerted.set(squadKey, true);
+          }
         } else {
           phys.vx = 0;
           phys.vy = 0;
@@ -42,6 +57,8 @@ export class SpeedboatBehaviorSystem implements System {
           boat.cooldown = Math.max(0, boat.cooldown - dt);
           return;
         }
+      } else if (boat.squadId && !squadAlerted.get(boat.squadId)) {
+        squadAlerted.set(boat.squadId, true);
       }
 
       const dx = boat.targetX - t.tx;
