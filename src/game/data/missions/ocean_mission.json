@@ -15,7 +15,7 @@
       "id": "obj2",
       "type": "destroy",
       "name": "Neutralize the mid-ocean mortar platform",
-      "at": { "tx": 26.0, "ty": 47.1 },
+      "at": { "tx": 26.0, "ty": 30.9 },
       "radiusTiles": 2.1
     },
     {
@@ -43,7 +43,7 @@
   ],
   "enemySpawns": [
     { "type": "AAA", "at": { "tx": 12.6, "ty": 45.7 } },
-    { "type": "SAM", "at": { "tx": 26.2, "ty": 47.8 } },
+    { "type": "SAM", "at": { "tx": 26.2, "ty": 31.6 } },
     { "type": "AAA", "at": { "tx": 39.4, "ty": 45.9 } },
     { "type": "SAM", "at": { "tx": 26.8, "ty": 43.8 } }
   ]

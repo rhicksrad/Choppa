@@ -298,7 +298,7 @@ export function createMissionTwoLayout(): MissionLayout {
     },
     {
       tx: 26.0,
-      ty: 47.0,
+      ty: 30.8,
       width: 2.5,
       depth: 1.3,
       height: 32,
@@ -347,7 +347,7 @@ export function createMissionTwoLayout(): MissionLayout {
     },
     {
       tx: 26.0,
-      ty: 45.4,
+      ty: 29.2,
       width: 1.5,
       depth: 1.0,
       height: 22,
@@ -400,14 +400,14 @@ export function createMissionTwoLayout(): MissionLayout {
 
   const guardPosts = [
     { tx: 12.0, ty: 47.0 },
-    { tx: 26.0, ty: 47.8 },
+    { tx: 26.0, ty: 31.6 },
     { tx: 40.0, ty: 47.0 },
   ];
 
   const patrolRoutes: PatrolRoute[] = [
     { tx: 18.8, ty: 46.4, axis: 'x', range: 2.4 },
     { tx: 33.2, ty: 46.4, axis: 'x', range: 2.4 },
-    { tx: 26.0, ty: 44.6, axis: 'y', range: 1.6 },
+    { tx: 26.0, ty: 28.4, axis: 'y', range: 1.6 },
   ];
 
   const boat = {
