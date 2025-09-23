@@ -201,17 +201,26 @@ export function createEnemyFactory({
     stores.chasers.set(entity, {
       speed: 3.1,
       acceleration: 3.6,
-      fireRange: 6.6,
-      fireInterval: 1,
+      fireRange: 7.2,
+      fireInterval: 0.95,
       cooldown: 0,
-      spread: 0.22,
+      spread: 0.16,
       guard: {
         homeX: point.tx,
         homeY: point.ty,
         holdRadius: 0.45,
-        aggroRange: 5.6,
-        leashRange: 9.5,
+        aggroRange: 6.8,
+        leashRange: 10.5,
         alerted: false,
+      },
+      weapon: {
+        kind: 'laser',
+        speed: 34,
+        ttl: 0.55,
+        radius: 0.05,
+        damage: 7,
+        damageRadius: 0.1,
+        launchOffset: 0.34,
       },
     });
     registerEnemy(entity, { kind: 'chaser', score: 260 });
