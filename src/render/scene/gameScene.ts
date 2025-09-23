@@ -451,11 +451,21 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       deps.context.fillText('Mission Complete', viewWidth / 2, viewHeight / 2 - 8);
       deps.context.fillStyle = '#c8d7e1';
       deps.context.font = '14px system-ui, sans-serif';
-      deps.context.fillText(
-        'Press Enter to restart or Esc for title',
-        viewWidth / 2,
-        viewHeight / 2 + 16,
-      );
+
+      const winBaseY = viewHeight / 2 + 16;
+      const isMissionOne = mission.state.def.id === 'm01';
+      if (isMissionOne) {
+        const lines = [
+          'Campus secured. Survivors are aboard and the valley is clear.',
+          'Recon spots a strike boat flotilla racing for the coast—scramble to intercept.',
+          'Press Enter for Mission Two or Esc for title',
+        ];
+        for (let i = 0; i < lines.length; i += 1) {
+          deps.context.fillText(lines[i]!, viewWidth / 2, winBaseY + i * 20);
+        }
+      } else {
+        deps.context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, winBaseY);
+      }
       deps.context.restore();
     }
   };

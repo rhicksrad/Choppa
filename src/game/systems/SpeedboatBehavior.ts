@@ -21,6 +21,13 @@ export class SpeedboatBehaviorSystem implements System {
   update(dt: number): void {
     const player = this.getPlayer();
     const landed: Entity[] = [];
+    const squadAlerted = new Map<string, boolean>();
+
+    this.speedboats.forEach((entity, boat) => {
+      if (boat.squadId && boat.activated) {
+        squadAlerted.set(boat.squadId, true);
+      }
+    });
 
     this.speedboats.forEach((entity, boat) => {
       const t = this.transforms.get(entity);
@@ -32,8 +39,16 @@ export class SpeedboatBehaviorSystem implements System {
       const pDist = Math.hypot(px, py);
 
       if (!boat.activated) {
-        if (pDist <= boat.activationRange) {
+        const squadKey = boat.squadId;
+        const squadIsAlerted = squadKey ? squadAlerted.get(squadKey) === true : false;
+        const shouldActivate = squadKey
+          ? squadIsAlerted || pDist <= boat.activationRange
+          : pDist <= boat.activationRange;
+        if (shouldActivate) {
           boat.activated = true;
+          if (squadKey) {
+            squadAlerted.set(squadKey, true);
+          }
         } else {
           phys.vx = 0;
           phys.vy = 0;
@@ -42,6 +57,8 @@ export class SpeedboatBehaviorSystem implements System {
           boat.cooldown = Math.max(0, boat.cooldown - dt);
           return;
         }
+      } else if (boat.squadId && !squadAlerted.get(boat.squadId)) {
+        squadAlerted.set(boat.squadId, true);
       }
 
       const dx = boat.targetX - t.tx;
@@ -61,23 +78,48 @@ export class SpeedboatBehaviorSystem implements System {
       boat.cooldown = Math.max(0, boat.cooldown - dt);
       if (pDist <= boat.fireRange && boat.cooldown <= 0) {
         boat.cooldown = boat.fireInterval;
-        const jitter = (this.rng.float01() - 0.5) * 0.18;
+        const weapon = boat.weapon;
+        const spread = weapon?.spread ?? 0.18;
+        const jitter = (this.rng.float01() - 0.5) * spread;
+        const invDist = 1 / (pDist || 1);
+        const baseX = px * invDist;
+        const baseY = py * invDist;
         const cs = Math.cos(jitter);
         const sn = Math.sin(jitter);
-        const nx = (px / (pDist || 1)) * cs - (py / (pDist || 1)) * sn;
-        const ny = (px / (pDist || 1)) * sn + (py / (pDist || 1)) * cs;
-        this.fireEvents.push({
-          faction: 'enemy',
-          kind: 'missile',
-          sx: t.tx,
-          sy: t.ty,
-          dx: nx,
-          dy: ny,
-          speed: 18,
-          ttl: 0.9,
-          radius: 0.14,
-          damage: 4,
-        });
+        const dirX = baseX * cs - baseY * sn;
+        const dirY = baseX * sn + baseY * cs;
+
+        if (weapon && weapon.kind === 'laser') {
+          this.fireEvents.push({
+            faction: 'enemy',
+            kind: 'laser',
+            sx: t.tx,
+            sy: t.ty,
+            dx: dirX,
+            dy: dirY,
+            speed: weapon.speed,
+            ttl: weapon.ttl,
+            radius: weapon.radius,
+            damage: weapon.damage,
+            damageRadius: weapon.damageRadius,
+            launchOffset: weapon.launchOffset,
+          });
+        } else {
+          this.fireEvents.push({
+            faction: 'enemy',
+            kind: 'missile',
+            sx: t.tx,
+            sy: t.ty,
+            dx: dirX,
+            dy: dirY,
+            speed: weapon?.speed ?? 18,
+            ttl: weapon?.ttl ?? 0.9,
+            radius: weapon?.radius ?? 0.14,
+            damage: weapon?.damage ?? 4,
+            damageRadius: weapon?.damageRadius,
+            launchOffset: weapon?.launchOffset,
+          });
+        }
       }
     });
 
