@@ -9,20 +9,37 @@ export interface MenuItem {
 export class Menu {
   private items: MenuItem[];
   private index = 0;
+  private prevKeys: Record<string, boolean> = Object.create(null);
+  private prevMouseButtons = 0;
 
   constructor(items: MenuItem[]) {
     this.items = items;
   }
 
   public update(input: InputSnapshot): string | null {
-    // Keyboard navigation
-    if (input.keys['ArrowUp'] || input.keys['w'] || input.keys['W']) this.index -= 1;
-    if (input.keys['ArrowDown'] || input.keys['s'] || input.keys['S']) this.index += 1;
+    const pressedOnce = (key: string): boolean => {
+      const pressed = !!input.keys[key];
+      const wasPressed = !!this.prevKeys[key];
+      this.prevKeys[key] = pressed;
+      return pressed && !wasPressed;
+    };
+
+    const moveUp = pressedOnce('ArrowUp') || pressedOnce('w') || pressedOnce('W');
+    const moveDown = pressedOnce('ArrowDown') || pressedOnce('s') || pressedOnce('S');
+
+    if (moveUp) this.index -= 1;
+    if (moveDown) this.index += 1;
     if (this.index < 0) this.index = this.items.length - 1;
     if (this.index >= this.items.length) this.index = 0;
 
     // Activate
-    if (input.keys['Enter'] || input.keys[' '] || (input.mouseButtons & 1) !== 0) {
+
+    const activate =
+      pressedOnce('Enter') || pressedOnce(' ') || pressedOnce('Space') || pressedOnce('Spacebar');
+    const mousePressed = (input.mouseButtons & 1) !== 0 && (this.prevMouseButtons & 1) === 0;
+    this.prevMouseButtons = input.mouseButtons;
+
+    if (activate || mousePressed) {
       return this.items[this.index]!.id;
     }
 

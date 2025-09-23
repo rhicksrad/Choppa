@@ -139,7 +139,7 @@ export class WeaponFireSystem implements System {
             speed: 22,
             ttl: 0.6,
             radius: 0.08,
-            damage: 10,
+            damage: 8,
             damageRadius: 0.12,
           });
         }
@@ -160,7 +160,7 @@ export class WeaponFireSystem implements System {
             vy: dirY * speed,
             ttl: 5.2,
             radius: 0.22,
-            damage: 16,
+            damage: 19.2,
             damageRadius: 0.9,
           });
         }
