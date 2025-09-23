@@ -16,6 +16,7 @@ import { createCombatProcessor } from './game/app/update/combat';
 import { loadMission } from './game/missions/loader';
 import missionJson from './game/data/missions/sample_mission.json';
 import type { MissionDef } from './game/missions/types';
+import type { UIState } from './ui/menus/scenes';
 
 const bootstrap = bootstrapApp();
 const state = createGameState();
@@ -46,6 +47,8 @@ const {
   setPlayerLocator,
   setBoatLandingHandler,
 } = bootstrap;
+
+void audio.music.play('title');
 
 const player = entities.create();
 stores.transforms.set(player, { tx: 0, ty: 0, rot: 0 });
@@ -173,6 +176,36 @@ const missionCoordinator = createMissionCoordinator({
 });
 missionCoordinator.initMissions();
 
+const missionMusicMap = {
+  m01: 'level1',
+  m02: 'level2',
+} as const;
+
+const getMissionTrackId = (missionId: string): string =>
+  missionMusicMap[missionId as keyof typeof missionMusicMap] ?? 'level1';
+
+const playMissionTrack = (missionId: string): void => {
+  const trackId = getMissionTrackId(missionId);
+  void audio.music.play(trackId);
+};
+
+const handleUIStateChange = (next: UIState, prev: UIState): void => {
+  if (next === 'title') {
+    void audio.music.play('title');
+    return;
+  }
+  if (prev === 'title' && next !== 'title') {
+    playMissionTrack(missionCoordinator.getScenario().id);
+  }
+};
+
+const transitionUIState = (next: UIState): void => {
+  if (ui.state === next) return;
+  const prev = ui.state;
+  ui.state = next;
+  handleUIStateChange(next, prev);
+};
+
 let scenario = missionCoordinator.getScenario();
 let runtimeMap = scenario.map;
 let isoParams = scenario.isoParams;
@@ -284,6 +317,8 @@ const resetGame = (targetMissionIndex?: number): void => {
   safeHouse = scenario.safeHouse;
   missionBriefing = missionCoordinator.getBriefing();
 
+  playMissionTrack(scenario.id);
+
   fog.configure(runtimeMap.width, runtimeMap.height);
 
   clearEnemies();
@@ -319,7 +354,7 @@ const resetGame = (targetMissionIndex?: number): void => {
   fog.reset();
   playerController.resetPlayer();
 
-  ui.state = 'briefing';
+  transitionUIState('briefing');
 };
 
 const uiController = createUIController({
@@ -330,6 +365,7 @@ const uiController = createUIController({
   applyAudioSettings: (muted) => audio.applySettings(muted),
   resetGame,
   getNextMissionIndex: () => missionCoordinator.getMissionIndices().next,
+  onStateChange: handleUIStateChange,
 });
 
 let fps = 0;

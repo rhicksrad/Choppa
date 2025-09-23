@@ -12,6 +12,7 @@ export interface UIControllerDeps {
   applyAudioSettings: (muted: boolean) => void;
   resetGame: (missionIndex?: number) => void;
   getNextMissionIndex: () => number;
+  onStateChange?: (next: UIState, prev: UIState) => void;
 }
 
 export interface UIController {
@@ -27,17 +28,25 @@ export function createUIController({
   applyAudioSettings,
   resetGame,
   getNextMissionIndex,
+  onStateChange,
 }: UIControllerDeps): UIController {
   let pauseLatch = false;
   let muteLatch = false;
   let audioMuted = false;
 
+  const changeState = (next: UIState): void => {
+    if (ui.state === next) return;
+    const prev = ui.state;
+    ui.state = next;
+    onStateChange?.(next, prev);
+  };
+
   const update = (_dt: number, snapshot: InputSnapshot): boolean => {
     const pauseDown = isDown(snapshot, bindings, 'pause');
     if (pauseDown && !pauseLatch) {
-      if (ui.state === 'in-game') ui.state = 'paused';
-      else if (ui.state === 'paused') ui.state = 'in-game';
-      else if (ui.state === 'title') ui.state = 'in-game';
+      if (ui.state === 'in-game') changeState('paused');
+      else if (ui.state === 'paused') changeState('in-game');
+      else if (ui.state === 'title') changeState('in-game');
     }
     pauseLatch = pauseDown;
 
@@ -52,36 +61,36 @@ export function createUIController({
       const action = titleMenu.update(snapshot);
       if (action === 'start') {
         resetGame();
-      } else if (action === 'settings') ui.state = 'settings';
-      else if (action === 'achievements') ui.state = 'achievements';
-      else if (action === 'about') ui.state = 'about';
+      } else if (action === 'settings') changeState('settings');
+      else if (action === 'achievements') changeState('achievements');
+      else if (action === 'about') changeState('about');
       if (action) saveUI(ui);
       return false;
     }
 
     if (ui.state === 'settings') {
-      if (snapshot.keys['Escape']) ui.state = 'title';
+      if (snapshot.keys['Escape']) changeState('title');
       return false;
     }
 
     if (ui.state === 'achievements') {
-      if (snapshot.keys['Escape']) ui.state = 'title';
+      if (snapshot.keys['Escape']) changeState('title');
       return false;
     }
 
     if (ui.state === 'about') {
-      if (snapshot.keys['Escape']) ui.state = 'title';
+      if (snapshot.keys['Escape']) changeState('title');
       return false;
     }
 
     if (ui.state === 'briefing') {
       if (snapshot.keys['Enter'] || snapshot.keys[' '] || snapshot.keys['Space'])
-        ui.state = 'in-game';
+        changeState('in-game');
       return false;
     }
 
     if (ui.state === 'paused') {
-      if (snapshot.keys['Escape']) ui.state = 'in-game';
+      if (snapshot.keys['Escape']) changeState('in-game');
       return false;
     }
 
@@ -94,13 +103,13 @@ export function createUIController({
       ) {
         resetGame();
       }
-      if (snapshot.keys['Escape']) ui.state = 'title';
+      if (snapshot.keys['Escape']) changeState('title');
       return false;
     }
 
     if (ui.state === 'win') {
       if (snapshot.keys['Enter'] || snapshot.keys[' ']) resetGame(getNextMissionIndex());
-      if (snapshot.keys['Escape']) ui.state = 'title';
+      if (snapshot.keys['Escape']) changeState('title');
       return false;
     }
 

@@ -2,7 +2,7 @@
   "id": "m02",
   "title": "Operation Stormbreak",
   "briefing": "Enemy mortar platforms have seized the breakwater beyond our carrier. Launch from the deck, silence every battery, and hold the coastal bunkers long enough for the convoy to escape.",
-  "startPos": { "tx": 30, "ty": 44 },
+  "startPos": { "tx": 12, "ty": 41 },
   "objectives": [
     {
       "id": "obj1",
@@ -37,7 +37,7 @@
       "type": "reach",
       "name": "Return to the carrier deck",
       "requires": ["obj1", "obj2", "obj3", "boats"],
-      "at": { "tx": 30, "ty": 44 },
+      "at": { "tx": 12, "ty": 41 },
       "radiusTiles": 1.6
     }
   ],

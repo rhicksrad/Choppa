@@ -7,6 +7,7 @@ import { Menu } from '../../ui/menus/menu';
 import { createUIStore, type UIStore } from '../../ui/menus/scenes';
 import { FogOfWar } from '../../render/draw/fog';
 import { AudioBus } from '../../core/audio/audio';
+import { MusicController } from '../../core/audio/music';
 import { EngineSound } from '../../core/audio/sfx';
 import { CameraShake } from '../../render/camera/shake';
 import { EntityRegistry, type Entity } from '../../core/ecs/entities';
@@ -53,6 +54,7 @@ export interface BootstrapResult {
   audio: {
     bus: AudioBus;
     engine: EngineSound;
+    music: MusicController;
     applySettings: (muted: boolean) => void;
   };
   shake: CameraShake;
@@ -145,6 +147,7 @@ function setupUI(): { ui: UIStore; titleMenu: Menu } {
 function setupAudio(ui: UIStore): {
   bus: AudioBus;
   engine: EngineSound;
+  music: MusicController;
   applySettings: (muted: boolean) => void;
 } {
   const bus = new AudioBus({
@@ -153,13 +156,18 @@ function setupAudio(ui: UIStore): {
     sfxVolume: ui.settings.sfxVolume,
   });
   const engine = new EngineSound(bus);
+  const music = new MusicController(bus, {
+    title: '/audio/title.mp3',
+    level1: '/audio/level1.mp3',
+    level2: '/audio/level2.mp3',
+  });
   const applySettings = (muted: boolean): void => {
     bus.setMaster(muted ? 0 : ui.settings.masterVolume);
     bus.setMusic(ui.settings.musicVolume);
     bus.setSfx(ui.settings.sfxVolume);
   };
   applySettings(false);
-  return { bus, engine, applySettings };
+  return { bus, engine, music, applySettings };
 }
 
 function setupEcs(): {
