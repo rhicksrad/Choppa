@@ -202,15 +202,45 @@ export function drawHUD(
     drawScoreBlock(infoColumnX, infoColumnTop + statsSpacingTop);
   }
 
-  // Objective list top-left
+  // Objectives panel below the HUD panel
+  const objectivePanelPaddingX = panelPadding;
+  const objectivePanelPaddingY = 14;
+  const objectiveHeaderHeight = 20;
+  const objectiveLineHeight = 18;
+  const hasObjectives = objectiveLines.length > 0;
+  const objectiveBodyHeight = hasObjectives ? 12 + objectiveLines.length * objectiveLineHeight : 0;
+  const objectivePanelInnerHeight = objectiveHeaderHeight + objectiveBodyHeight;
+  const objectivePanelH = objectivePanelInnerHeight + objectivePanelPaddingY * 2;
+  const objectivePanelW = panelW;
+  const objectivePanelX = panelX;
+  const objectivePanelY = panelY + panelH + margin;
+
+  ctx.fillStyle = 'rgba(7, 16, 24, 0.88)';
+  ctx.fillRect(objectivePanelX, objectivePanelY, objectivePanelW, objectivePanelH);
+  ctx.strokeStyle = 'rgba(146, 255, 166, 0.12)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(
+    objectivePanelX + 0.5,
+    objectivePanelY + 0.5,
+    objectivePanelW - 1,
+    objectivePanelH - 1,
+  );
+
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#92ffa6';
   ctx.font = 'bold 16px system-ui, sans-serif';
-  ctx.fillText('Objectives', 16, 24);
-  ctx.fillStyle = '#e6eef5';
-  ctx.font = '14px system-ui, sans-serif';
-  for (let i = 0; i < objectiveLines.length; i += 1)
-    ctx.fillText(objectiveLines[i]!, 16, 44 + i * 18);
+  ctx.fillStyle = '#92ffa6';
+  let objectiveTextY = objectivePanelY + objectivePanelPaddingY + objectiveHeaderHeight;
+  const objectiveTextX = objectivePanelX + objectivePanelPaddingX;
+  ctx.fillText('Objectives', objectiveTextX, objectiveTextY);
+
+  if (hasObjectives) {
+    objectiveTextY += 12;
+    ctx.font = '14px system-ui, sans-serif';
+    ctx.fillStyle = '#e6eef5';
+    for (let i = 0; i < objectiveLines.length; i += 1) {
+      ctx.fillText(objectiveLines[i]!, objectiveTextX, objectiveTextY + i * objectiveLineHeight);
+    }
+  }
 
   // Compass top-center
   if (compassDir) {
@@ -252,3 +282,4 @@ function drawBar(
   ctx.fillText(label, x, y - 2);
   ctx.restore();
 }
+
