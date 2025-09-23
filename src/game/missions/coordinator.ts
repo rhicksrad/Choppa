@@ -2,9 +2,11 @@ import { parseTiled, type RuntimeTilemap } from '../../world/tiles/tiled';
 import missionJson from '../data/missions/sample_mission.json';
 import oceanMissionJson from '../data/missions/ocean_mission.json';
 import mothershipMissionJson from '../data/missions/mothership_mission.json';
+import homelandMissionJson from '../data/missions/homeland_mission.json';
 import sampleMapJson from '../../world/tiles/sample_map.json';
 import oceanMapJson from '../../world/tiles/ocean_map.json';
 import mothershipMapJson from '../../world/tiles/mothership_map.json';
+import homelandMapJson from '../../world/tiles/homeland_map.json';
 import { loadJson, saveJson, removeKey } from '../../core/util/storage';
 import type { MissionTracker } from './tracker';
 import { loadMission } from './loader';
@@ -15,6 +17,7 @@ import {
   createMissionOneLayout,
   createMissionTwoLayout,
   createMissionThreeLayout,
+  createMissionFourLayout,
   cloneBuildingSite,
   clonePadConfig,
   clonePickupSite,
@@ -155,12 +158,14 @@ const missionDefs: MissionDef[] = [
   missionJson as MissionDef,
   oceanMissionJson as MissionDef,
   mothershipMissionJson as MissionDef,
+  homelandMissionJson as MissionDef,
 ];
 
 const missionTilemaps: Record<string, RuntimeTilemap> = {
   m01: parseTiled(sampleMapJson as unknown),
   m02: parseTiled(oceanMapJson as unknown),
   m03: parseTiled(mothershipMapJson as unknown),
+  m04: parseTiled(homelandMapJson as unknown),
 };
 
 const MISSION_ONE_WAVE_COUNT = 3;
@@ -168,6 +173,7 @@ const MISSION_ONE_WAVE_COUNT = 3;
 const missionOneLayout = createMissionOneLayout(missionTilemaps.m01);
 const missionTwoLayout = createMissionTwoLayout();
 const missionThreeLayout = createMissionThreeLayout(missionTilemaps.m03);
+const missionFourLayout = createMissionFourLayout(missionTilemaps.m04);
 
 const PROGRESS_KEY = 'choppa:progress';
 
@@ -479,6 +485,11 @@ class MissionCoordinatorImpl implements MissionCoordinator {
     this.state.boat.objectiveFailed = false;
     this.state.boat.scenario = this.scenario.boatScenario;
 
+    this.state.hive.planting = false;
+    this.state.hive.progress = 0;
+    this.state.hive.target = 0;
+    this.state.hive.armed = false;
+
     this.state.wave.index = 0;
     this.state.wave.countdown = this.scenario.initialWaveCountdown;
     this.state.wave.active = false;
@@ -577,6 +588,30 @@ class MissionCoordinatorImpl implements MissionCoordinator {
           this.state.boat.objectiveFailed = false;
         },
         spawnExtraEnemies: () => this.spawnMissionThreeDefenders(),
+      },
+      m04: {
+        map: missionTilemaps.m04,
+        pad: missionFourLayout.pad,
+        safeHouse: missionFourLayout.safeHouse,
+        campusSites: missionFourLayout.campusSites,
+        staticStructures: missionFourLayout.staticStructures,
+        pickupSites: missionFourLayout.pickupSites,
+        survivorSites: missionFourLayout.survivorSites,
+        alienSpawnPoints: missionFourLayout.alienSpawnPoints,
+        waveSpawnPoints: missionFourLayout.waveSpawnPoints,
+        initialWaveCountdown: 5.0,
+        waveCooldown: (index: number) => Math.max(3.0, 5.5 - index * 0.35),
+        waveSpawner: (index: number) =>
+          this.enemySpawners.spawnDefaultWave(index, this.scenario.waveSpawnPoints),
+        setupMissionHandlers: () => this.setupMissionFourHandlers(),
+        setupObjectiveLabels: () => this.setupMissionFourObjectiveLabels(),
+        onApply: () => {
+          this.state.boat.scenario = null;
+          this.state.boat.boatsEscaped = 0;
+          this.state.boat.objectiveComplete = false;
+          this.state.boat.objectiveFailed = false;
+        },
+        spawnExtraEnemies: () => this.spawnMissionFourDefenders(),
       },
     };
   }
@@ -723,6 +758,61 @@ class MissionCoordinatorImpl implements MissionCoordinator {
         label += ` (Power Offline: ${completeCount}/${powerIds.length})`;
       }
       return label;
+    };
+  }
+
+  private spawnMissionFourDefenders(): void {
+    const sentinels = missionFourLayout.sentinelPosts ?? [];
+    for (let i = 0; i < sentinels.length; i += 1) {
+      const post = sentinels[i]!;
+      this.enemySpawners.spawnSentinel(
+        { tx: post.tx, ty: post.ty },
+        { holdRadius: post.holdRadius, leashRange: post.leashRange, fireRange: post.fireRange },
+      );
+    }
+
+    const obelisks = missionFourLayout.obeliskSites ?? [];
+    for (let i = 0; i < obelisks.length; i += 1) {
+      const site = obelisks[i]!;
+      this.enemySpawners.spawnObelisk(
+        { tx: site.tx, ty: site.ty },
+        { fireRange: site.fireRange, damage: site.damage },
+      );
+    }
+
+    const patrolRoutes = missionFourLayout.patrolRoutes ?? [];
+    for (let i = 0; i < patrolRoutes.length; i += 1) {
+      this.enemySpawners.spawnShorePatrol(patrolRoutes[i]!);
+    }
+  }
+
+  private setupMissionFourHandlers(): void {
+    this.state.hive.target = 8;
+    this.state.hive.progress = 0;
+    this.state.hive.armed = false;
+    this.state.hive.planting = false;
+    this.missionHandlers['plant-nuke'] = () => this.state.hive.armed;
+  }
+
+  private setupMissionFourObjectiveLabels(): void {
+    this.objectiveLabelOverrides['plant-nuke'] = (objective) => {
+      if (objective.complete) return objective.name;
+      const target = Math.max(0.01, this.state.hive.target);
+      const percent = Math.min(100, Math.round((this.state.hive.progress / target) * 100));
+      let label = `${objective.name} (${percent}% armed`;
+      if (this.state.hive.planting) {
+        label += ' | Holding core';
+      } else if (this.state.hive.progress > 0) {
+        label += ' | Interrupted';
+      } else {
+        label += ' | Approach core';
+      }
+      label += ')';
+      return label;
+    };
+    this.objectiveLabelOverrides.extract = (objective) => {
+      if (objective.complete) return objective.name;
+      return `${objective.name} (Nuke armed)`;
     };
   }
 }

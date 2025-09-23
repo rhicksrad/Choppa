@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Add Mission Four "Operation Black Sun" featuring the alien homeland tilemap and
+  a timed objective to plant a nuke in the hivemind core.
 - Remove redundant static GitHub Pages workflow so the production site serves the
   bundled build and not raw TypeScript assets.
 - Document the deployment workflow in the README for future contributors.
