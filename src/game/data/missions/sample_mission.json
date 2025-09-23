@@ -28,7 +28,7 @@
     {
       "id": "obj4",
       "type": "custom",
-      "name": "Defeat all waves of the alien counterattack",
+      "name": "Repel all three incoming drone waves",
       "at": { "tx": 26, "ty": 26 },
       "radiusTiles": 6
     },

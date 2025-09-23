@@ -260,6 +260,16 @@ export function createEnemyFactory({
       activationRange: 7.5,
       activated: false,
       squadId: lane.squadId,
+      weapon: {
+        kind: 'laser',
+        speed: 32,
+        ttl: 0.6,
+        radius: 0.05,
+        damage: 6,
+        damageRadius: 0.12,
+        launchOffset: 0.42,
+        spread: 0.12,
+      },
     });
     registerEnemy(entity, { kind: 'speedboat', score: 220 + wave * 25, wave });
   };

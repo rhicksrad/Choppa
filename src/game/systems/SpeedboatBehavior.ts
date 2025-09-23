@@ -78,23 +78,48 @@ export class SpeedboatBehaviorSystem implements System {
       boat.cooldown = Math.max(0, boat.cooldown - dt);
       if (pDist <= boat.fireRange && boat.cooldown <= 0) {
         boat.cooldown = boat.fireInterval;
-        const jitter = (this.rng.float01() - 0.5) * 0.18;
+        const weapon = boat.weapon;
+        const spread = weapon?.spread ?? 0.18;
+        const jitter = (this.rng.float01() - 0.5) * spread;
+        const invDist = 1 / (pDist || 1);
+        const baseX = px * invDist;
+        const baseY = py * invDist;
         const cs = Math.cos(jitter);
         const sn = Math.sin(jitter);
-        const nx = (px / (pDist || 1)) * cs - (py / (pDist || 1)) * sn;
-        const ny = (px / (pDist || 1)) * sn + (py / (pDist || 1)) * cs;
-        this.fireEvents.push({
-          faction: 'enemy',
-          kind: 'missile',
-          sx: t.tx,
-          sy: t.ty,
-          dx: nx,
-          dy: ny,
-          speed: 18,
-          ttl: 0.9,
-          radius: 0.14,
-          damage: 4,
-        });
+        const dirX = baseX * cs - baseY * sn;
+        const dirY = baseX * sn + baseY * cs;
+
+        if (weapon && weapon.kind === 'laser') {
+          this.fireEvents.push({
+            faction: 'enemy',
+            kind: 'laser',
+            sx: t.tx,
+            sy: t.ty,
+            dx: dirX,
+            dy: dirY,
+            speed: weapon.speed,
+            ttl: weapon.ttl,
+            radius: weapon.radius,
+            damage: weapon.damage,
+            damageRadius: weapon.damageRadius,
+            launchOffset: weapon.launchOffset,
+          });
+        } else {
+          this.fireEvents.push({
+            faction: 'enemy',
+            kind: 'missile',
+            sx: t.tx,
+            sy: t.ty,
+            dx: dirX,
+            dy: dirY,
+            speed: weapon?.speed ?? 18,
+            ttl: weapon?.ttl ?? 0.9,
+            radius: weapon?.radius ?? 0.14,
+            damage: weapon?.damage ?? 4,
+            damageRadius: weapon?.damageRadius,
+            launchOffset: weapon?.launchOffset,
+          });
+        }
       }
     });
 
