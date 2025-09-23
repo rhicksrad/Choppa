@@ -146,6 +146,8 @@ const missionTilemaps: Record<string, RuntimeTilemap> = {
   m02: parseTiled(oceanMapJson as unknown),
 };
 
+const MISSION_ONE_WAVE_COUNT = 3;
+
 const missionOneLayout = createMissionOneLayout(missionTilemaps.m01);
 const missionTwoLayout = createMissionTwoLayout();
 
@@ -488,9 +490,14 @@ class MissionCoordinatorImpl implements MissionCoordinator {
         alienSpawnPoints: missionOneLayout.alienSpawnPoints,
         waveSpawnPoints: missionOneLayout.waveSpawnPoints,
         initialWaveCountdown: 3.5,
-        waveCooldown: (index: number) => defaultWaveCooldown(index),
-        waveSpawner: (index: number) =>
-          this.enemySpawners.spawnDefaultWave(index, this.scenario.waveSpawnPoints),
+        waveCooldown: (index: number) => {
+          if (index >= MISSION_ONE_WAVE_COUNT) return Number.POSITIVE_INFINITY;
+          return defaultWaveCooldown(index);
+        },
+        waveSpawner: (index: number) => {
+          if (index > MISSION_ONE_WAVE_COUNT) return false;
+          return this.enemySpawners.spawnDefaultWave(index, this.scenario.waveSpawnPoints);
+        },
         setupMissionHandlers: () => this.setupMissionOneHandlers(),
         setupObjectiveLabels: () => this.setupMissionOneObjectiveLabels(),
         onApply: () => {
@@ -568,16 +575,32 @@ class MissionCoordinatorImpl implements MissionCoordinator {
 
   private setupMissionOneHandlers(): void {
     this.missionHandlers.obj4 = () =>
-      this.state.flags.aliensTriggered && this.state.flags.aliensDefeated;
+      this.state.wave.index >= MISSION_ONE_WAVE_COUNT &&
+      !this.state.wave.active &&
+      !Number.isFinite(this.state.wave.countdown);
     this.missionHandlers.obj5 = () => this.state.rescue.rescued >= this.state.rescue.total;
   }
 
   private setupMissionOneObjectiveLabels(): void {
     this.objectiveLabelOverrides.obj4 = (objective) => {
-      if (!this.state.flags.aliensTriggered) return `${objective.name} (stand by)`;
-      if (!objective.complete)
-        return `${objective.name} (${this.state.alienEntities.size} remaining)`;
-      return objective.name;
+      const totalWaves = MISSION_ONE_WAVE_COUNT;
+      const waveState = this.state.wave;
+      let label = objective.name;
+      if (!objective.complete) {
+        const waveNumber = waveState.active
+          ? Math.min(Math.max(waveState.index, 1), totalWaves)
+          : Math.min(Math.max(waveState.index + 1, 1), totalWaves);
+        label += ` (Wave ${waveNumber} of ${totalWaves}`;
+        if (waveState.active) {
+          label += ` | Remaining: ${waveState.enemies.size}`;
+        } else if (waveState.index >= totalWaves && !Number.isFinite(waveState.countdown)) {
+          label += ' | All waves defeated';
+        } else if (Number.isFinite(waveState.countdown)) {
+          label += ` | Next wave in: ${Math.max(0, waveState.countdown).toFixed(1)}s`;
+        }
+        label += ')';
+      }
+      return label;
     };
     this.objectiveLabelOverrides.obj5 = (objective) => {
       const carrying = this.state.rescue.carrying;
