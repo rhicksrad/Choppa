@@ -263,6 +263,42 @@ export function playMissile(bus: AudioBus): void {
   crackOsc.stop(now + 0.12);
 }
 
+export function playAlienLaser(bus: AudioBus): void {
+  const ctx = bus.context;
+  const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
+  const now = ctx.currentTime;
+
+  const tone = ctx.createOscillator();
+  tone.type = 'square';
+  const toneGain = ctx.createGain();
+  toneGain.gain.value = 0.035;
+  tone.frequency.setValueAtTime(1500, now);
+  tone.frequency.exponentialRampToValueAtTime(2800, now + 0.08);
+  tone.connect(toneGain);
+  toneGain.connect(destination);
+  toneGain.gain.setValueAtTime(0.05, now);
+  toneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+  const hiss = ctx.createBufferSource();
+  hiss.buffer = createNoiseBurst(ctx, 0.1);
+  const hissFilter = ctx.createBiquadFilter();
+  hissFilter.type = 'bandpass';
+  hissFilter.frequency.value = 2400;
+  hissFilter.Q.value = 1.4;
+  const hissGain = ctx.createGain();
+  hissGain.gain.value = 0.02;
+  hiss.connect(hissFilter);
+  hissFilter.connect(hissGain);
+  hissGain.connect(destination);
+  hissGain.gain.setValueAtTime(0.028, now);
+  hissGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+  tone.start(now);
+  tone.stop(now + 0.16);
+  hiss.start(now);
+  hiss.stop(now + 0.12);
+}
+
 export function playRocket(bus: AudioBus): void {
   const ctx = bus.context;
   const destination: AudioNode = (bus as any)['sfx'] || (bus as any);
