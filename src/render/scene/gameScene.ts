@@ -359,6 +359,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       objectiveLines,
       null,
       {
+        enabled: ui.settings.minimap,
         mapW: args.runtimeMap.width,
         mapH: args.runtimeMap.height,
         player: { tx: playerTransform.tx, ty: playerTransform.ty },

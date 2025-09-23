@@ -33,6 +33,7 @@ production.
 - **Middle Mouse / Ctrl** – Hellfires
 - **Esc** – Pause / Resume / Back
 - **M** – Toggle mute
+- **Title Screen → Settings** – Adjust audio sliders, fog-of-war, screen shake, and minimap visibility
 
 ## Project Structure
 

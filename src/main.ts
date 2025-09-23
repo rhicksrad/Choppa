@@ -381,6 +381,7 @@ const uiController = createUIController({
   ui,
   titleMenu,
   bindings,
+  canvas,
   saveUI: (store) => saveJson('choppa:ui', store),
   applyAudioSettings: (muted) => audio.applySettings(muted),
   resetGame,
