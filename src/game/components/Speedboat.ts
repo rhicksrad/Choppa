@@ -1,3 +1,14 @@
+export interface SpeedboatWeaponConfig {
+  kind: 'missile' | 'laser';
+  speed?: number;
+  ttl?: number;
+  radius?: number;
+  damage?: number;
+  damageRadius?: number;
+  launchOffset?: number;
+  spread?: number;
+}
+
 export interface Speedboat {
   targetX: number;
   targetY: number;
@@ -9,4 +20,6 @@ export interface Speedboat {
   arrivalRadius: number;
   activationRange: number;
   activated: boolean;
+  squadId?: string;
+  weapon?: SpeedboatWeaponConfig;
 }
