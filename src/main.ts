@@ -16,11 +16,16 @@ import { createCombatProcessor } from './game/app/update/combat';
 import { loadMission } from './game/missions/loader';
 import missionJson from './game/data/missions/sample_mission.json';
 import type { MissionDef } from './game/missions/types';
+import { createAchievementTracker } from './game/achievements/tracker';
 import { defaultBindings } from './ui/input-remap/bindings';
-import { createUIStore, type UIState } from './ui/menus/scenes';
+import { createUIStore, type UIState, type UIStore } from './ui/menus/scenes';
 
 const bootstrap = bootstrapApp();
 const state = createGameState();
+
+const persistUI = (store: UIStore): void => {
+  saveJson('choppa:ui', store);
+};
 
 const {
   canvas,
@@ -197,6 +202,8 @@ const missionCoordinator = createMissionCoordinator({
   spawnAlienUnit,
 });
 missionCoordinator.initMissions();
+
+const achievementTracker = createAchievementTracker({ ui, saveUI: persistUI });
 
 const missionMusicMap = {
   m01: 'level1',
@@ -392,6 +399,7 @@ const resetCampaignProgress = (): void => {
   removeKey('choppa:ui');
   ui.settings = { ...defaultUI.settings };
   ui.achievements = { ...defaultUI.achievements };
+  achievementTracker.reset();
 
   audio.applySettings(false);
 
@@ -409,7 +417,7 @@ const uiController = createUIController({
   titleMenu,
   bindings,
   canvas,
-  saveUI: (store) => saveJson('choppa:ui', store),
+  saveUI: persistUI,
   applyAudioSettings: (muted) => audio.applySettings(muted),
   resetGame,
   resetCampaign: resetCampaignProgress,
@@ -427,6 +435,7 @@ const loop = new GameLoop({
     lastStepDt = dt;
     const snapshot = input.readSnapshot();
     const playing = uiController.update(dt, snapshot);
+    achievementTracker.update(dt, state, missionCoordinator.mission);
     if (!playing) return;
 
     playerController.update(dt, snapshot, isoParams, runtimeMap);
@@ -455,6 +464,7 @@ const loop = new GameLoop({
       player,
       pad,
       safeHouse,
+      achievements: achievementTracker.getRenderState(),
       fps,
       dt: lastStepDt,
     });

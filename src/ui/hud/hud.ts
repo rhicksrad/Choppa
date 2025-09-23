@@ -1,5 +1,6 @@
 import type { IsoParams } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
+import type { AchievementBannerView } from '../../game/achievements/tracker';
 
 export interface BarsData {
   fuel01: number;
@@ -38,6 +39,7 @@ export function drawHUD(
     enemies: { tx: number; ty: number }[];
   },
   _iso: IsoParams,
+  achievementBanners: AchievementBannerView[] = [],
 ): void {
   const { width: w } = getCanvasViewMetrics(ctx);
   ctx.save();
@@ -53,6 +55,90 @@ export function drawHUD(
   const panelPadding = 16;
   const columnGap = 24;
   const sectionGap = 16;
+
+  if (achievementBanners.length > 0) {
+    const bannerWidth = Math.min(340, Math.max(240, w * 0.32));
+    const textMaxWidth = bannerWidth - 32;
+    const spacing = 10;
+    const topPad = 12;
+    const bottomPad = 12;
+    const labelLineHeight = 14;
+    const titleLineHeight = 20;
+    const bodyLineHeight = 16;
+    const labelFont = 'bold 12px system-ui, sans-serif';
+    const titleFont = 'bold 16px system-ui, sans-serif';
+    const bodyFont = '13px system-ui, sans-serif';
+
+    const wrapDescription = (text: string): string[] => {
+      const words = text.split(/\s+/).filter(Boolean);
+      const lines: string[] = [];
+      let current = '';
+      for (let i = 0; i < words.length; i += 1) {
+        const word = words[i]!;
+        const candidate = current ? `${current} ${word}` : word;
+        const width = ctx.measureText(candidate).width;
+        if (width <= textMaxWidth || !current) {
+          current = candidate;
+        } else {
+          lines.push(current);
+          current = word;
+        }
+      }
+      if (current) lines.push(current);
+      return lines.slice(0, 2);
+    };
+
+    let stackCursor = margin;
+
+    for (let i = 0; i < achievementBanners.length; i += 1) {
+      const banner = achievementBanners[i]!;
+      ctx.font = bodyFont;
+      const descriptionLines = wrapDescription(banner.description);
+      const bannerHeight =
+        topPad +
+        labelLineHeight +
+        6 +
+        titleLineHeight +
+        4 +
+        descriptionLines.length * bodyLineHeight +
+        bottomPad;
+      const slide = Math.max(0, Math.min(1, banner.slideOffset));
+      const drawY = stackCursor - slide * (bannerHeight + spacing + 6);
+      const drawX = margin;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, banner.alpha));
+      ctx.fillStyle = 'rgba(7, 16, 24, 0.92)';
+      ctx.fillRect(drawX, drawY, bannerWidth, bannerHeight);
+      ctx.strokeStyle = 'rgba(146, 255, 166, 0.22)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(drawX + 0.5, drawY + 0.5, bannerWidth - 1, bannerHeight - 1);
+
+      let textY = drawY + topPad;
+      const textX = drawX + 16;
+
+      ctx.fillStyle = '#92ffa6';
+      ctx.font = labelFont;
+      ctx.fillText('Achievement Unlocked', textX, textY);
+      textY += labelLineHeight + 6;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = titleFont;
+      ctx.fillText(banner.title, textX, textY);
+      textY += titleLineHeight + 4;
+
+      ctx.fillStyle = '#c8d7e1';
+      ctx.font = bodyFont;
+      for (let lineIndex = 0; lineIndex < descriptionLines.length; lineIndex += 1) {
+        ctx.fillText(descriptionLines[lineIndex]!, textX, textY);
+        textY += bodyLineHeight;
+      }
+
+      ctx.restore();
+
+      stackCursor += bannerHeight + spacing;
+    }
+  }
 
   const barW = 220;
   const barH = 16;

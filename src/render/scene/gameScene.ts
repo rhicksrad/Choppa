@@ -18,6 +18,7 @@ import { drawPad, drawHeli } from '../../render/sprites/heli';
 import { drawRescueRunner } from '../../render/sprites/rescuees';
 import { drawHUD } from '../../ui/hud/hud';
 import { renderSettings, renderAchievements, renderAbout } from '../../ui/menus/renderers';
+import type { AchievementRenderState } from '../../game/achievements/tracker';
 import type { Menu } from '../../ui/menus/menu';
 import type { UIStore } from '../../ui/menus/scenes';
 import type { MissionTracker } from '../../game/missions/tracker';
@@ -60,6 +61,7 @@ export interface GameSceneRenderArgs {
   player: Entity;
   pad: PadConfig;
   safeHouse: SafeHouseParams;
+  achievements: AchievementRenderState;
   fps: number;
   dt: number;
 }
@@ -70,7 +72,7 @@ export interface GameSceneRenderer {
 
 export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneRenderer {
   const renderMenuScenes = (args: GameSceneRenderArgs): boolean => {
-    const { ui, titleMenu } = args;
+    const { ui, titleMenu, achievements } = args;
     if (ui.state === 'title') {
       titleMenu.render(deps.context, 'Choppa', 'Isometric helicopter action prototype');
       return true;
@@ -80,7 +82,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       return true;
     }
     if (ui.state === 'achievements') {
-      renderAchievements(deps.context);
+      renderAchievements(deps.context, achievements);
       return true;
     }
     if (ui.state === 'about') {
@@ -373,6 +375,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
         enemies: state.minimapEnemies,
       },
       isoParams,
+      args.achievements.banners,
     );
 
     if (state.player.invulnerable && ui.state === 'in-game') {

@@ -1,6 +1,7 @@
 import type { UIStore } from './scenes';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 import { computeSettingsLayout } from './settingsLayout';
+import type { AchievementRenderState } from '../../game/achievements/tracker';
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -135,25 +136,167 @@ export function renderSettings(context: CanvasRenderingContext2D, ui: UIStore): 
   context.restore();
 }
 
-export function renderAchievements(context: CanvasRenderingContext2D): void {
+export function renderAchievements(
+  context: CanvasRenderingContext2D,
+  achievements: AchievementRenderState,
+): void {
   const { width: w, height: h } = getCanvasViewMetrics(context);
+  const sorted = [...achievements.definitions].sort((a, b) => {
+    const orderA = a.sortOrder ?? Number.POSITIVE_INFINITY;
+    const orderB = b.sortOrder ?? Number.POSITIVE_INFINITY;
+    if (orderA === orderB) return a.title.localeCompare(b.title);
+    return orderA - orderB;
+  });
+
+  const panelWidth = Math.min(860, Math.max(520, w * 0.72));
+  const panelPaddingX = 36;
+  const panelPaddingTop = 36;
+  const panelPaddingBottom = 40;
+  const columns = panelWidth >= 640 ? 2 : 1;
+  const columnGap = columns > 1 ? 24 : 0;
+  const columnWidth =
+    (panelWidth - panelPaddingX * 2 - columnGap * (columns - 1)) / Math.max(1, columns);
+  const rowHeight = 78;
+  const rowGap = 16;
+  const rows = Math.ceil(sorted.length / columns);
+  const listHeight = rows * rowHeight + Math.max(0, rows - 1) * rowGap;
+  const headerHeight = 74;
+
+  let panelHeight = panelPaddingTop + headerHeight + listHeight + panelPaddingBottom;
+  panelHeight = Math.min(panelHeight, h - 48);
+  const panelX = (w - panelWidth) / 2;
+  const panelY = Math.max(24, (h - panelHeight) / 2);
+
+  const bodyFont = '13px system-ui, sans-serif';
+  const wrapDescription = (text: string, maxWidth: number): string[] => {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let current = '';
+    for (let i = 0; i < words.length; i += 1) {
+      const word = words[i]!;
+      const candidate = current ? `${current} ${word}` : word;
+      context.font = bodyFont;
+      if (context.measureText(candidate).width <= maxWidth || !current) {
+        current = candidate;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.slice(0, 3);
+  };
+
   context.save();
-  context.fillStyle = '#0e141a';
-  context.globalAlpha = 0.9;
+  context.fillStyle = '#050b12';
+  context.globalAlpha = 0.82;
   context.fillRect(0, 0, w, h);
   context.globalAlpha = 1;
-  context.textAlign = 'center';
+
+  context.fillStyle = '#0f1c29';
+  context.fillRect(panelX, panelY, panelWidth, panelHeight);
+  context.strokeStyle = '#1d2f3f';
+  context.lineWidth = 2;
+  context.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+  context.save();
+  context.beginPath();
+  context.rect(panelX, panelY, panelWidth, panelHeight);
+  context.clip();
+
+  const titleX = panelX + panelPaddingX;
+  let cursorY = panelY + panelPaddingTop;
+
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
   context.fillStyle = '#92ffa6';
-  context.font = 'bold 26px system-ui, sans-serif';
-  context.fillText('Achievements', w / 2, h * 0.2);
+  context.font = 'bold 30px system-ui, sans-serif';
+  context.fillText('Achievements', titleX, cursorY);
+  cursorY += 36;
+
   context.fillStyle = '#c8d7e1';
-  context.font = '14px system-ui, sans-serif';
-  context.fillText(
-    'Achievement tracking will be wired to mission objectives later.',
-    w / 2,
-    h * 0.2 + 22,
-  );
-  context.fillText('Press Esc to return.', w / 2, h * 0.2 + 40);
+  context.font = '15px system-ui, sans-serif';
+  context.fillText('Campaign milestones and rescue accolades.', titleX, cursorY);
+  cursorY += 28;
+
+  context.fillStyle = 'rgba(146, 255, 166, 0.18)';
+  context.fillRect(panelX + panelPaddingX, cursorY, panelWidth - panelPaddingX * 2, 1);
+  cursorY += 24;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < columns; col += 1) {
+      const index = row * columns + col;
+      if (index >= sorted.length) continue;
+      const def = sorted[index]!;
+      const unlocked = achievements.unlocked.has(def.id);
+
+      const entryX = panelX + panelPaddingX + col * (columnWidth + columnGap);
+      const entryY = cursorY + row * (rowHeight + rowGap);
+      const entryHeight = rowHeight;
+
+      context.save();
+      context.fillStyle = unlocked ? 'rgba(24, 52, 39, 0.9)' : 'rgba(9, 18, 27, 0.88)';
+      context.fillRect(entryX, entryY, columnWidth, entryHeight);
+      context.strokeStyle = unlocked ? 'rgba(146, 255, 166, 0.35)' : 'rgba(48, 66, 80, 0.55)';
+      context.lineWidth = 1.5;
+      context.strokeRect(entryX + 0.5, entryY + 0.5, columnWidth - 1, entryHeight - 1);
+
+      const badgeCenterX = entryX + 20;
+      const badgeCenterY = entryY + entryHeight / 2;
+
+      context.lineWidth = 2;
+      if (unlocked) {
+        context.fillStyle = '#1fb879';
+        context.beginPath();
+        context.arc(badgeCenterX, badgeCenterY, 14, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = '#0b1d12';
+        context.stroke();
+        context.strokeStyle = '#ffffff';
+        context.lineWidth = 2.5;
+        context.beginPath();
+        context.moveTo(badgeCenterX - 6, badgeCenterY);
+        context.lineTo(badgeCenterX - 1, badgeCenterY + 5);
+        context.lineTo(badgeCenterX + 7, badgeCenterY - 6);
+        context.stroke();
+      } else {
+        context.strokeStyle = 'rgba(146, 255, 166, 0.3)';
+        context.beginPath();
+        context.arc(badgeCenterX, badgeCenterY, 14, 0, Math.PI * 2);
+        context.stroke();
+      }
+
+      const textX = badgeCenterX + 24;
+      const textWidth = columnWidth - (textX - entryX) - 18;
+
+      context.textAlign = 'left';
+      context.fillStyle = unlocked ? '#ffffff' : '#e6eef5';
+      context.font = 'bold 16px system-ui, sans-serif';
+      context.fillText(def.title, textX, entryY + 14);
+
+      const descriptionLines = wrapDescription(def.description, textWidth);
+
+      context.fillStyle = '#9fb3c8';
+      context.font = bodyFont;
+      for (let lineIndex = 0; lineIndex < descriptionLines.length; lineIndex += 1) {
+        context.fillText(descriptionLines[lineIndex]!, textX, entryY + 36 + lineIndex * 16);
+      }
+
+      context.textAlign = 'right';
+      context.font = '12px system-ui, sans-serif';
+      context.fillStyle = unlocked ? '#92ffa6' : '#5f7386';
+      context.fillText(unlocked ? 'Unlocked' : 'Locked', entryX + columnWidth - 16, entryY + 16);
+      context.textAlign = 'left';
+
+      context.restore();
+    }
+  }
+
+  context.font = '13px system-ui, sans-serif';
+  context.fillStyle = '#7f92a3';
+  context.fillText('Press Esc to return.', titleX, panelY + panelHeight - panelPaddingBottom + 8);
+
+  context.restore();
   context.restore();
 }
 
