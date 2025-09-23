@@ -110,6 +110,14 @@ export function createPickupProcessor({
     safeHouse: SafeHouseParams,
   ): void => {
     const completed: PickupCompleteEvent[] = [];
+    let reservedSurvivors = 0;
+
+    pickups.forEach((_entity, pickup) => {
+      if (pickup.kind === 'survivor' && pickup.collectingBy === player) {
+        reservedSurvivors += pickup.survivorCount ?? 1;
+      }
+    });
+
     pickups.forEach((entity, pickup) => {
       const pickupTransform = transforms.get(entity);
       if (!pickupTransform) {
@@ -126,11 +134,15 @@ export function createPickupProcessor({
       }
 
       if (pickup.collectingBy === player) {
+        const survivorCount = pickup.kind === 'survivor' ? (pickup.survivorCount ?? 1) : 0;
         const playerTransform = transforms.get(player)!;
         const dx = pickupTransform.tx - playerTransform.tx;
         const dy = pickupTransform.ty - playerTransform.ty;
         const dist = Math.hypot(dx, dy);
         if (dist > pickup.radius + 0.4 || state.player.invulnerable) {
+          if (survivorCount > 0) {
+            reservedSurvivors = Math.max(0, reservedSurvivors - survivorCount);
+          }
           pickup.collectingBy = null;
           pickup.progress = 0;
           pickupFactory.cancelPickupCraneSound(entity);
@@ -184,11 +196,12 @@ export function createPickupProcessor({
             }
           } else if (pickup.kind === 'survivor') {
             const survivors = pickup.survivorCount ?? 1;
-            const remainingCapacity = SURVIVOR_CAPACITY - state.rescue.carrying;
+            const remainingCapacity = SURVIVOR_CAPACITY - state.rescue.carrying - reservedSurvivors;
             if (remainingCapacity >= survivors) {
               pickup.collectingBy = player;
               pickup.progress = 0;
               pickupFactory.beginPickupCraneSound(entity, pickup);
+              reservedSurvivors += survivors;
             }
           } else if (pickup.kind === 'armor') {
             const needsArmor = healths.get(player)!.current < healths.get(player)!.max - 0.5;
