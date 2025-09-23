@@ -49,6 +49,23 @@ const {
   setBoatLandingHandler,
 } = bootstrap;
 
+const audioBaseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
+const rescueCueUrl = `${audioBaseUrl}audio/GTTC.mp3`;
+let rescueCueBuffer: AudioBuffer | null = null;
+
+void (async () => {
+  try {
+    const response = await fetch(rescueCueUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const arrayBuffer = await response.arrayBuffer();
+    rescueCueBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+      audio.bus.context.decodeAudioData(arrayBuffer.slice(0), resolve, reject);
+    });
+  } catch (err) {
+    console.warn('[audio] Failed to load rescue cue', err);
+  }
+})();
+
 void audio.music.play('title');
 
 const player = entities.create();
@@ -302,6 +319,7 @@ const combatProcessor = createCombatProcessor({
   destroyEntity,
   engine: audio.engine,
   spawnAlienUnit,
+  getRescueCueBuffer: () => rescueCueBuffer,
 });
 
 setBoatLandingHandler(combatProcessor.handleBoatLanding);

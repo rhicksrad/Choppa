@@ -2,7 +2,7 @@
   "id": "m01",
   "title": "Operation Dawnshield",
   "briefing": "Alien strongholds anchor an invasion corridor through the valley. Neutralize their forward defenses, demolish the command campus, and evacuate anyone left standing before the counterattack closes in.",
-  "startPos": { "tx": 39, "ty": 39 },
+  "startPos": { "tx": 47, "ty": 47 },
   "objectives": [
     {
       "id": "obj1",
@@ -28,7 +28,7 @@
     {
       "id": "obj4",
       "type": "custom",
-      "name": "Break the alien counterattack",
+      "name": "Repel all three incoming drone waves",
       "at": { "tx": 26, "ty": 26 },
       "radiusTiles": 6
     },
@@ -44,7 +44,7 @@
       "type": "reach",
       "name": "Return to the pad",
       "requires": ["obj1", "obj2", "obj3", "obj4", "obj5"],
-      "at": { "tx": 39, "ty": 39 },
+      "at": { "tx": 47, "ty": 47 },
       "radiusTiles": 1.2
     }
   ],
