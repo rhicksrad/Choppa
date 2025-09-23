@@ -10,6 +10,8 @@ import {
   drawPatrolDrone,
   drawChaserDrone,
   drawAlienMonstrosity,
+  drawSentinelDrone,
+  drawObeliskTurret,
   drawSpeedboat,
 } from '../../render/sprites/targets';
 import { drawPad, drawHeli } from '../../render/sprites/heli';
@@ -164,7 +166,12 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     stores.chasers.forEach((entity) => {
       const t = stores.transforms.get(entity);
       if (!t) return;
-      if (state.alienEntities.has(entity)) {
+      const meta = state.enemyMeta.get(entity);
+      if (meta?.kind === 'sentinel') {
+        drawSentinelDrone(deps.context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
+      } else if (meta?.kind === 'obelisk') {
+        drawObeliskTurret(deps.context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
+      } else if (state.alienEntities.has(entity)) {
         drawAlienMonstrosity(
           deps.context,
           isoParams,
@@ -402,9 +409,25 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
         deps.context.fillText(`• ${goals[i]!}`, goalX, goalY + i * 22);
       }
       deps.context.textAlign = 'center';
+      let footerY = goalY + goals.length * 22;
+      const dialog = missionBriefing.dialog;
+      if (dialog.length > 0) {
+        footerY += 20;
+        deps.context.fillStyle = '#92ffa6';
+        deps.context.font = 'bold 14px system-ui, sans-serif';
+        deps.context.fillText('Mission Comms:', viewWidth / 2, footerY);
+        footerY += 18;
+        deps.context.fillStyle = '#c8d7e1';
+        deps.context.font = '14px system-ui, sans-serif';
+        for (let i = 0; i < dialog.length; i += 1) {
+          deps.context.fillText(dialog[i]!, viewWidth / 2, footerY + i * 18);
+        }
+        footerY += dialog.length * 18;
+      }
+      footerY += 24;
       deps.context.fillStyle = '#92ffa6';
       deps.context.font = 'bold 16px system-ui, sans-serif';
-      deps.context.fillText('Press Enter to deploy', viewWidth / 2, goalY + goals.length * 22 + 24);
+      deps.context.fillText('Press Enter to deploy', viewWidth / 2, footerY);
       deps.context.restore();
     }
 
@@ -453,15 +476,10 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       deps.context.font = '14px system-ui, sans-serif';
 
       const winBaseY = viewHeight / 2 + 16;
-      const isMissionOne = mission.state.def.id === 'm01';
-      if (isMissionOne) {
-        const lines = [
-          'Campus secured. Survivors are aboard and the valley is clear.',
-          'Recon spots a strike boat flotilla racing for the coast—scramble to intercept.',
-          'Press Enter for Mission Two or Esc for title',
-        ];
-        for (let i = 0; i < lines.length; i += 1) {
-          deps.context.fillText(lines[i]!, viewWidth / 2, winBaseY + i * 20);
+      const successDialog = mission.state.def.successDialog;
+      if (successDialog && successDialog.length > 0) {
+        for (let i = 0; i < successDialog.length; i += 1) {
+          deps.context.fillText(successDialog[i]!, viewWidth / 2, winBaseY + i * 20);
         }
       } else {
         deps.context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, winBaseY);

@@ -2,6 +2,11 @@
   "id": "m01",
   "title": "Operation Dawnshield",
   "briefing": "Alien strongholds anchor an invasion corridor through the valley. Neutralize their forward defenses, demolish the command campus, and evacuate anyone left standing before the counterattack closes in.",
+  "introDialog": [
+    "Ops: Recon spots survivors pinned between the alien towers.",
+    "XO: Take down their guns, hold the quad, and get our people out.",
+    "Pilot: Copy. Rotors spun and missiles hot."
+  ],
   "startPos": { "tx": 47, "ty": 47 },
   "objectives": [
     {
@@ -51,5 +56,10 @@
   "enemySpawns": [
     { "type": "AAA", "at": { "tx": 19, "ty": 23 } },
     { "type": "SAM", "at": { "tx": 34, "ty": 19 } }
+  ],
+  "successDialog": [
+    "Ops: Campus secured. Survivors are aboard and the valley is clear.",
+    "XO: Strike boat flotilla inbound on the breakwater—scramble to intercept.",
+    "Press Enter for Mission Two or Esc for title"
   ]
 }

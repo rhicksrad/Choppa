@@ -1,8 +1,10 @@
 import { parseTiled, type RuntimeTilemap } from '../../world/tiles/tiled';
 import missionJson from '../data/missions/sample_mission.json';
 import oceanMissionJson from '../data/missions/ocean_mission.json';
+import mothershipMissionJson from '../data/missions/mothership_mission.json';
 import sampleMapJson from '../../world/tiles/sample_map.json';
 import oceanMapJson from '../../world/tiles/ocean_map.json';
+import mothershipMapJson from '../../world/tiles/mothership_map.json';
 import { loadJson, saveJson, removeKey } from '../../core/util/storage';
 import type { MissionTracker } from './tracker';
 import { loadMission } from './loader';
@@ -12,6 +14,7 @@ import type { GameState } from '../app/state';
 import {
   createMissionOneLayout,
   createMissionTwoLayout,
+  createMissionThreeLayout,
   cloneBuildingSite,
   clonePadConfig,
   clonePickupSite,
@@ -67,6 +70,7 @@ interface MissionBriefing {
   title: string;
   text: string;
   goals: string[];
+  dialog: string[];
 }
 
 interface ScenarioRuntime {
@@ -112,6 +116,14 @@ export interface MissionCoordinatorDeps {
       waveIndex: number,
       boatScenario: { lanes: BoatLane[]; waves: BoatWave[] },
     ) => boolean;
+    spawnSentinel: (
+      point: { tx: number; ty: number },
+      options?: { holdRadius?: number; leashRange?: number; fireRange?: number },
+    ) => void;
+    spawnObelisk: (
+      point: { tx: number; ty: number },
+      options?: { fireRange?: number; damage?: number },
+    ) => void;
   };
   buildingSpawner: {
     spawnAlienStronghold: (
@@ -139,17 +151,23 @@ export interface MissionCoordinator {
   spawnMissionEnemies(): void;
 }
 
-const missionDefs: MissionDef[] = [missionJson as MissionDef, oceanMissionJson as MissionDef];
+const missionDefs: MissionDef[] = [
+  missionJson as MissionDef,
+  oceanMissionJson as MissionDef,
+  mothershipMissionJson as MissionDef,
+];
 
 const missionTilemaps: Record<string, RuntimeTilemap> = {
   m01: parseTiled(sampleMapJson as unknown),
   m02: parseTiled(oceanMapJson as unknown),
+  m03: parseTiled(mothershipMapJson as unknown),
 };
 
 const MISSION_ONE_WAVE_COUNT = 3;
 
 const missionOneLayout = createMissionOneLayout(missionTilemaps.m01);
 const missionTwoLayout = createMissionTwoLayout();
+const missionThreeLayout = createMissionThreeLayout(missionTilemaps.m03);
 
 const PROGRESS_KEY = 'choppa:progress';
 
@@ -158,6 +176,7 @@ function createMissionBriefing(def: MissionDef): MissionBriefing {
     title: def.title,
     text: def.briefing,
     goals: def.objectives.map((o) => o.name),
+    dialog: def.introDialog ? [...def.introDialog] : [],
   };
 }
 
@@ -535,6 +554,30 @@ class MissionCoordinatorImpl implements MissionCoordinator {
         },
         spawnExtraEnemies: () => this.spawnMissionTwoGuards(),
       },
+      m03: {
+        map: missionTilemaps.m03,
+        pad: missionThreeLayout.pad,
+        safeHouse: missionThreeLayout.safeHouse,
+        campusSites: missionThreeLayout.campusSites,
+        staticStructures: missionThreeLayout.staticStructures,
+        pickupSites: missionThreeLayout.pickupSites,
+        survivorSites: missionThreeLayout.survivorSites,
+        alienSpawnPoints: missionThreeLayout.alienSpawnPoints,
+        waveSpawnPoints: missionThreeLayout.waveSpawnPoints,
+        initialWaveCountdown: 4.8,
+        waveCooldown: (index: number) => Math.max(3.2, 5.2 - index * 0.3),
+        waveSpawner: (index: number) =>
+          this.enemySpawners.spawnDefaultWave(index, this.scenario.waveSpawnPoints),
+        setupMissionHandlers: () => this.setupMissionThreeHandlers(),
+        setupObjectiveLabels: () => this.setupMissionThreeObjectiveLabels(),
+        onApply: () => {
+          this.state.boat.scenario = null;
+          this.state.boat.boatsEscaped = 0;
+          this.state.boat.objectiveComplete = false;
+          this.state.boat.objectiveFailed = false;
+        },
+        spawnExtraEnemies: () => this.spawnMissionThreeDefenders(),
+      },
     };
   }
 
@@ -568,6 +611,31 @@ class MissionCoordinatorImpl implements MissionCoordinator {
       this.enemySpawners.spawnCoastGuard(guardPosts[i]!, 9.2);
     }
     const patrolRoutes = missionTwoLayout.patrolRoutes ?? [];
+    for (let i = 0; i < patrolRoutes.length; i += 1) {
+      this.enemySpawners.spawnShorePatrol(patrolRoutes[i]!);
+    }
+  }
+
+  private spawnMissionThreeDefenders(): void {
+    const sentinels = missionThreeLayout.sentinelPosts ?? [];
+    for (let i = 0; i < sentinels.length; i += 1) {
+      const post = sentinels[i]!;
+      this.enemySpawners.spawnSentinel(
+        { tx: post.tx, ty: post.ty },
+        { holdRadius: post.holdRadius, leashRange: post.leashRange, fireRange: post.fireRange },
+      );
+    }
+
+    const obelisks = missionThreeLayout.obeliskSites ?? [];
+    for (let i = 0; i < obelisks.length; i += 1) {
+      const site = obelisks[i]!;
+      this.enemySpawners.spawnObelisk(
+        { tx: site.tx, ty: site.ty },
+        { fireRange: site.fireRange, damage: site.damage },
+      );
+    }
+
+    const patrolRoutes = missionThreeLayout.patrolRoutes ?? [];
     for (let i = 0; i < patrolRoutes.length; i += 1) {
       this.enemySpawners.spawnShorePatrol(patrolRoutes[i]!);
     }
@@ -637,6 +705,23 @@ class MissionCoordinatorImpl implements MissionCoordinator {
         }
       }
       label += ')';
+      return label;
+    };
+  }
+
+  private setupMissionThreeHandlers(): void {}
+
+  private setupMissionThreeObjectiveLabels(): void {
+    const powerIds = ['core-west', 'core-east', 'core-south'];
+    this.objectiveLabelOverrides.breach = (objective) => {
+      const completeCount = powerIds.reduce((count, id) => {
+        const target = this.mission.state.objectives.find((o) => o.id === id);
+        return count + (target && target.complete ? 1 : 0);
+      }, 0);
+      let label = objective.name;
+      if (!objective.complete) {
+        label += ` (Power Offline: ${completeCount}/${powerIds.length})`;
+      }
       return label;
     };
   }

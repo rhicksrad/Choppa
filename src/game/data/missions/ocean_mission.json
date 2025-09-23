@@ -2,6 +2,11 @@
   "id": "m02",
   "title": "Operation Stormbreak",
   "briefing": "Enemy mortar platforms have seized the breakwater beyond our carrier. Launch from the deck, silence every battery, and hold the coastal bunkers long enough for the convoy to escape.",
+  "introDialog": [
+    "Ops: Mortar barges have the breakwater locked down and our convoys pinned.",
+    "XO: Knock out the platforms and keep those strike boats from slipping through.",
+    "Pilot: Deck is clear. Rolling in fast."
+  ],
   "startPos": { "tx": 26, "ty": 2 },
   "objectives": [
     {
@@ -46,5 +51,10 @@
     { "type": "SAM", "at": { "tx": 26.2, "ty": 31.6 } },
     { "type": "AAA", "at": { "tx": 39.4, "ty": 45.9 } },
     { "type": "SAM", "at": { "tx": 26.8, "ty": 43.8 } }
+  ],
+  "successDialog": [
+    "Ops: Breakwater is ours. Strike boats are wreckage and the convoy is moving.",
+    "XO: The mothership is exposed—escort team inbound to drop you on its shield generators.",
+    "Press Enter for Mission Three or Esc for title"
   ]
 }

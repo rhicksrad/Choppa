@@ -14,7 +14,6 @@ export interface BarsData {
   enemiesRemaining: number;
   nextWaveIn: number | null;
 }
-
 const ammoDisplayOrder: {
   key: keyof BarsData['ammo'];
   label: string;
@@ -281,4 +280,3 @@ function drawBar(
   ctx.fillText(label, x, y - 2);
   ctx.restore();
 }
-

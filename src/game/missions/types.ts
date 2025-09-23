@@ -13,9 +13,11 @@ export interface MissionDef {
   id: string;
   title: string;
   briefing: string;
+  introDialog?: string[];
   startPos: { tx: number; ty: number };
   objectives: ObjectiveDef[];
   enemySpawns?: Array<{ type: 'AAA' | 'SAM'; at: { tx: number; ty: number } }>;
+  successDialog?: string[];
 }
 
 export interface ObjectiveState extends ObjectiveDef {

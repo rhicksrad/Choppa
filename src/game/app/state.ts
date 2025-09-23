@@ -4,7 +4,7 @@ import type { PickupCraneSoundHandle } from '../../core/audio/sfx';
 import type { BoatScenarioConfig } from '../missions/coordinator';
 
 export interface EnemyMeta {
-  kind: 'aaa' | 'sam' | 'patrol' | 'chaser' | 'speedboat';
+  kind: 'aaa' | 'sam' | 'patrol' | 'chaser' | 'speedboat' | 'sentinel' | 'obelisk';
   score: number;
   wave?: number;
 }
