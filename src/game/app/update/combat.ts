@@ -52,6 +52,7 @@ export interface CombatProcessorDeps {
   missionCoordinator: MissionCoordinator;
   spawnSurvivors: (sites: SurvivorSite[]) => void;
   spawnPickupDrop: (tx: number, ty: number, amount: number) => void;
+  maybeSpawnAlienAmmoDrop: (tx: number, ty: number) => void;
   destroyEntity: (entity: Entity) => void;
   engine: EngineSound;
   spawnAlienUnit: (point: { tx: number; ty: number }) => void;
@@ -88,6 +89,7 @@ export function createCombatProcessor({
   missionCoordinator,
   spawnSurvivors,
   spawnPickupDrop,
+  maybeSpawnAlienAmmoDrop,
   destroyEntity,
   engine,
   spawnAlienUnit,
@@ -197,7 +199,12 @@ export function createCombatProcessor({
       const enemyMeta = state.enemyMeta.get(entity);
       if (enemyMeta) {
         const t = transforms.get(entity);
-        if (t) spawnExplosion(t.tx, t.ty);
+        if (t) {
+          spawnExplosion(t.tx, t.ty);
+          if (state.alienEntities.has(entity)) {
+            maybeSpawnAlienAmmoDrop(t.tx, t.ty);
+          }
+        }
         playExplosion(bus);
         if (enemyMeta.kind === 'boss') {
           state.finalBoss.phase = 'defeated';
