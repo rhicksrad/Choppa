@@ -60,6 +60,7 @@ export function createUIController({
   let prevUIState: UIState = ui.state;
   let briefingConfirmLocked = ui.state === 'briefing';
   let powerupConfirmLocked = ui.state === 'powerup-select';
+  let nukeCinematicConfirmLocked = ui.state === 'nuke-cinematic';
   let powerupLeftLatch = false;
   let powerupRightLatch = false;
   let finalWinTimer = 0;
@@ -81,6 +82,7 @@ export function createUIController({
     prevUIState = next;
     briefingConfirmLocked = next === 'briefing';
     powerupConfirmLocked = next === 'powerup-select';
+    nukeCinematicConfirmLocked = next === 'nuke-cinematic';
     powerupLeftLatch = false;
     powerupRightLatch = false;
     onStateChange?.(next, prev);
@@ -114,6 +116,7 @@ export function createUIController({
       prevUIState = ui.state;
       briefingConfirmLocked = ui.state === 'briefing';
       powerupConfirmLocked = ui.state === 'powerup-select';
+      nukeCinematicConfirmLocked = ui.state === 'nuke-cinematic';
       powerupLeftLatch = false;
       powerupRightLatch = false;
       if (ui.state === 'final-win') {
@@ -254,6 +257,17 @@ export function createUIController({
         snapshot.keys['Spacebar'];
       if (!confirmDown) briefingConfirmLocked = false;
       if (!briefingConfirmLocked && confirmDown) changeState('in-game');
+      return false;
+    }
+
+    if (ui.state === 'nuke-cinematic') {
+      const confirmDown =
+        snapshot.keys['Enter'] ||
+        snapshot.keys[' '] ||
+        snapshot.keys['Space'] ||
+        snapshot.keys['Spacebar'];
+      if (!confirmDown) nukeCinematicConfirmLocked = false;
+      if (!nukeCinematicConfirmLocked && confirmDown) changeState('in-game');
       return false;
     }
 

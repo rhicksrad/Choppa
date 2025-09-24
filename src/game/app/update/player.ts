@@ -149,7 +149,7 @@ export function createPlayerController({
         y: transform.ty + Math.sin(transform.rot),
       };
     }
-    weaponFire.setInput(snapshot, aimTile.x, aimTile.y);
+    weaponFire.setInput(snapshot, aimTile.x, aimTile.y, !state.player.invulnerable);
 
     const margin = 1.2;
     const maxX = map.width - 1 - margin;
