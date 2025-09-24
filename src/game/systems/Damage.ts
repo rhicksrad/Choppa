@@ -2,7 +2,7 @@ import type { System } from '../../core/ecs/systems';
 import type { ComponentStore } from '../../core/ecs/components';
 import type { Health } from '../components/Health';
 import type { Transform } from '../components/Transform';
-import type { Collider } from '../components/Collider';
+import type { Collider, Team } from '../components/Collider';
 import type { Entity } from '../../core/ecs/entities';
 
 export interface PendingHit {
@@ -10,6 +10,7 @@ export interface PendingHit {
   y: number;
   radius: number;
   amount: number;
+  sourceTeam?: Team;
 }
 
 export class DamageSystem implements System {
@@ -34,6 +35,7 @@ export class DamageSystem implements System {
         const t = this.transforms.get(e);
         const h = this.healths.get(e);
         if (!t || !h || h.current <= 0) return;
+        if (hit.sourceTeam && c.team && c.team === hit.sourceTeam) return;
         const r = (c.radius || 0) + hit.radius;
         const dx = t.tx - hit.x;
         const dy = t.ty - hit.y;

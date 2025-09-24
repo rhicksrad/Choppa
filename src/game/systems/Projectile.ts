@@ -1,6 +1,6 @@
 import type { ComponentStore } from '../../core/ecs/components';
 import type { Transform } from '../components/Transform';
-import type { Collider } from '../components/Collider';
+import type { Collider, Team } from '../components/Collider';
 import type { DamageTag } from '../components/DamageTag';
 
 export interface Projectile {
@@ -14,6 +14,14 @@ export interface Projectile {
   radius: number; // collision radius
   seek?: { targetX: number; targetY: number; turnRate: number };
   damage: DamageTag;
+}
+
+interface ProjectileImpact {
+  x: number;
+  y: number;
+  radius: number;
+  amount: number;
+  sourceTeam?: Team;
 }
 
 /** Simple projectile pool */
@@ -36,7 +44,7 @@ export class ProjectilePool {
     playerColliders: ComponentStore<Collider>,
     enemyColliders: ComponentStore<Collider>,
     transforms: ComponentStore<Transform>,
-    onHit: (hit: { x: number; y: number; radius: number; amount: number }) => void,
+    onHit: (hit: ProjectileImpact) => void,
   ): void {
     const next: Projectile[] = [];
     for (let i = 0; i < this.items.length; i += 1) {
@@ -73,7 +81,7 @@ export class ProjectilePool {
         if (pr.kind === 'missile' || pr.kind === 'hellfire') {
           const amount = pr.damage.amount;
           const rad = pr.damage.radius ?? 0.05;
-          onHit({ x: pr.x, y: pr.y, radius: rad, amount });
+          onHit({ x: pr.x, y: pr.y, radius: rad, amount, sourceTeam: pr.faction });
         }
         continue; // expired
       }
@@ -98,7 +106,7 @@ export class ProjectilePool {
           hit = true;
           const amount = pr.damage.amount;
           const rad = pr.damage.radius ?? 0.05;
-          onHit({ x: pr.x, y: pr.y, radius: rad, amount });
+          onHit({ x: pr.x, y: pr.y, radius: rad, amount, sourceTeam: pr.faction });
         }
       });
       if (!hit) next.push(pr);
