@@ -477,7 +477,7 @@ export function createMissionTwoLayout(): MissionLayout {
 }
 
 export function createMissionThreeLayout(map: { width: number; height: number }): MissionLayout {
-  const pad: PadConfig = { tx: Math.round(map.width / 2), ty: map.height - 7, radius: 1.8 };
+  const pad: PadConfig = { tx: Math.round(map.width / 2), ty: 6, radius: 1.8 };
   const safeHouse: SafeHouseParams = {
     tx: pad.tx - 1.2,
     ty: pad.ty + 0.6,
