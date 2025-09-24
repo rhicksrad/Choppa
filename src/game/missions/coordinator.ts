@@ -730,8 +730,7 @@ class MissionCoordinatorImpl implements MissionCoordinator {
   private setupMissionTwoHandlers(): void {
     this.missionHandlers.boats = () =>
       this.state.boat.objectiveComplete && !this.state.boat.objectiveFailed;
-    this.missionHandlers.scientists = () =>
-      this.state.rescue.rescued >= this.state.rescue.total;
+    this.missionHandlers.scientists = () => this.state.rescue.rescued >= this.state.rescue.total;
   }
 
   private setupMissionTwoObjectiveLabels(): void {
