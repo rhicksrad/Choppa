@@ -3,6 +3,11 @@ import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 import type { AchievementBannerView } from '../../game/achievements/tracker';
 import { createVerticalGradient, drawPanel, font, mixColor, palette, traceRoundedRect } from '../theme';
 
+export interface ObjectiveLine {
+  label: string;
+  complete: boolean;
+}
+
 export interface BarsData {
   fuel01: number;
   fuelCurrent: number;
@@ -35,7 +40,7 @@ const ammoDisplayOrder: {
 export function drawHUD(
   ctx: CanvasRenderingContext2D,
   bars: BarsData,
-  objectiveLines: string[],
+  objectiveLines: ObjectiveLine[],
   boss: BossBarData,
   compassDir: { dx: number; dy: number } | null,
   minimap: {
@@ -361,7 +366,10 @@ export function drawHUD(
   const objectivePanelPaddingX = panelPadding;
   const objectivePanelPaddingY = 14;
   const objectiveHeaderHeight = 20;
-  const objectiveLineHeight = 18;
+  const objectiveLineHeight = 24;
+  const objectiveIndicatorSize = 16;
+  const objectiveIndicatorRadius = 5;
+  const objectiveIndicatorGap = 12;
   const hasObjectives = objectiveLines.length > 0;
   const objectiveBodyHeight = hasObjectives ? 12 + objectiveLines.length * objectiveLineHeight : 0;
   const objectivePanelInnerHeight = objectiveHeaderHeight + objectiveBodyHeight;
@@ -385,17 +393,74 @@ export function drawHUD(
   ctx.textAlign = 'left';
   ctx.font = font(16, 'bold');
   ctx.fillStyle = palette.accent;
-  let objectiveTextY = objectivePanelY + objectivePanelPaddingY + objectiveHeaderHeight;
+  const objectiveHeaderBaseline = objectivePanelY + objectivePanelPaddingY + objectiveHeaderHeight;
   const objectiveTextX = objectivePanelX + objectivePanelPaddingX;
-  ctx.fillText('Objectives', objectiveTextX, objectiveTextY);
+  ctx.fillText('Objectives', objectiveTextX, objectiveHeaderBaseline);
 
   if (hasObjectives) {
-    objectiveTextY += 12;
+    const bodyStartY = objectiveHeaderBaseline + 12;
+    const indicatorOffsetY = (objectiveLineHeight - objectiveIndicatorSize) / 2;
+    const textX = objectiveTextX + objectiveIndicatorSize + objectiveIndicatorGap;
     ctx.font = font(14);
-    ctx.fillStyle = palette.textPrimary;
+    ctx.textBaseline = 'middle';
     for (let i = 0; i < objectiveLines.length; i += 1) {
-      ctx.fillText(objectiveLines[i]!, objectiveTextX, objectiveTextY + i * objectiveLineHeight);
+      const objective = objectiveLines[i]!;
+      const lineTop = bodyStartY + i * objectiveLineHeight + indicatorOffsetY;
+      const indicatorRect = {
+        x: objectiveTextX,
+        y: lineTop,
+        width: objectiveIndicatorSize,
+        height: objectiveIndicatorSize,
+      } as const;
+      const indicatorCenterY = indicatorRect.y + objectiveIndicatorSize / 2;
+
+      ctx.save();
+      const indicatorGradient = createVerticalGradient(
+        ctx,
+        indicatorRect,
+        objective.complete
+          ? mixColor(palette.accent, '#ffffff', 0.4)
+          : mixColor(palette.panelSunken, '#ffffff', 0.08),
+        objective.complete
+          ? mixColor(palette.accentStrong, '#000000', 0.2)
+          : mixColor(palette.panelSunken, '#000000', 0.45),
+      );
+      traceRoundedRect(ctx, indicatorRect, objectiveIndicatorRadius);
+      ctx.fillStyle = indicatorGradient;
+      ctx.fill();
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = objective.complete
+        ? mixColor(palette.accentStrong, '#000000', 0.25)
+        : palette.panelBorderMuted;
+      traceRoundedRect(ctx, indicatorRect, objectiveIndicatorRadius);
+      ctx.stroke();
+      if (!objective.complete) {
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = mixColor(palette.accent, '#ffffff', 0.15);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(indicatorRect.x + objectiveIndicatorSize / 2, indicatorCenterY, objectiveIndicatorSize * 0.22, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      if (objective.complete) {
+        ctx.save();
+        ctx.strokeStyle = palette.textInverted;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(indicatorRect.x + objectiveIndicatorSize * 0.26, indicatorCenterY + objectiveIndicatorSize * 0.05);
+        ctx.lineTo(indicatorRect.x + objectiveIndicatorSize * 0.45, indicatorCenterY + objectiveIndicatorSize * 0.24);
+        ctx.lineTo(indicatorRect.x + objectiveIndicatorSize * 0.74, indicatorCenterY - objectiveIndicatorSize * 0.22);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.fillStyle = objective.complete ? mixColor(palette.textSecondary, '#ffffff', 0.08) : palette.textPrimary;
+      ctx.fillText(objective.label, textX, indicatorCenterY);
     }
+    ctx.textBaseline = 'alphabetic';
   }
 
   // Compass top-center

@@ -26,6 +26,7 @@ import { drawPad, drawHeli, drawCrashSite } from '../../render/sprites/heli';
 import { PLAYER_RESPAWN_DURATION } from '../../game/app/constants';
 import { drawRescueRunner } from '../../render/sprites/rescuees';
 import { drawHUD } from '../../ui/hud/hud';
+import type { ObjectiveLine } from '../../ui/hud/hud';
 import { renderSettings, renderAchievements, renderAbout } from '../../ui/menus/renderers';
 import type { AchievementRenderState } from '../../game/achievements/tracker';
 import type { Menu } from '../../ui/menus/menu';
@@ -453,10 +454,10 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     const ammoComp = stores.ammos.get(player)!;
     const healthComp = stores.healths.get(player)!;
 
-    const objectiveLines = mission.state.objectives.map((objective) => {
+    const objectiveLines: ObjectiveLine[] = mission.state.objectives.map((objective) => {
       const labelFn = objectiveLabels[objective.id];
       const label = labelFn ? labelFn(objective) : objective.name;
-      return `${objective.complete ? '[x]' : '[ ]'} ${label}`;
+      return { label, complete: objective.complete };
     });
 
     const nextWaveCountdown =
