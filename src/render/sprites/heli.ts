@@ -151,17 +151,18 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.lineWidth = 1.6;
   ctx.beginPath();
   // roundRect with fallback
-  (ctx as any).roundRect?.(-14, -4.5, 4.5, 9, 2) ?? (() => {
-    ctx.moveTo(-12, -4.5);
-    ctx.lineTo(-11.5, -4.5);
-    ctx.quadraticCurveTo(-9.5, -4.5, -9.5, -2.5);
-    ctx.lineTo(-9.5, 4.5 - 2);
-    ctx.quadraticCurveTo(-9.5, 4.5, -11.5, 4.5);
-    ctx.lineTo(-12, 4.5);
-    ctx.quadraticCurveTo(-14, 4.5, -14, 2.5);
-    ctx.lineTo(-14, -2.5);
-    ctx.quadraticCurveTo(-14, -4.5, -12, -4.5);
-  })();
+  (ctx as any).roundRect?.(-14, -4.5, 4.5, 9, 2) ??
+    (() => {
+      ctx.moveTo(-12, -4.5);
+      ctx.lineTo(-11.5, -4.5);
+      ctx.quadraticCurveTo(-9.5, -4.5, -9.5, -2.5);
+      ctx.lineTo(-9.5, 4.5 - 2);
+      ctx.quadraticCurveTo(-9.5, 4.5, -11.5, 4.5);
+      ctx.lineTo(-12, 4.5);
+      ctx.quadraticCurveTo(-14, 4.5, -14, 2.5);
+      ctx.lineTo(-14, -2.5);
+      ctx.quadraticCurveTo(-14, -4.5, -12, -4.5);
+    })();
   ctx.fill();
   ctx.stroke();
 
@@ -174,17 +175,18 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.strokeStyle = '#4f5f6c';
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  (ctx as any).roundRect?.(-7, -6, 6, 12, 2.5) ?? (() => {
-    ctx.moveTo(-4.5, -6);
-    ctx.lineTo(-2.5, -6);
-    ctx.quadraticCurveTo(-1, -6, -1, -4.5);
-    ctx.lineTo(-1, 4.5);
-    ctx.quadraticCurveTo(-1, 6, -2.5, 6);
-    ctx.lineTo(-4.5, 6);
-    ctx.quadraticCurveTo(-7, 6, -7, 4.5);
-    ctx.lineTo(-7, -4.5);
-    ctx.quadraticCurveTo(-7, -6, -4.5, -6);
-  })();
+  (ctx as any).roundRect?.(-7, -6, 6, 12, 2.5) ??
+    (() => {
+      ctx.moveTo(-4.5, -6);
+      ctx.lineTo(-2.5, -6);
+      ctx.quadraticCurveTo(-1, -6, -1, -4.5);
+      ctx.lineTo(-1, 4.5);
+      ctx.quadraticCurveTo(-1, 6, -2.5, 6);
+      ctx.lineTo(-4.5, 6);
+      ctx.quadraticCurveTo(-7, 6, -7, 4.5);
+      ctx.lineTo(-7, -4.5);
+      ctx.quadraticCurveTo(-7, -6, -4.5, -6);
+    })();
   ctx.fill();
   ctx.stroke();
 
@@ -322,6 +324,22 @@ export function drawPad(
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+
+  // Landing marker "H"
+  const barOffsetX = halfW * 0.32;
+  const hTop = -halfH * 0.6;
+  const hBottom = halfH * 0.6;
+  ctx.strokeStyle = '#e4fff2';
+  ctx.lineWidth = Math.max(3, iso.tileWidth * 0.08);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-barOffsetX, hTop);
+  ctx.lineTo(-barOffsetX, hBottom);
+  ctx.moveTo(barOffsetX, hTop);
+  ctx.lineTo(barOffsetX, hBottom);
+  ctx.moveTo(-barOffsetX, 0);
+  ctx.lineTo(barOffsetX, 0);
+  ctx.stroke();
   ctx.restore();
 }
-
