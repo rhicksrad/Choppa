@@ -60,11 +60,11 @@ export function createUIController({
   let prevUIState: UIState = ui.state;
   let briefingConfirmLocked = ui.state === 'briefing';
   let powerupConfirmLocked = ui.state === 'powerup-select';
+  let nukeCinematicConfirmLocked = ui.state === 'nuke-cinematic';
   let powerupLeftLatch = false;
   let powerupRightLatch = false;
-  let finalWinTimer = 0;
   let finalWinHandled = ui.state !== 'final-win';
-  const FINAL_WIN_AUTO_RETURN = 8;
+  let finalWinConfirmLocked = ui.state === 'final-win';
 
   const changeState = (next: UIState): void => {
     if (ui.state === next) return;
@@ -81,6 +81,7 @@ export function createUIController({
     prevUIState = next;
     briefingConfirmLocked = next === 'briefing';
     powerupConfirmLocked = next === 'powerup-select';
+    nukeCinematicConfirmLocked = next === 'nuke-cinematic';
     powerupLeftLatch = false;
     powerupRightLatch = false;
     onStateChange?.(next, prev);
@@ -114,14 +115,15 @@ export function createUIController({
       prevUIState = ui.state;
       briefingConfirmLocked = ui.state === 'briefing';
       powerupConfirmLocked = ui.state === 'powerup-select';
+      nukeCinematicConfirmLocked = ui.state === 'nuke-cinematic';
       powerupLeftLatch = false;
       powerupRightLatch = false;
       if (ui.state === 'final-win') {
-        finalWinTimer = 0;
         finalWinHandled = false;
+        finalWinConfirmLocked = true;
       } else if (previous === 'final-win') {
-        finalWinTimer = 0;
         finalWinHandled = true;
+        finalWinConfirmLocked = false;
       }
     }
 
@@ -257,6 +259,17 @@ export function createUIController({
       return false;
     }
 
+    if (ui.state === 'nuke-cinematic') {
+      const confirmDown =
+        snapshot.keys['Enter'] ||
+        snapshot.keys[' '] ||
+        snapshot.keys['Space'] ||
+        snapshot.keys['Spacebar'];
+      if (!confirmDown) nukeCinematicConfirmLocked = false;
+      if (!nukeCinematicConfirmLocked && confirmDown) changeState('in-game');
+      return false;
+    }
+
     if (ui.state === 'powerup-select') {
       if (!powerups.hasSelection() || powerups.getOptionCount() === 0) {
         changeState('briefing');
@@ -314,14 +327,11 @@ export function createUIController({
     }
 
     if (ui.state === 'final-win') {
-      finalWinTimer += dt;
-      const confirmDown = snapshot.keys['Enter'] || snapshot.keys[' '];
-      const escapeDown = snapshot.keys['Escape'];
-      if (
-        !finalWinHandled &&
-        (confirmDown || escapeDown || finalWinTimer >= FINAL_WIN_AUTO_RETURN)
-      ) {
+      const confirmDown = Boolean(snapshot.keys['Enter']);
+      if (!confirmDown) finalWinConfirmLocked = false;
+      if (!finalWinHandled && !finalWinConfirmLocked && confirmDown) {
         finalWinHandled = true;
+        finalWinConfirmLocked = true;
         completeFinalWin();
       }
       return false;
