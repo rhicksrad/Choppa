@@ -55,6 +55,7 @@ export function createBuildingFactory({
       drop: site.drop,
       category: site.category ?? 'civilian',
       triggersAlarm: Boolean(site.triggersAlarm),
+      tag: site.tag,
     });
     state.buildingEntities.push(entity);
     return entity;
