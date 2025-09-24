@@ -137,6 +137,48 @@ export class IsoTilemapRenderer {
       ctx.restore();
     };
 
+    const drawAlienCanopy = (radius: number): void => {
+      ctx.save();
+      ctx.translate(halfW, halfH - halfH * 0.35);
+      ctx.fillStyle = 'rgba(54, 0, 87, 0.32)';
+      ctx.beginPath();
+      ctx.ellipse(0, halfH * 0.6, radius * 1.45, radius * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6d26a3';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#8e3fd6';
+      ctx.beginPath();
+      ctx.arc(-radius * 0.35, radius * 0.2, radius * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b074ff';
+      ctx.beginPath();
+      ctx.arc(radius * 0.55, -radius * 0.1, radius * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#44265f';
+      ctx.fillRect(-1.4, radius * 0.7, 2.8, halfH * 0.5);
+      ctx.restore();
+    };
+
+    const drawAlienSprout = (): void => {
+      ctx.save();
+      ctx.translate(halfW, halfH - halfH * 0.1);
+      ctx.fillStyle = 'rgba(54, 0, 87, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, halfH * 0.45, halfW * 0.42, halfH * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#7c32bb';
+      ctx.beginPath();
+      ctx.arc(-halfW * 0.18, -halfH * 0.12, halfW * 0.26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#9f5ff2';
+      ctx.beginPath();
+      ctx.arc(halfW * 0.22, -halfH * 0.02, halfW * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+
     switch (gid) {
       case 1: // grass
         drawDiamond(1, 1, '#3d7240', '#2c4f2d');
@@ -195,6 +237,131 @@ export class IsoTilemapRenderer {
           ctx.lineTo(halfW + i + halfW * 0.4, tileHeight - 2);
           ctx.stroke();
         }
+        ctx.restore();
+        break;
+      case 100: // alien soil
+        drawDiamond(1, 1, '#221132', '#3a1e58');
+        ctx.save();
+        ctx.translate(halfW, halfH);
+        const glow = ctx.createRadialGradient(0, 0, halfW * 0.2, 0, 0, halfW * 0.95);
+        glow.addColorStop(0, 'rgba(142, 78, 214, 0.25)');
+        glow.addColorStop(1, 'rgba(142, 78, 214, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.moveTo(0, -halfH);
+        ctx.lineTo(halfW, 0);
+        ctx.lineTo(0, halfH);
+        ctx.lineTo(-halfW, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        break;
+      case 101: // luminous yellow river
+        drawDiamond(1, 1, '#f0d438', '#caa21b');
+        ctx.save();
+        ctx.translate(0, halfH * 0.12);
+        ctx.strokeStyle = 'rgba(255, 247, 164, 0.6)';
+        ctx.lineWidth = 1.4;
+        for (let i = -1; i <= 1; i += 1) {
+          ctx.beginPath();
+          const y = halfH + i * 5;
+          ctx.moveTo(6, y);
+          ctx.quadraticCurveTo(tileWidth / 2, y + 3, tileWidth - 6, y - 2);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(255, 216, 0, 0.35)';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(halfW - 10, halfH - 12);
+        ctx.quadraticCurveTo(halfW, halfH + 2, halfW + 10, halfH - 8);
+        ctx.stroke();
+        ctx.restore();
+        break;
+      case 102: // alien wire conduit
+        drawDiamond(1, 1, '#191d27', '#2f3647');
+        ctx.save();
+        ctx.translate(halfW, halfH);
+        ctx.strokeStyle = '#61e1ff';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-halfW * 0.78, 0);
+        ctx.lineTo(halfW * 0.78, 0);
+        ctx.moveTo(0, -halfH * 0.78);
+        ctx.lineTo(0, halfH * 0.78);
+        ctx.stroke();
+        ctx.setLineDash([halfW * 0.35, halfW * 0.25]);
+        ctx.strokeStyle = '#b66cff';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(-halfW * 0.55, -halfH * 0.55);
+        ctx.lineTo(halfW * 0.55, halfH * 0.55);
+        ctx.moveTo(halfW * 0.55, -halfH * 0.55);
+        ctx.lineTo(-halfW * 0.55, halfH * 0.55);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        break;
+      case 103: // alien canopy cluster
+        drawAlienCanopy(Math.min(halfW, halfH * 1.7) * 0.9);
+        break;
+      case 104: // alien sprout grove
+        drawAlienSprout();
+        break;
+      case 105: // wire junction node
+        drawDiamond(1, 1, '#1c202c', '#353c4d');
+        ctx.save();
+        ctx.translate(halfW, halfH);
+        ctx.strokeStyle = '#6ce9ff';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-halfW * 0.6, 0);
+        ctx.lineTo(halfW * 0.6, 0);
+        ctx.moveTo(0, -halfH * 0.6);
+        ctx.lineTo(0, halfH * 0.6);
+        ctx.stroke();
+        ctx.strokeStyle = '#c47bff';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-halfW * 0.45, -halfH * 0.45);
+        ctx.lineTo(halfW * 0.45, halfH * 0.45);
+        ctx.moveTo(halfW * 0.45, -halfH * 0.45);
+        ctx.lineTo(-halfW * 0.45, halfH * 0.45);
+        ctx.stroke();
+        ctx.fillStyle = '#f6ffb4';
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.min(halfW, halfH) * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffd966';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+        ctx.restore();
+        break;
+      case 110: // hivemind core
+        drawDiamond(1, 1, '#3b1450', '#5f1f7c');
+        ctx.save();
+        ctx.translate(halfW, halfH);
+        const outer = ctx.createRadialGradient(0, 0, halfW * 0.1, 0, 0, halfW * 0.9);
+        outer.addColorStop(0, 'rgba(255, 230, 120, 0.9)');
+        outer.addColorStop(0.55, 'rgba(193, 109, 255, 0.65)');
+        outer.addColorStop(1, 'rgba(74, 20, 105, 0)');
+        ctx.fillStyle = outer;
+        ctx.beginPath();
+        ctx.arc(0, 0, halfH * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffe87a';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, halfH * 0.45, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#a669ff';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.arc(0, 0, halfH * 0.65, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#fff7b8';
+        ctx.beginPath();
+        ctx.arc(0, 0, halfH * 0.35, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
         break;
       case 10: // road segment
