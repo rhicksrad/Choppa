@@ -57,6 +57,7 @@ export interface CombatProcessorDeps {
   spawnAlienUnit: (point: { tx: number; ty: number }) => void;
   spawnFinalBoss: (point: { tx: number; ty: number }) => Entity;
   getRescueCueBuffer?: () => AudioBuffer | null;
+  getPlayerDeathBuffer?: () => AudioBuffer | null;
 }
 
 export interface CombatProcessor {
@@ -91,6 +92,7 @@ export function createCombatProcessor({
   spawnAlienUnit,
   spawnFinalBoss,
   getRescueCueBuffer = () => null,
+  getPlayerDeathBuffer = () => null,
 }: CombatProcessorDeps): CombatProcessor {
   const SHIELD_TAG = 'mothership-shield';
   const MOTHERSHIP_POWER_IDS = ['core-west', 'core-east', 'core-south'] as const;
@@ -154,6 +156,8 @@ export function createCombatProcessor({
     const t = transforms.get(player);
     if (t) spawnExplosion(t.tx, t.ty);
     playExplosion(bus);
+    const deathBuffer = getPlayerDeathBuffer();
+    if (deathBuffer) bus.playSfx(deathBuffer);
     colliders.remove(player);
     const body = physics.get(player);
     if (body) {
