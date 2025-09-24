@@ -61,19 +61,27 @@ const {
 
 const audioBaseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 const rescueCueUrl = `${audioBaseUrl}audio/GTTC.mp3`;
+const playerScreamUrl = `${audioBaseUrl}audio/scream.mp3`;
 let rescueCueBuffer: AudioBuffer | null = null;
+let playerScreamBuffer: AudioBuffer | null = null;
 
-void (async () => {
+async function loadAudioBuffer(url: string, label: string): Promise<AudioBuffer | null> {
   try {
-    const response = await fetch(rescueCueUrl);
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const arrayBuffer = await response.arrayBuffer();
-    rescueCueBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+    return await new Promise<AudioBuffer>((resolve, reject) => {
       audio.bus.context.decodeAudioData(arrayBuffer.slice(0), resolve, reject);
     });
   } catch (err) {
-    console.warn('[audio] Failed to load rescue cue', err);
+    console.warn(`[audio] Failed to load ${label}`, err);
+    return null;
   }
+}
+
+void (async () => {
+  rescueCueBuffer = await loadAudioBuffer(rescueCueUrl, 'rescue cue');
+  playerScreamBuffer = await loadAudioBuffer(playerScreamUrl, 'player scream');
 })();
 
 void audio.music.play('title');
@@ -406,6 +414,7 @@ const combatProcessor = createCombatProcessor({
   spawnAlienUnit,
   spawnFinalBoss,
   getRescueCueBuffer: () => rescueCueBuffer,
+  getPlayerDeathBuffer: () => playerScreamBuffer,
 });
 
 setBoatLandingHandler(combatProcessor.handleBoatLanding);
