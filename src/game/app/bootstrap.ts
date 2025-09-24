@@ -167,6 +167,8 @@ function setupAudio(ui: UIStore): {
     level2: `${audioBase}audio/level2.mp3`,
     level3: `${audioBase}audio/level3.mp3`,
     level4: `${audioBase}level4.mp3`,
+    boss: `${audioBase}audio/boss.mp3`,
+    win: `${audioBase}audio/win.mp3`,
   });
   const applySettings = (muted: boolean): void => {
     bus.setMaster(muted ? 0 : ui.settings.masterVolume);
