@@ -863,6 +863,26 @@ export function createMissionFourLayout(map: { width: number; height: number }):
       ammo: { missiles: 142, rockets: 6, hellfires: 3 },
     },
     { tx: pad.tx, ty: pad.ty - 3.0, kind: 'armor', armorAmount: 40 },
+    { tx: 22.5, ty: 23.0, kind: 'fuel', fuelAmount: 70 },
+    { tx: 41.5, ty: 23.0, kind: 'fuel', fuelAmount: 70 },
+    {
+      tx: 26.8,
+      ty: 32.8,
+      kind: 'ammo',
+      ammo: { missiles: 96, rockets: 4, hellfires: 2 },
+    },
+    {
+      tx: 37.2,
+      ty: 32.8,
+      kind: 'ammo',
+      ammo: { missiles: 96, rockets: 4, hellfires: 2 },
+    },
+    {
+      tx: 32.0,
+      ty: 14.8,
+      kind: 'ammo',
+      ammo: { missiles: 110, rockets: 5, hellfires: 2 },
+    },
   ];
 
   const alienSpawnPoints = [

@@ -738,9 +738,10 @@ class MissionCoordinatorImpl implements MissionCoordinator {
       const boat = this.state.boat.scenario;
       if (!boat) return objective.name;
       const totalWaves = boat.waves.length;
-      const currentWave = this.state.wave.active
-        ? this.state.wave.index
-        : Math.min(this.state.wave.index + 1, totalWaves);
+      let currentWave = this.state.wave.index;
+      if (!this.state.wave.active) {
+        currentWave = Math.min(this.state.wave.index + 1, totalWaves);
+      }
       let label = `${objective.name} (Escaped: ${this.state.boat.boatsEscaped}/${boat.maxEscapes}`;
       if (!objective.complete) {
         const clampedWave = Math.min(Math.max(currentWave, 1), totalWaves);
