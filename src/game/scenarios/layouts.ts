@@ -477,7 +477,7 @@ export function createMissionTwoLayout(): MissionLayout {
 }
 
 export function createMissionThreeLayout(map: { width: number; height: number }): MissionLayout {
-  const pad: PadConfig = { tx: Math.round(map.width / 2), ty: map.height - 7, radius: 1.8 };
+  const pad: PadConfig = { tx: Math.round(map.width / 2), ty: 6, radius: 1.8 };
   const safeHouse: SafeHouseParams = {
     tx: pad.tx - 1.2,
     ty: pad.ty + 0.6,
@@ -633,6 +633,18 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       ty: pad.ty - 0.6,
       kind: 'ammo',
       ammo: { missiles: 126, rockets: 6, hellfires: 3 },
+    },
+    {
+      tx: pad.tx - 3.4,
+      ty: pad.ty + 2.4,
+      kind: 'fuel',
+      fuelAmount: 54,
+    },
+    {
+      tx: pad.tx + 3.4,
+      ty: pad.ty + 2.4,
+      kind: 'ammo',
+      ammo: { missiles: 78, rockets: 3, hellfires: 1 },
     },
     { tx: 23.6, ty: 33.0, kind: 'ammo', ammo: { missiles: 90, rockets: 4 } },
     { tx: 36.4, ty: 33.0, kind: 'fuel', fuelAmount: 64 },
