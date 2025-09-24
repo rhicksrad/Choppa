@@ -106,6 +106,8 @@ export interface MissionLayout {
 
 const MAP_BORDER = 8;
 
+export const MISSION_TWO_BASE_TAG = 'm02-coast-base';
+
 function offsetTiles<T extends { tx: number; ty: number }>(
   items: T[],
   border: number = MAP_BORDER,
@@ -314,6 +316,7 @@ export function createMissionTwoLayout(): MissionLayout {
       score: 320,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: MISSION_TWO_BASE_TAG,
     },
     {
       tx: 26.0,
@@ -329,6 +332,7 @@ export function createMissionTwoLayout(): MissionLayout {
       score: 315,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: MISSION_TWO_BASE_TAG,
     },
     {
       tx: 40.0,
@@ -344,6 +348,7 @@ export function createMissionTwoLayout(): MissionLayout {
       score: 305,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: MISSION_TWO_BASE_TAG,
     },
   ];
 
@@ -363,6 +368,7 @@ export function createMissionTwoLayout(): MissionLayout {
       category: 'stronghold',
       triggersAlarm: false,
       drop: { kind: 'armor', amount: 35 },
+      tag: MISSION_TWO_BASE_TAG,
     },
     {
       tx: 26.0,
@@ -378,6 +384,7 @@ export function createMissionTwoLayout(): MissionLayout {
       score: 190,
       category: 'stronghold',
       triggersAlarm: false,
+      tag: MISSION_TWO_BASE_TAG,
     },
     {
       tx: 33.6,
@@ -393,6 +400,7 @@ export function createMissionTwoLayout(): MissionLayout {
       score: 175,
       category: 'stronghold',
       triggersAlarm: false,
+      tag: MISSION_TWO_BASE_TAG,
     },
   ];
 
@@ -467,7 +475,14 @@ export function createMissionTwoLayout(): MissionLayout {
     campusSites,
     staticStructures,
     pickupSites,
-    survivorSites: [],
+    survivorSites: [
+      {
+        tx: 26.0,
+        ty: 30.8,
+        count: 4,
+        radius: 1.1,
+      },
+    ],
     alienSpawnPoints,
     waveSpawnPoints,
     guardPosts,
