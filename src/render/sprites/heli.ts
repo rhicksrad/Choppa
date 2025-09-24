@@ -65,7 +65,7 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.fill();
   ctx.stroke();
 
-  // Vertical tail fin
+  // Vertical tail fin (merged feature)
   const tailFinGradient = ctx.createLinearGradient(-27, -12, -21, 6);
   tailFinGradient.addColorStop(0, '#080b0e');
   tailFinGradient.addColorStop(0.6, '#12181f');
@@ -88,7 +88,7 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.quadraticCurveTo(-26.5, -5, -23, -2.4);
   ctx.stroke();
 
-  // Tail rotor shroud
+  // Tail rotor shroud + rotor blur
   ctx.save();
   ctx.translate(-27.5, 0);
   const tailShroudGradient = ctx.createRadialGradient(0, 0, 0.5, 0, 0, 3.4);
@@ -102,12 +102,13 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.fill();
   ctx.stroke();
 
-  // Tail rotor hub and blur
+  // Tail rotor hub
   ctx.fillStyle = '#8da9bb';
   ctx.beginPath();
   ctx.arc(0, 0, 0.9, 0, Math.PI * 2);
   ctx.fill();
 
+  // Tail rotor blur
   ctx.strokeStyle = 'rgba(150, 200, 230, 0.65)';
   ctx.lineWidth = 1.1;
   const tailBlades = 4;
@@ -149,7 +150,18 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.strokeStyle = '#55616d';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.roundRect(-14, -4.5, 4.5, 9, 2);
+  // roundRect with fallback
+  (ctx as any).roundRect?.(-14, -4.5, 4.5, 9, 2) ?? (() => {
+    ctx.moveTo(-12, -4.5);
+    ctx.lineTo(-11.5, -4.5);
+    ctx.quadraticCurveTo(-9.5, -4.5, -9.5, -2.5);
+    ctx.lineTo(-9.5, 4.5 - 2);
+    ctx.quadraticCurveTo(-9.5, 4.5, -11.5, 4.5);
+    ctx.lineTo(-12, 4.5);
+    ctx.quadraticCurveTo(-14, 4.5, -14, 2.5);
+    ctx.lineTo(-14, -2.5);
+    ctx.quadraticCurveTo(-14, -4.5, -12, -4.5);
+  })();
   ctx.fill();
   ctx.stroke();
 
@@ -162,7 +174,17 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.strokeStyle = '#4f5f6c';
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.roundRect(-7, -6, 6, 12, 2.5);
+  (ctx as any).roundRect?.(-7, -6, 6, 12, 2.5) ?? (() => {
+    ctx.moveTo(-4.5, -6);
+    ctx.lineTo(-2.5, -6);
+    ctx.quadraticCurveTo(-1, -6, -1, -4.5);
+    ctx.lineTo(-1, 4.5);
+    ctx.quadraticCurveTo(-1, 6, -2.5, 6);
+    ctx.lineTo(-4.5, 6);
+    ctx.quadraticCurveTo(-7, 6, -7, 4.5);
+    ctx.lineTo(-7, -4.5);
+    ctx.quadraticCurveTo(-7, -6, -4.5, -6);
+  })();
   ctx.fill();
   ctx.stroke();
 
@@ -219,19 +241,19 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.strokeStyle = '#454f57';
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.roundRect(6, -7.5, 9, 3.5, 1.8);
+  (ctx as any).roundRect?.(6, -7.5, 9, 3.5, 1.8);
   ctx.fill();
   ctx.stroke();
   ctx.beginPath();
-  ctx.roundRect(6, 4, 9, 3.5, 1.8);
+  (ctx as any).roundRect?.(6, 4, 9, 3.5, 1.8);
   ctx.fill();
   ctx.stroke();
 
   // Gun barrels
   ctx.fillStyle = '#c3ccd2';
   ctx.beginPath();
-  ctx.roundRect(15, -6.6, 4.5, 1.4, 0.7);
-  ctx.roundRect(15, 5.2, 4.5, 1.4, 0.7);
+  (ctx as any).roundRect?.(15, -6.6, 4.5, 1.4, 0.7);
+  (ctx as any).roundRect?.(15, 5.2, 4.5, 1.4, 0.7);
   ctx.fill();
   ctx.fillStyle = '#7a848c';
   ctx.fillRect(19.3, -6.2, 3.2, 0.8);
@@ -256,7 +278,7 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.fill();
   ctx.stroke();
 
-  // Rotor (simple line sweep)
+  // Main rotor (simple line sweep)
   const bladeLen = 18;
   const blades = 2;
   ctx.strokeStyle = '#9cc9e4';
@@ -302,3 +324,4 @@ export function drawPad(
   ctx.stroke();
   ctx.restore();
 }
+
