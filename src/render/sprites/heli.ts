@@ -65,6 +65,29 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.fill();
   ctx.stroke();
 
+  // Vertical tail fin (merged feature)
+  const tailFinGradient = ctx.createLinearGradient(-27, -12, -21, 6);
+  tailFinGradient.addColorStop(0, '#080b0e');
+  tailFinGradient.addColorStop(0.6, '#12181f');
+  tailFinGradient.addColorStop(1, '#1a242c');
+  ctx.fillStyle = tailFinGradient;
+  ctx.strokeStyle = '#4a5661';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(-22.5, -2.6);
+  ctx.lineTo(-32.5, -11.2);
+  ctx.lineTo(-30.2, 4);
+  ctx.quadraticCurveTo(-26.8, 2.6, -22.2, 3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(160, 190, 210, 0.25)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-31.3, -9.8);
+  ctx.quadraticCurveTo(-26.5, -5, -23, -2.4);
+  ctx.stroke();
+
   // Tail rotor shroud + rotor blur
   ctx.save();
   ctx.translate(-27.5, 0);
@@ -127,18 +150,17 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.strokeStyle = '#55616d';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  // roundRect is widely supported; fallback would be manual path if needed
-  // x, y, w, h, radius
+  // roundRect with fallback
   (ctx as any).roundRect?.(-14, -4.5, 4.5, 9, 2) ?? (() => {
-    ctx.moveTo(-14 + 2, -4.5);
-    ctx.lineTo(-14 + 4.5 - 2, -4.5);
-    ctx.quadraticCurveTo(-14 + 4.5, -4.5, -14 + 4.5, -4.5 + 2);
-    ctx.lineTo(-14 + 4.5, -4.5 + 9 - 2);
-    ctx.quadraticCurveTo(-14 + 4.5, -4.5 + 9, -14 + 4.5 - 2, -4.5 + 9);
-    ctx.lineTo(-14 + 2, -4.5 + 9);
-    ctx.quadraticCurveTo(-14, -4.5 + 9, -14, -4.5 + 9 - 2);
-    ctx.lineTo(-14, -4.5 + 2);
-    ctx.quadraticCurveTo(-14, -4.5, -14 + 2, -4.5);
+    ctx.moveTo(-12, -4.5);
+    ctx.lineTo(-11.5, -4.5);
+    ctx.quadraticCurveTo(-9.5, -4.5, -9.5, -2.5);
+    ctx.lineTo(-9.5, 4.5 - 2);
+    ctx.quadraticCurveTo(-9.5, 4.5, -11.5, 4.5);
+    ctx.lineTo(-12, 4.5);
+    ctx.quadraticCurveTo(-14, 4.5, -14, 2.5);
+    ctx.lineTo(-14, -2.5);
+    ctx.quadraticCurveTo(-14, -4.5, -12, -4.5);
   })();
   ctx.fill();
   ctx.stroke();
@@ -153,15 +175,15 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   (ctx as any).roundRect?.(-7, -6, 6, 12, 2.5) ?? (() => {
-    ctx.moveTo(-7 + 2.5, -6);
-    ctx.lineTo(-7 + 6 - 2.5, -6);
-    ctx.quadraticCurveTo(-1, -6, -1, -6 + 2.5);
-    ctx.lineTo(-1, 6 - 2.5);
-    ctx.quadraticCurveTo(-1, 6, -1 - 2.5, 6);
-    ctx.lineTo(-7 + 2.5, 6);
-    ctx.quadraticCurveTo(-7, 6, -7, 6 - 2.5);
-    ctx.lineTo(-7, -6 + 2.5);
-    ctx.quadraticCurveTo(-7, -6, -7 + 2.5, -6);
+    ctx.moveTo(-4.5, -6);
+    ctx.lineTo(-2.5, -6);
+    ctx.quadraticCurveTo(-1, -6, -1, -4.5);
+    ctx.lineTo(-1, 4.5);
+    ctx.quadraticCurveTo(-1, 6, -2.5, 6);
+    ctx.lineTo(-4.5, 6);
+    ctx.quadraticCurveTo(-7, 6, -7, 4.5);
+    ctx.lineTo(-7, -4.5);
+    ctx.quadraticCurveTo(-7, -6, -4.5, -6);
   })();
   ctx.fill();
   ctx.stroke();
