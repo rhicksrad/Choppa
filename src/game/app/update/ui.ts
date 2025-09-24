@@ -19,6 +19,7 @@ export interface UIControllerDeps {
   resetGame: (missionIndex?: number) => void;
   resetCampaign: () => void;
   getNextMissionIndex: () => number;
+  completeFinalWin: () => void;
   onStateChange?: (next: UIState, prev: UIState) => void;
   powerups: PowerupSelectionBridge;
 }
@@ -46,6 +47,7 @@ export function createUIController({
   resetGame,
   resetCampaign,
   getNextMissionIndex,
+  completeFinalWin,
   onStateChange,
   powerups,
 }: UIControllerDeps): UIController {
@@ -60,6 +62,9 @@ export function createUIController({
   let powerupConfirmLocked = ui.state === 'powerup-select';
   let powerupLeftLatch = false;
   let powerupRightLatch = false;
+  let finalWinTimer = 0;
+  let finalWinHandled = ui.state !== 'final-win';
+  const FINAL_WIN_AUTO_RETURN = 8;
 
   const changeState = (next: UIState): void => {
     if (ui.state === next) return;
@@ -103,13 +108,21 @@ export function createUIController({
     saveUI(ui);
   };
 
-  const update = (_dt: number, snapshot: InputSnapshot): boolean => {
+  const update = (dt: number, snapshot: InputSnapshot): boolean => {
     if (ui.state !== prevUIState) {
+      const previous = prevUIState;
       prevUIState = ui.state;
       briefingConfirmLocked = ui.state === 'briefing';
       powerupConfirmLocked = ui.state === 'powerup-select';
       powerupLeftLatch = false;
       powerupRightLatch = false;
+      if (ui.state === 'final-win') {
+        finalWinTimer = 0;
+        finalWinHandled = false;
+      } else if (previous === 'final-win') {
+        finalWinTimer = 0;
+        finalWinHandled = true;
+      }
     }
 
     const pauseDown = isDown(snapshot, bindings, 'pause');
@@ -294,9 +307,23 @@ export function createUIController({
       return false;
     }
 
-    if (ui.state === 'win' || ui.state === 'final-win') {
+    if (ui.state === 'win') {
       if (snapshot.keys['Enter'] || snapshot.keys[' ']) resetGame(getNextMissionIndex());
       if (snapshot.keys['Escape']) changeState('title');
+      return false;
+    }
+
+    if (ui.state === 'final-win') {
+      finalWinTimer += dt;
+      const confirmDown = snapshot.keys['Enter'] || snapshot.keys[' '];
+      const escapeDown = snapshot.keys['Escape'];
+      if (
+        !finalWinHandled &&
+        (confirmDown || escapeDown || finalWinTimer >= FINAL_WIN_AUTO_RETURN)
+      ) {
+        finalWinHandled = true;
+        completeFinalWin();
+      }
       return false;
     }
 
