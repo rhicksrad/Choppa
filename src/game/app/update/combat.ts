@@ -82,6 +82,9 @@ export function createCombatProcessor({
   spawnAlienUnit,
   getRescueCueBuffer = () => null,
 }: CombatProcessorDeps): CombatProcessor {
+  const SHIELD_TAG = 'mothership-shield';
+  const MOTHERSHIP_POWER_IDS = ['core-west', 'core-east', 'core-south'] as const;
+
   const spawnExplosion = (tx: number, ty: number, radius = 0.9, duration = 0.6): void => {
     state.explosions.push({ tx, ty, age: 0, duration, radius });
   };
@@ -192,6 +195,36 @@ export function createCombatProcessor({
         continue;
       }
       destroyEntity(entity);
+    }
+  };
+
+  const removeTaggedBuildings = (tag: string): boolean => {
+    let removed = false;
+    for (let i = state.buildingEntities.length - 1; i >= 0; i -= 1) {
+      const entity = state.buildingEntities[i]!;
+      const meta = state.buildingMeta.get(entity);
+      if (!meta || meta.tag !== tag) continue;
+      const transform = transforms.get(entity);
+      if (transform) spawnExplosion(transform.tx, transform.ty, 1.2, 0.9);
+      destroyEntity(entity);
+      removed = true;
+    }
+    return removed;
+  };
+
+  const updateMothershipShield = (): void => {
+    if (mission.state.def.id !== 'm03') return;
+    if (!state.flags.mothershipShieldActive) return;
+    const allOffline = MOTHERSHIP_POWER_IDS.every((id) => {
+      const objective = mission.state.objectives.find((o) => o.id === id);
+      return Boolean(objective && objective.complete);
+    });
+    if (!allOffline) return;
+    state.flags.mothershipShieldActive = false;
+    state.flags.mothershipBreachOpen = true;
+    const removed = removeTaggedBuildings(SHIELD_TAG);
+    if (removed) {
+      playExplosion(bus, 0.6);
     }
   };
 
@@ -381,6 +414,7 @@ export function createCombatProcessor({
     damage.update();
     checkBuildingsForAlienTrigger();
     handleDeaths();
+    updateMothershipShield();
 
     if (!state.flags.campusLeveled) {
       let campusRemaining = 0;

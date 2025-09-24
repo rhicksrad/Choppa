@@ -476,9 +476,12 @@ class MissionCoordinatorImpl implements MissionCoordinator {
       0,
     );
 
+    const isMothership = id === 'm03';
     this.state.flags.aliensTriggered = false;
     this.state.flags.aliensDefeated = false;
     this.state.flags.campusLeveled = false;
+    this.state.flags.mothershipShieldActive = isMothership;
+    this.state.flags.mothershipBreachOpen = false;
 
     this.state.boat.boatsEscaped = 0;
     this.state.boat.objectiveComplete = false;
@@ -755,7 +758,11 @@ class MissionCoordinatorImpl implements MissionCoordinator {
       }, 0);
       let label = objective.name;
       if (!objective.complete) {
-        label += ` (Power Offline: ${completeCount}/${powerIds.length})`;
+        label += ` (Power Offline: ${completeCount}/${powerIds.length}`;
+        if (!this.state.flags.mothershipShieldActive) {
+          label += ' | Hangar open';
+        }
+        label += ')';
       }
       return label;
     };

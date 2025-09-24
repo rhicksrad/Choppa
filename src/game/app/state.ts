@@ -14,6 +14,7 @@ export interface BuildingMeta {
   drop?: { kind: 'armor'; amount: number };
   category: 'campus' | 'stronghold' | 'civilian';
   triggersAlarm: boolean;
+  tag?: string;
 }
 
 export interface Explosion {
@@ -100,6 +101,8 @@ export interface GameState {
     aliensTriggered: boolean;
     aliensDefeated: boolean;
     campusLeveled: boolean;
+    mothershipShieldActive: boolean;
+    mothershipBreachOpen: boolean;
   };
   boat: BoatState;
   hive: HiveState;
@@ -122,7 +125,13 @@ export function createGameState(): GameState {
     alienEntities: new Set(),
     rescueRunners: [],
     rescue: { carrying: 0, rescued: 0, total: 0, survivorsSpawned: false },
-    flags: { aliensTriggered: false, aliensDefeated: false, campusLeveled: false },
+    flags: {
+      aliensTriggered: false,
+      aliensDefeated: false,
+      campusLeveled: false,
+      mothershipShieldActive: false,
+      mothershipBreachOpen: false,
+    },
     boat: { scenario: null, boatsEscaped: 0, objectiveComplete: false, objectiveFailed: false },
     hive: { planting: false, progress: 0, target: 0, armed: false },
   };
