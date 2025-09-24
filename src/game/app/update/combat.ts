@@ -418,19 +418,27 @@ export function createCombatProcessor({
 
     if (boss.phase === 'cinematic') {
       boss.timer += dt;
-      if (boss.timer >= 4.8) {
-        boss.timer = 0;
-        ui.state = 'in-game';
-        const spawnPoint = { tx: 32, ty: 21 };
-        const entity = spawnFinalBoss(spawnPoint);
-        boss.entity = entity;
-        boss.name = 'Vorusk the Neurofurnace';
-        const bossHealth = healths.get(entity);
-        boss.health = bossHealth?.current ?? 0;
-        boss.healthMax = bossHealth?.max ?? boss.health;
-        boss.phase = 'active';
-        void music.play('boss');
+      mission.state.complete = false;
+      if (ui.state === 'nuke-cinematic') {
+        return;
       }
+      if (ui.state !== 'in-game') {
+        ui.state = 'in-game';
+      }
+      boss.phase = 'spawning';
+      boss.timer = 0;
+    }
+
+    if (boss.phase === 'spawning') {
+      const spawnPoint = { tx: 32, ty: 21 };
+      const entity = spawnFinalBoss(spawnPoint);
+      boss.entity = entity;
+      boss.name = 'Vorusk the Neurofurnace';
+      const bossHealth = healths.get(entity);
+      boss.health = bossHealth?.current ?? 0;
+      boss.healthMax = bossHealth?.max ?? boss.health;
+      boss.phase = 'active';
+      void music.play('boss');
       mission.state.complete = false;
       return;
     }

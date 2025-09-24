@@ -621,9 +621,15 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       deps.context.fillStyle = '#d0f7ff';
       deps.context.font = '16px system-ui, sans-serif';
       const dialog = mission.state.def.phaseTwoIntroDialog ?? [];
+      const dialogStartY = cy - 70;
       for (let i = 0; i < dialog.length; i += 1) {
-        deps.context.fillText(dialog[i]!, cx, cy - 70 + i * 22);
+        deps.context.fillText(dialog[i]!, cx, dialogStartY + i * 22);
       }
+
+      const promptY = dialogStartY + dialog.length * 22 + 48;
+      deps.context.fillStyle = '#92ffa6';
+      deps.context.font = 'bold 18px system-ui, sans-serif';
+      deps.context.fillText('Press Enter to continue', cx, promptY);
       deps.context.restore();
     }
 
