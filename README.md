@@ -1,32 +1,22 @@
 # Choppa
 
-Choppa is a browser-based homage to classic isometric helicopter strike games. Everything runs in TypeScript with a lightweight ECS, Canvas 2D rendering, and a deterministic fixed-step loop.
+Choppa is a browser-based homage to classic isometric helicopter strike games. The final campaign spans four handcrafted missions with cinematic briefings, reactive audio, and a deterministic fixed-step loop written entirely in TypeScript.
 
-## Quickstart
+## Campaign highlights
 
-```bash
-npm install
-npm run dev -- --host
-```
+- **Operation Dawnshield** – Level the alien forward bases, repel escalating drone waves, and airlift stranded survivors out of the valley.
+- **Operation Stormbreak** – Launch from the carrier deck, silence roaming mortar platforms, and escort convoy ships past relentless strike boats.
+- **Operation Starfall** – Infiltrate the mothership hangar, shred three shield conduits, and breach the hull before the invasion fleet escapes.
+- **Operation Black Sun** – Fight across the alien homeland, plant a nuke in the hivemind well, and survive the two-phase Vorusk encounter to finish the war.
+- **Powerup draft** – Between sorties, pick from escalating upgrade rounds to expand ammo reserves, reduce weapon cooldowns, and boost warhead yield.
 
-Open the printed URL in Chrome or Firefox. For a production build:
+## Core features
 
-```bash
-npm run build
-```
-
-## Deployment
-
-The production site is deployed through the automated workflow in
-`.github/workflows/gh-pages.yml`, which builds the project with Vite and uploads the
-contents of the `dist/` directory to GitHub Pages. This ensures the published
-site always serves bundled JavaScript along with the generated `favicon.ico` and
-`manifest.webmanifest` assets, avoiding MIME-type errors or missing resources in
-production.
-
-### Social sharing image
-
-Add a `1200x630` Open Graph preview at `public/og-image.png` before publishing so shared links can use your custom artwork.
+- **Responsive flight & combat** – WASD flight with strafe thrusters supports mouse-aimed machine guns, guided missiles, and devastating hellfires tuned around reproducible physics.
+- **Enemy variety** – AAA emplacements, SAM towers, drones, gunships, strike boats, and late-game bosses mix projectile patterns and objective pressure.
+- **Mission scripting** – Objectives track destruction, timed waves, evac counts, and extraction pads to pace each theater.
+- **Achievements** – Ten unlockable achievements celebrate perfect evacuations, flawless convoy escorts, and campaign completion; unlocked medals persist in local storage.
+- **Persistent settings** – Audio mix, fog-of-war, minimap visibility, screen shake, and key bindings save between runs for quick relaunches.
 
 ## Controls
 
@@ -37,35 +27,56 @@ Add a `1200x630` Open Graph preview at `public/og-image.png` before publishing s
 - **Middle Mouse / Ctrl** – Hellfires
 - **Esc** – Pause / Resume / Back
 - **M** – Toggle mute
-- **Title Screen → Settings** – Adjust audio sliders, fog-of-war, screen shake, and minimap visibility
+- **Title Screen → Settings** – Adjust audio sliders, fog-of-war, screen shake, minimap, and input bindings
 
-## Project Structure
+## Development setup
+
+1. Install Node.js 18 or newer.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server (add `--host` to expose on your LAN):
+   ```bash
+   npm run dev -- --host
+   ```
+
+### Useful scripts
+
+- `npm run build` – Create a production build under `dist/`.
+- `npm run preview -- --host` – Preview the production bundle locally.
+- `npm run lint` – Type-check and lint the TypeScript source with ESLint.
+- `npm run pages:deploy` – Push the contents of `dist/` to the `gh-pages` branch.
+
+## Deployment
+
+The production site is deployed through `.github/workflows/gh-pages.yml`. The workflow installs dependencies, runs the Vite build, and publishes the generated `dist/` artifacts (including `favicon.ico`, `manifest.webmanifest`, and `og-image.png`) to GitHub Pages.
+
+## Project structure
 
 ```
 /index.html            Entry page and canvas
 /vite.config.ts        Vite configuration
 /src/
   core/                ECS, timing, input, audio, utilities
-  game/                Components, systems, data
+  game/                Campaign data, systems, spawn factories
   render/              Camera, isometric projection, sprite painters
-  ui/                  HUD, menus, bindings
-  world/               Tilemap helpers and sample map
+  ui/                  HUD, menus, bindings, achievements overlay
+  world/               Tilemap helpers and runtime maps
   main.ts              Game wiring and loop
-/public/               Favicon and manifest
+/public/               Audio, favicon, manifest, Open Graph preview
 ```
 
-## Gameplay Notes
+## Persistence & accessibility
 
-- Waves spawn patrol drones and chaser gunships; difficulty ramps each wave.
-- The mission layer tracks static AAA/SAM objectives. Clear them and survive to win.
-- Helicopter fuel and ammo must be recovered from supply crates scattered across the map.
-- Explosion, weapon, and engine audio are procedural and respect the mute toggle.
+- Campaign progress, unlocked achievements, and settings persist in `localStorage` for returning pilots.
+- Mouse-free menus and large-font HUD keep the action readable even during heavy effects.
 
-## Known Limitations
+## Known limitations
 
-- Placeholder art and procedural audio are used until bespoke assets land.
-- No persistent progression between sessions beyond local storage of settings.
-- AI navigation is simple; terrain collision and friendly units are not yet modelled.
+- Placeholder art and procedural audio remain until bespoke assets land.
+- No persistent progression between campaigns beyond stored settings and achievements.
+- AI navigation favors simple pathing; terrain collision and friendly formations are still evolving.
 - Mobile/touch controls are not implemented.
 
 ## License
