@@ -405,6 +405,16 @@ const spawnPickupDrop = (tx: number, ty: number, amount: number): void => {
   });
 };
 
+const maybeSpawnAlienAmmoDrop = (tx: number, ty: number): void => {
+  if (rng.float01() > 0.1) return;
+  spawnPickupEntity({
+    tx,
+    ty,
+    kind: 'ammo',
+    ammo: { missiles: 80, rockets: 3, hellfires: 0 },
+  });
+};
+
 const combatProcessor = createCombatProcessor({
   state,
   ui,
@@ -426,6 +436,7 @@ const combatProcessor = createCombatProcessor({
   missionCoordinator,
   spawnSurvivors,
   spawnPickupDrop,
+  maybeSpawnAlienAmmoDrop,
   destroyEntity,
   engine: audio.engine,
   spawnAlienUnit,
