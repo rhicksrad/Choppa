@@ -209,7 +209,7 @@ const missionMusicMap = {
   m01: 'level1',
   m02: 'level2',
   m03: 'level3',
-  m04: 'level3',
+  m04: 'level4',
 } as const;
 
 const getMissionTrackId = (missionId: string): string =>
