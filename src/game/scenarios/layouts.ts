@@ -507,6 +507,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       score: 420,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: 'mothership-conduit',
     },
     {
       tx: 35.8,
@@ -522,6 +523,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       score: 420,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: 'mothership-conduit',
     },
     {
       tx: 30.0,
@@ -537,6 +539,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       score: 430,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: 'mothership-conduit',
     },
   ];
 
