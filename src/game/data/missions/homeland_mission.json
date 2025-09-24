@@ -35,7 +35,7 @@
       "type": "custom",
       "name": "Plant the nuke in the hivemind well",
       "requires": ["spire-west", "spire-east", "core-shield"],
-      "at": { "tx": 32.0, "ty": 21.0 },
+      "at": { "tx": 32.0, "ty": 31.0 },
       "radiusTiles": 2.2
     },
     {
