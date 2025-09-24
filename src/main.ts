@@ -526,6 +526,12 @@ const resetCampaignProgress = (): void => {
   resetGame(0);
 };
 
+const handleFinalVictoryComplete = (): void => {
+  missionCoordinator.resetProgress();
+  resetGame(0);
+  transitionUIState('title');
+};
+
 const uiController = createUIController({
   ui,
   titleMenu,
@@ -536,6 +542,7 @@ const uiController = createUIController({
   resetGame,
   resetCampaign: resetCampaignProgress,
   getNextMissionIndex: () => missionCoordinator.getMissionIndices().next,
+  completeFinalWin: handleFinalVictoryComplete,
   onStateChange: handleUIStateChange,
   powerups: {
     hasSelection: hasActivePowerupSelection,
