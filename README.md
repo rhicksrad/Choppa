@@ -24,6 +24,10 @@ site always serves bundled JavaScript along with the generated `favicon.ico` and
 `manifest.webmanifest` assets, avoiding MIME-type errors or missing resources in
 production.
 
+### Social sharing image
+
+Add a `1200x630` Open Graph preview at `public/og-image.png` before publishing so shared links can use your custom artwork.
+
 ## Controls
 
 - **WASD / Arrow Keys** – Fly the chopper
