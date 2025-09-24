@@ -6,6 +6,7 @@ import type { Health } from '../../components/Health';
 import type { Physics } from '../../components/Physics';
 import type { Building } from '../../components/Building';
 import type { GameState } from '../state';
+import { PLAYER_RESPAWN_DURATION } from '../constants';
 import {
   playMissile,
   playAlienLaser,
@@ -163,7 +164,7 @@ export function createCombatProcessor({
     }
     state.player.lives -= 1;
     state.player.invulnerable = true;
-    state.player.respawnTimer = 2.5;
+    state.player.respawnTimer = PLAYER_RESPAWN_DURATION;
     if (state.player.lives <= 0) {
       ui.state = 'game-over';
       state.wave.active = false;

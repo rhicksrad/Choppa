@@ -15,7 +15,8 @@ import {
   drawObeliskTurret,
   drawSpeedboat,
 } from '../../render/sprites/targets';
-import { drawPad, drawHeli } from '../../render/sprites/heli';
+import { drawPad, drawHeli, drawCrashSite } from '../../render/sprites/heli';
+import { PLAYER_RESPAWN_DURATION } from '../../game/app/constants';
 import { drawRescueRunner } from '../../render/sprites/rescuees';
 import { drawHUD } from '../../ui/hud/hud';
 import { renderSettings, renderAchievements, renderAbout } from '../../ui/menus/renderers';
@@ -317,16 +318,37 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
 
     const sprite = stores.sprites.get(player);
     if (!sprite) return;
-    drawHeli(deps.context, {
-      tx: playerTransform.tx,
-      ty: playerTransform.ty,
-      rot: playerTransform.rot,
-      rotorPhase: sprite.rotor,
-      color: sprite.color,
-      iso: isoParams,
-      originX: originWithShakeX,
-      originY: originWithShakeY,
-    });
+
+    const respawning = state.player.invulnerable && ui.state === 'in-game';
+    if (respawning) {
+      const elapsed = Math.max(
+        0,
+        Math.min(
+          PLAYER_RESPAWN_DURATION,
+          PLAYER_RESPAWN_DURATION - state.player.respawnTimer,
+        ),
+      );
+      drawCrashSite(deps.context, {
+        tx: playerTransform.tx,
+        ty: playerTransform.ty,
+        iso: isoParams,
+        originX: originWithShakeX,
+        originY: originWithShakeY,
+        elapsed,
+        duration: PLAYER_RESPAWN_DURATION,
+      });
+    } else {
+      drawHeli(deps.context, {
+        tx: playerTransform.tx,
+        ty: playerTransform.ty,
+        rot: playerTransform.rot,
+        rotorPhase: sprite.rotor,
+        color: sprite.color,
+        iso: isoParams,
+        originX: originWithShakeX,
+        originY: originWithShakeY,
+      });
+    }
   };
 
   const renderUiLayer = (
