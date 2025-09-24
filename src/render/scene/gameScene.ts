@@ -156,7 +156,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     originWithShakeX: number,
     originWithShakeY: number,
   ): void => {
-    const { isoParams, stores, player, state, pad } = args;
+    const { isoParams, stores, player, state, pad, ui } = args;
     const playerTransform = stores.transforms.get(player);
     if (!playerTransform) return;
 
