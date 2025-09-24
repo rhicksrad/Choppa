@@ -848,12 +848,14 @@ export function createMissionFourLayout(map: { width: number; height: number }):
   ];
 
   const alienSpawnPoints = [
-    { tx: 28.2, ty: 22.0 },
-    { tx: 35.8, ty: 22.0 },
-    { tx: 32.0, ty: 28.4 },
-    { tx: 32.0, ty: 13.8 },
-    { tx: 24.0, ty: 30.2 },
-    { tx: 40.0, ty: 30.2 },
+    { tx: 20.5, ty: 18.0 },
+    { tx: 43.5, ty: 18.0 },
+    { tx: 18.0, ty: 44.2 },
+    { tx: 46.0, ty: 44.2 },
+    { tx: 24.0, ty: 28.0 },
+    { tx: 40.0, ty: 28.0 },
+    { tx: 32.0, ty: 36.2 },
+    { tx: 32.0, ty: 50.8 },
   ];
 
   const waveSpawnPoints = [
@@ -866,18 +868,20 @@ export function createMissionFourLayout(map: { width: number; height: number }):
   ];
 
   const patrolRoutes: PatrolRoute[] = [
-    { tx: 32.0, ty: 27.6, axis: 'y', range: 5.6 },
-    { tx: 24.5, ty: 26.2, axis: 'x', range: 3.6 },
-    { tx: 39.5, ty: 26.0, axis: 'x', range: 3.6 },
+    { tx: 32.0, ty: 27.6, axis: 'y', range: 6.5 },
+    { tx: 24.0, ty: 28.0, axis: 'x', range: 7.5 },
+    { tx: 40.0, ty: 28.0, axis: 'x', range: 7.5 },
+    { tx: 32.0, ty: 18.0, axis: 'x', range: 10.0 },
+    { tx: 32.0, ty: 44.2, axis: 'x', range: 12.0 },
   ];
 
   const sentinelPosts: SentinelPost[] = [
-    { tx: 27.6, ty: 22.2, holdRadius: 1.0, leashRange: 8.6, fireRange: 8.8 },
-    { tx: 36.4, ty: 22.2, holdRadius: 1.0, leashRange: 8.6, fireRange: 8.8 },
+    { tx: 20.5, ty: 18.0, holdRadius: 1.0, leashRange: 8.8, fireRange: 9.0 },
+    { tx: 43.5, ty: 18.0, holdRadius: 1.0, leashRange: 8.8, fireRange: 9.0 },
     { tx: 32.0, ty: 25.6, holdRadius: 1.2, leashRange: 9.2, fireRange: 9.4 },
     { tx: 32.0, ty: 16.0, holdRadius: 1.2, leashRange: 9.6, fireRange: 9.8 },
-    { tx: 28.4, ty: 30.2, holdRadius: 1.0, leashRange: 8.2, fireRange: 8.6 },
-    { tx: 35.6, ty: 30.2, holdRadius: 1.0, leashRange: 8.2, fireRange: 8.6 },
+    { tx: 18.0, ty: 44.2, holdRadius: 1.0, leashRange: 8.4, fireRange: 8.8 },
+    { tx: 46.0, ty: 44.2, holdRadius: 1.0, leashRange: 8.4, fireRange: 8.8 },
   ];
 
   const obeliskSites: ObeliskSite[] = [

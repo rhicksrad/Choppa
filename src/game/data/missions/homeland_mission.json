@@ -48,10 +48,10 @@
     }
   ],
   "enemySpawns": [
-    { "type": "SAM", "at": { "tx": 24.2, "ty": 28.0 } },
-    { "type": "AAA", "at": { "tx": 39.8, "ty": 28.0 } },
-    { "type": "SAM", "at": { "tx": 32.0, "ty": 16.2 } },
-    { "type": "AAA", "at": { "tx": 32.0, "ty": 33.2 } }
+    { "type": "SAM", "at": { "tx": 20.5, "ty": 18.0 } },
+    { "type": "AAA", "at": { "tx": 43.5, "ty": 18.0 } },
+    { "type": "SAM", "at": { "tx": 18.0, "ty": 44.2 } },
+    { "type": "AAA", "at": { "tx": 46.0, "ty": 44.2 } }
   ],
   "successDialog": [
     "Science: Nuke planted. The hivemind lattice is collapsing across the spectrum.",
