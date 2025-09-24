@@ -1,6 +1,7 @@
 import type { IsoParams } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 import type { AchievementBannerView } from '../../game/achievements/tracker';
+import { createVerticalGradient, drawPanel, font, mixColor, palette, traceRoundedRect } from '../theme';
 
 export interface BarsData {
   fuel01: number;
@@ -25,11 +26,10 @@ const ammoDisplayOrder: {
   key: keyof BarsData['ammo'];
   label: string;
   color: string;
-  bg: string;
 }[] = [
-  { key: 'missiles', label: 'Machine Gun (LMB / Space)', color: '#ffd166', bg: '#2b1f08' },
-  { key: 'rockets', label: 'Missiles (RMB / Shift)', color: '#ff8a5c', bg: '#2b1208' },
-  { key: 'hellfires', label: 'Hellfires (MMB / Ctrl)', color: '#f94144', bg: '#2a090b' },
+  { key: 'missiles', label: 'Machine Gun (LMB / Space)', color: '#ffd166' },
+  { key: 'rockets', label: 'Missiles (RMB / Shift)', color: '#ff8a5c' },
+  { key: 'hellfires', label: 'Hellfires (MMB / Ctrl)', color: '#f94144' },
 ];
 
 export function drawHUD(
@@ -61,18 +61,41 @@ export function drawHUD(
     const drawY = 28;
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#f4f1ff';
-    ctx.font = 'bold 18px system-ui, sans-serif';
-    ctx.fillText(boss.name, drawX + barWidth / 2, drawY - 10);
+    ctx.font = font(18, 'bold');
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = palette.textPrimary;
+    ctx.fillText(boss.name, drawX + barWidth / 2, drawY - 12);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
 
-    ctx.fillStyle = 'rgba(10, 4, 18, 0.82)';
-    ctx.fillRect(drawX, drawY, barWidth, barHeight);
-    const fillWidth = Math.max(0, Math.min(1, boss.health01)) * (barWidth - 4);
-    ctx.fillStyle = boss.enraged ? '#ff5d8f' : '#92ffa6';
-    ctx.fillRect(drawX + 2, drawY + 2, fillWidth, barHeight - 4);
-    ctx.strokeStyle = boss.enraged ? 'rgba(255,93,143,0.85)' : 'rgba(146,255,166,0.85)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(drawX + 1, drawY + 1, barWidth - 2, barHeight - 2);
+    const barRect = { x: drawX, y: drawY, width: barWidth, height: barHeight } as const;
+    const barBase = boss.enraged ? palette.danger : palette.accent;
+    drawPanel(ctx, barRect, {
+      radius: 9,
+      fill: 'rgba(10, 20, 28, 0.9)',
+      stroke: mixColor(barBase, '#000000', 0.6),
+      borderWidth: 1.5,
+      shadow: false,
+    });
+
+    const fillWidth = Math.max(0, Math.min(1, boss.health01)) * (barWidth - 6);
+    if (fillWidth > 0) {
+      const fillRect = { x: drawX + 3, y: drawY + 3, width: fillWidth, height: barHeight - 6 } as const;
+      const gradient = createVerticalGradient(
+        ctx,
+        fillRect,
+        mixColor(barBase, '#ffffff', 0.4),
+        mixColor(barBase, '#000000', 0.05),
+      );
+      ctx.save();
+      traceRoundedRect(ctx, fillRect, 6);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.restore();
   }
 
@@ -94,9 +117,9 @@ export function drawHUD(
     const labelLineHeight = 14;
     const titleLineHeight = 20;
     const bodyLineHeight = 16;
-    const labelFont = 'bold 12px system-ui, sans-serif';
-    const titleFont = 'bold 16px system-ui, sans-serif';
-    const bodyFont = '13px system-ui, sans-serif';
+    const labelFont = font(12, 'bold');
+    const titleFont = font(16, 'bold');
+    const bodyFont = font(13);
 
     const wrapDescription = (text: string): string[] => {
       const words = text.split(/\s+/).filter(Boolean);
@@ -137,26 +160,32 @@ export function drawHUD(
 
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, banner.alpha));
-      ctx.fillStyle = 'rgba(7, 16, 24, 0.92)';
-      ctx.fillRect(drawX, drawY, bannerWidth, bannerHeight);
-      ctx.strokeStyle = 'rgba(146, 255, 166, 0.22)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(drawX + 0.5, drawY + 0.5, bannerWidth - 1, bannerHeight - 1);
+      drawPanel(
+        ctx,
+        { x: drawX, y: drawY, width: bannerWidth, height: bannerHeight },
+        {
+          radius: 12,
+          fill: palette.backdropStrong,
+          stroke: palette.accentSoft,
+          borderWidth: 1,
+          shadow: { color: 'rgba(0, 0, 0, 0.28)', blur: 14, offsetY: 6 },
+        },
+      );
 
       let textY = drawY + topPad;
       const textX = drawX + 16;
 
-      ctx.fillStyle = '#92ffa6';
+      ctx.fillStyle = palette.accent;
       ctx.font = labelFont;
       ctx.fillText('Achievement Unlocked', textX, textY);
       textY += labelLineHeight + 6;
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = palette.textPrimary;
       ctx.font = titleFont;
       ctx.fillText(banner.title, textX, textY);
       textY += titleLineHeight + 4;
 
-      ctx.fillStyle = '#c8d7e1';
+      ctx.fillStyle = palette.textSecondary;
       ctx.font = bodyFont;
       for (let lineIndex = 0; lineIndex < descriptionLines.length; lineIndex += 1) {
         ctx.fillText(descriptionLines[lineIndex]!, textX, textY);
@@ -212,24 +241,32 @@ export function drawHUD(
   const panelX = rawPanelX < margin ? margin : rawPanelX;
   const panelY = margin;
 
-  ctx.fillStyle = 'rgba(7, 16, 24, 0.88)';
-  ctx.fillRect(panelX, panelY, panelW, panelH);
-  ctx.strokeStyle = 'rgba(146, 255, 166, 0.12)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+  drawPanel(
+    ctx,
+    { x: panelX, y: panelY, width: panelW, height: panelH },
+    {
+      radius: 16,
+      fill: palette.panel,
+      stroke: palette.accentSoft,
+      borderWidth: 1.2,
+      shadow: { color: 'rgba(0, 0, 0, 0.45)', blur: 26, offsetY: 14 },
+    },
+  );
 
   const leftColumnX = panelX + panelPadding;
   const leftColumnTop = panelY + panelPadding;
   let columnY = leftColumnTop;
 
-  ctx.fillStyle = '#e6eef5';
-  ctx.font = 'bold 16px system-ui, sans-serif';
+  ctx.fillStyle = palette.textPrimary;
+  ctx.font = font(16, 'bold');
   ctx.fillText(`Lives: ${bars.lives}`, leftColumnX, columnY + 16);
   columnY += livesLineHeight + barsSpacingTop;
 
-  drawBar(ctx, leftColumnX, columnY, barW, barH, bars.fuel01, '#2bd673', '#0a1e13', 'FUEL');
+  const fuelColor = '#2bd673';
+  const armorColor = '#2ba6ff';
+  drawBar(ctx, leftColumnX, columnY, barW, barH, bars.fuel01, fuelColor, mixColor(fuelColor, '#050b12', 0.82), 'FUEL');
   columnY += barH + barSpacing;
-  drawBar(ctx, leftColumnX, columnY, barW, barH, bars.armor01, '#2ba6ff', '#0a1521', 'ARMOR');
+  drawBar(ctx, leftColumnX, columnY, barW, barH, bars.armor01, armorColor, mixColor(armorColor, '#050b12', 0.82), 'ARMOR');
   columnY += barH + barSpacing;
 
   for (const ammoInfo of ammoDisplayOrder) {
@@ -244,7 +281,7 @@ export function drawHUD(
       barH,
       ammo01,
       ammoInfo.color,
-      ammoInfo.bg,
+      mixColor(ammoInfo.color, '#050b12', 0.82),
       ammoInfo.label,
     );
     columnY += barH + barSpacing;
@@ -253,9 +290,9 @@ export function drawHUD(
   const drawScoreBlock = (x: number, top: number) => {
     ctx.save();
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#c8d7e1';
-    ctx.font = '14px system-ui, sans-serif';
-    let lineY = top + 14;
+    ctx.fillStyle = palette.textSecondary;
+    ctx.font = font(14);
+    let lineY = top + 16;
     ctx.fillText(`Score: ${Math.floor(bars.score)}`, x, lineY);
     lineY += statsLineHeight;
     ctx.fillText(`Wave: ${bars.wave}  Remaining: ${bars.enemiesRemaining}`, x, lineY);
@@ -268,12 +305,15 @@ export function drawHUD(
 
   const drawMinimapPanel = (x: number, y: number) => {
     ctx.save();
-    ctx.fillStyle = '#11202b';
-    ctx.fillRect(x - 2, y - 2, mmW + 4, mmH + 4);
-    ctx.fillStyle = '#0b1720';
+    drawPanel(
+      ctx,
+      { x: x - 6, y: y - 6, width: mmW + 12, height: mmH + 12 },
+      { radius: 12, fill: palette.panelSunken, stroke: palette.panelBorder, borderWidth: 1, shadow: false },
+    );
+    ctx.fillStyle = palette.minimapFill;
     ctx.fillRect(x, y, mmW, mmH);
 
-    ctx.strokeStyle = '#142a3a';
+    ctx.strokeStyle = palette.minimapGrid;
     ctx.lineWidth = 1;
     for (let gx = 0; gx <= minimap.mapW; gx += 4) {
       const gxNorm = (gx / minimap.mapW) * mmW;
@@ -290,7 +330,7 @@ export function drawHUD(
       ctx.stroke();
     }
 
-    ctx.fillStyle = '#ef476f';
+    ctx.fillStyle = palette.minimapEnemy;
     for (let i = 0; i < minimap.enemies.length; i += 1) {
       const e = minimap.enemies[i]!;
       const px = x + (e.tx / minimap.mapW) * mmW;
@@ -298,10 +338,12 @@ export function drawHUD(
       ctx.fillRect(px - 2, py - 2, 4, 4);
     }
 
-    ctx.fillStyle = '#92ffa6';
+    ctx.fillStyle = palette.minimapPlayer;
     const ppx = x + (minimap.player.tx / minimap.mapW) * mmW;
     const ppy = y + (minimap.player.ty / minimap.mapH) * mmH;
-    ctx.fillRect(ppx - 2, ppy - 2, 4, 4);
+    ctx.beginPath();
+    ctx.arc(ppx, ppy, 3, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   };
 
@@ -328,28 +370,29 @@ export function drawHUD(
   const objectivePanelX = panelX;
   const objectivePanelY = panelY + panelH + margin;
 
-  ctx.fillStyle = 'rgba(7, 16, 24, 0.88)';
-  ctx.fillRect(objectivePanelX, objectivePanelY, objectivePanelW, objectivePanelH);
-  ctx.strokeStyle = 'rgba(146, 255, 166, 0.12)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(
-    objectivePanelX + 0.5,
-    objectivePanelY + 0.5,
-    objectivePanelW - 1,
-    objectivePanelH - 1,
+  drawPanel(
+    ctx,
+    { x: objectivePanelX, y: objectivePanelY, width: objectivePanelW, height: objectivePanelH },
+    {
+      radius: 14,
+      fill: palette.panel,
+      stroke: palette.accentSoft,
+      borderWidth: 1,
+      shadow: { color: 'rgba(0, 0, 0, 0.38)', blur: 22, offsetY: 10 },
+    },
   );
 
   ctx.textAlign = 'left';
-  ctx.font = 'bold 16px system-ui, sans-serif';
-  ctx.fillStyle = '#92ffa6';
+  ctx.font = font(16, 'bold');
+  ctx.fillStyle = palette.accent;
   let objectiveTextY = objectivePanelY + objectivePanelPaddingY + objectiveHeaderHeight;
   const objectiveTextX = objectivePanelX + objectivePanelPaddingX;
   ctx.fillText('Objectives', objectiveTextX, objectiveTextY);
 
   if (hasObjectives) {
     objectiveTextY += 12;
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.fillStyle = '#e6eef5';
+    ctx.font = font(14);
+    ctx.fillStyle = palette.textPrimary;
     for (let i = 0; i < objectiveLines.length; i += 1) {
       ctx.fillText(objectiveLines[i]!, objectiveTextX, objectiveTextY + i * objectiveLineHeight);
     }
@@ -361,7 +404,10 @@ export function drawHUD(
     ctx.translate(w / 2, 28);
     const ang = Math.atan2(compassDir.dy, compassDir.dx);
     ctx.rotate(ang);
-    ctx.fillStyle = '#c8d7e1';
+    ctx.fillStyle = palette.textSecondary;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
     ctx.beginPath();
     ctx.moveTo(12, 0);
     ctx.lineTo(-8, -6);
@@ -386,12 +432,43 @@ function drawBar(
   label: string,
 ): void {
   ctx.save();
+  const radius = Math.min(6, h / 2);
+  const backgroundRect = { x, y, width: w, height: h } as const;
   ctx.fillStyle = bg;
-  ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, Math.max(0, Math.min(1, v01)) * w, h);
-  ctx.fillStyle = '#c8d7e1';
-  ctx.font = '10px system-ui, sans-serif';
-  ctx.fillText(label, x, y - 2);
+  traceRoundedRect(ctx, backgroundRect, radius);
+  ctx.fill();
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = mixColor(bg, '#000000', 0.55);
+  traceRoundedRect(ctx, backgroundRect, radius);
+  ctx.stroke();
+
+  const clamped = Math.max(0, Math.min(1, v01));
+  if (clamped > 0) {
+    const innerPadding = 2;
+    const fillRect = {
+      x: x + innerPadding,
+      y: y + innerPadding,
+      width: Math.max(0, w - innerPadding * 2) * clamped,
+      height: Math.max(0, h - innerPadding * 2),
+    } as const;
+
+    ctx.save();
+    traceRoundedRect(ctx, fillRect, Math.max(2, radius - innerPadding));
+    ctx.clip();
+    const gradient = createVerticalGradient(
+      ctx,
+      fillRect,
+      mixColor(color, '#ffffff', 0.35),
+      mixColor(color, '#000000', 0.1),
+    );
+    ctx.fillStyle = gradient;
+    ctx.fillRect(fillRect.x, fillRect.y, fillRect.width, fillRect.height);
+    ctx.restore();
+  }
+
+  ctx.fillStyle = palette.textMuted;
+  ctx.font = font(11, 'bold');
+  ctx.fillText(label, x, y - 4);
   ctx.restore();
 }

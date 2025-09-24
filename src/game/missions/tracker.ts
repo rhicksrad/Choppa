@@ -33,15 +33,17 @@ export class MissionTracker {
           o.complete = true;
         }
       } else if (o.type === 'destroy') {
-        // Consider objective complete if no living collider within radius
+        // Consider objective complete if no living enemy collider within radius
         let anyAlive = false;
-        this.colliders.forEach((e, _c) => {
+        this.colliders.forEach((entity, collider) => {
           if (anyAlive) return;
-          const t = this.transforms.get(e);
-          if (!t) return;
-          const h = this.healths.get(e);
-          if (!h || h.current <= 0) return;
-          if (tileDist(t.tx, t.ty, o.at.tx, o.at.ty) <= o.radiusTiles) anyAlive = true;
+          if (collider.team && collider.team !== 'enemy') return;
+          const transform = this.transforms.get(entity);
+          if (!transform) return;
+          const health = this.healths.get(entity);
+          if (!health || health.current <= 0) return;
+          if (tileDist(transform.tx, transform.ty, o.at.tx, o.at.ty) <= o.radiusTiles)
+            anyAlive = true;
         });
         if (!anyAlive) o.complete = true;
       }
