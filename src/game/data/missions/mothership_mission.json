@@ -7,46 +7,89 @@
     "XO: Knock them out and we'll carve a corridor straight into the core.",
     "Pilot: Once I'm inside, prepare the jump for their homeworld."
   ],
-  "startPos": { "tx": 30, "ty": 53 },
+  "startPos": {
+    "tx": 30,
+    "ty": 2
+  },
   "objectives": [
     {
       "id": "core-west",
       "type": "destroy",
       "name": "Disable the western power conduit",
-      "at": { "tx": 24.2, "ty": 30.2 },
+      "at": {
+        "tx": 5.2,
+        "ty": 30.2
+      },
       "radiusTiles": 1.8
     },
     {
       "id": "core-east",
       "type": "destroy",
       "name": "Disable the eastern power conduit",
-      "at": { "tx": 35.8, "ty": 30.0 },
+      "at": {
+        "tx": 54.2,
+        "ty": 30.0
+      },
       "radiusTiles": 1.8
     },
     {
       "id": "core-south",
       "type": "destroy",
       "name": "Disable the southern power conduit",
-      "at": { "tx": 30.0, "ty": 38.6 },
+      "at": {
+        "tx": 30.0,
+        "ty": 57.2
+      },
       "radiusTiles": 1.9
     },
     {
       "id": "breach",
       "type": "reach",
       "name": "Breach the mothership interior",
-      "requires": ["core-west", "core-east", "core-south"],
-      "at": { "tx": 30.0, "ty": 26.4 },
+      "requires": [
+        "core-west",
+        "core-east",
+        "core-south"
+      ],
+      "at": {
+        "tx": 30.0,
+        "ty": 26.4
+      },
       "radiusTiles": 1.6
     }
   ],
   "enemySpawns": [
-    { "type": "AAA", "at": { "tx": 27.6, "ty": 33.4 } },
-    { "type": "AAA", "at": { "tx": 32.4, "ty": 33.4 } },
-    { "type": "SAM", "at": { "tx": 24.0, "ty": 28.2 } },
-    { "type": "SAM", "at": { "tx": 36.0, "ty": 28.2 } }
+    {
+      "type": "AAA",
+      "at": {
+        "tx": 27.5,
+        "ty": 54.5
+      }
+    },
+    {
+      "type": "AAA",
+      "at": {
+        "tx": 32.5,
+        "ty": 54.5
+      }
+    },
+    {
+      "type": "SAM",
+      "at": {
+        "tx": 7.0,
+        "ty": 28.2
+      }
+    },
+    {
+      "type": "SAM",
+      "at": {
+        "tx": 52.0,
+        "ty": 28.2
+      }
+    }
   ],
   "successDialog": [
-    "XO: Conduits offline. The hangar is open—hold while the breach team boards.",
+    "XO: Conduits offline. The hangar is open\u2014hold while the breach team boards.",
     "Science: Portal drives synced to the mothership core. Next stop: the alien homeworld.",
     "Press Enter for Mission Four or Esc for title"
   ]
