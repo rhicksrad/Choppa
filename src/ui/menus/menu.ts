@@ -1,5 +1,6 @@
 import type { InputSnapshot } from '../../core/input/input';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
+import { drawBackdrop, font, palette } from '../theme';
 
 export interface MenuItem {
   id: string;
@@ -51,10 +52,7 @@ export class Menu {
   public render(context: CanvasRenderingContext2D, title: string, subtitle: string): void {
     const { width: w, height: h } = getCanvasViewMetrics(context);
     context.save();
-    context.fillStyle = '#0e141a';
-    context.globalAlpha = 0.75;
-    context.fillRect(0, 0, w, h);
-    context.globalAlpha = 1;
+    drawBackdrop(context, w, h, 0.78);
 
     context.textAlign = 'center';
     context.textBaseline = 'top';
@@ -69,8 +67,8 @@ export class Menu {
       return Number.isFinite(parsed) ? parsed : 16;
     };
 
-    const titleFont = 'bold 32px system-ui, sans-serif';
-    const subtitleFont = '14px system-ui, sans-serif';
+    const titleFont = font(32, 'bold');
+    const subtitleFont = font(14);
     const gapTitleSubtitle = 12;
     const gapSubtitleMenu = 36;
     const gapMenuItems = 18;
@@ -82,12 +80,14 @@ export class Menu {
 
     const menuFonts: string[] = [];
     const menuHeights: number[] = [];
+    const menuWidths: number[] = [];
     for (let i = 0; i < this.items.length; i += 1) {
       const selected = i === this.index;
-      const font = selected ? 'bold 18px system-ui, sans-serif' : '16px system-ui, sans-serif';
-      menuFonts.push(font);
-      context.font = font;
+      const itemFont = selected ? font(18, 'bold') : font(16);
+      menuFonts.push(itemFont);
+      context.font = itemFont;
       menuHeights.push(measureHeight(this.items[i]!.label));
+      menuWidths.push(context.measureText(this.items[i]!.label).width);
     }
 
     const menuCount = menuHeights.length;
@@ -101,12 +101,18 @@ export class Menu {
 
     let y = (h - totalHeight) / 2;
 
-    context.fillStyle = '#92ffa6';
+    context.fillStyle = palette.accent;
+    context.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    context.shadowBlur = 16;
+    context.shadowOffsetY = 4;
     context.font = titleFont;
     context.fillText(title, w / 2, y);
+    context.shadowColor = 'transparent';
+    context.shadowBlur = 0;
+    context.shadowOffsetY = 0;
     y += titleHeight + gapTitleSubtitle;
 
-    context.fillStyle = '#c8d7e1';
+    context.fillStyle = palette.textSecondary;
     context.font = subtitleFont;
     context.fillText(subtitle, w / 2, y);
     y += subtitleHeight;
@@ -116,7 +122,14 @@ export class Menu {
       for (let i = 0; i < menuCount; i += 1) {
         const item = this.items[i]!;
         const selected = i === this.index;
-        context.fillStyle = selected ? '#ffffff' : '#9fb3c8';
+        if (selected) {
+          const highlightWidth = Math.min(w * 0.6, menuWidths[i]! + 80);
+          const highlightX = w / 2 - highlightWidth / 2;
+          const highlightY = y - 8;
+          context.fillStyle = 'rgba(31, 184, 121, 0.16)';
+          context.fillRect(highlightX, highlightY, highlightWidth, menuHeights[i]! + 16);
+        }
+        context.fillStyle = selected ? palette.textPrimary : palette.textSecondary;
         context.font = menuFonts[i]!;
         context.fillText(item.label, w / 2, y);
         y += menuHeights[i]!;
