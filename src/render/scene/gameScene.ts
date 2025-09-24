@@ -132,7 +132,10 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       drawRubble(deps.context, isoParams, originWithShakeX, originWithShakeY, decal);
     }
 
-    let shieldSite: { tx: number; ty: number; width: number; depth: number; height: number } | null = null;
+    let shieldSite:
+      | { tx: number; ty: number; width: number; depth: number; height: number }
+      | null = null;
+
     stores.buildings.forEach((entity, building) => {
       const t = stores.transforms.get(entity);
       const h = stores.healths.get(entity);
@@ -347,10 +350,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     if (respawning) {
       const elapsed = Math.max(
         0,
-        Math.min(
-          PLAYER_RESPAWN_DURATION,
-          PLAYER_RESPAWN_DURATION - state.player.respawnTimer,
-        ),
+        Math.min(PLAYER_RESPAWN_DURATION, PLAYER_RESPAWN_DURATION - state.player.respawnTimer),
       );
       drawCrashSite(deps.context, {
         tx: playerTransform.tx,
@@ -429,8 +429,8 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     const bossState = state.finalBoss;
     if (bossState.phase !== 'inactive' && bossState.entity) {
       const bossHealth = stores.healths.get(bossState.entity);
-      const max = bossState.healthMax > 0 ? bossState.healthMax : (bossHealth?.max ?? 0);
-      const current = bossState.health > 0 ? bossState.health : (bossHealth?.current ?? 0);
+      const max = bossState.healthMax > 0 ? bossState.healthMax : bossHealth?.max ?? 0;
+      const current = bossState.health > 0 ? bossState.health : bossHealth?.current ?? 0;
       if (max > 0) {
         bossHud = {
           name: bossState.name || 'Unknown Horror',
@@ -780,3 +780,5 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     },
   };
 }
+
+
