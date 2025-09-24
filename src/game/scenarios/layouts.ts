@@ -634,6 +634,18 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       kind: 'ammo',
       ammo: { missiles: 126, rockets: 6, hellfires: 3 },
     },
+    {
+      tx: pad.tx - 3.4,
+      ty: pad.ty + 2.4,
+      kind: 'fuel',
+      fuelAmount: 54,
+    },
+    {
+      tx: pad.tx + 3.4,
+      ty: pad.ty + 2.4,
+      kind: 'ammo',
+      ammo: { missiles: 78, rockets: 3, hellfires: 1 },
+    },
     { tx: 23.6, ty: 33.0, kind: 'ammo', ammo: { missiles: 90, rockets: 4 } },
     { tx: 36.4, ty: 33.0, kind: 'fuel', fuelAmount: 64 },
     { tx: 30.0, ty: 37.6, kind: 'armor', armorAmount: 45 },
