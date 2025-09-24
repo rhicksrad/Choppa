@@ -62,8 +62,12 @@ const {
 const audioBaseUrl = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/');
 const rescueCueUrl = `${audioBaseUrl}audio/GTTC.mp3`;
 const playerScreamUrl = `${audioBaseUrl}audio/scream.mp3`;
+const missionOneBriefingUrl = `${audioBaseUrl}audio/aliens.mp3`;
+const bossDefeatScreamUrl = `${audioBaseUrl}audio/scream-3.mp3`;
 let rescueCueBuffer: AudioBuffer | null = null;
 let playerScreamBuffer: AudioBuffer | null = null;
+let missionOneBriefingBuffer: AudioBuffer | null = null;
+let bossDefeatScreamBuffer: AudioBuffer | null = null;
 
 async function loadAudioBuffer(url: string, label: string): Promise<AudioBuffer | null> {
   try {
@@ -82,6 +86,8 @@ async function loadAudioBuffer(url: string, label: string): Promise<AudioBuffer 
 void (async () => {
   rescueCueBuffer = await loadAudioBuffer(rescueCueUrl, 'rescue cue');
   playerScreamBuffer = await loadAudioBuffer(playerScreamUrl, 'player scream');
+  missionOneBriefingBuffer = await loadAudioBuffer(missionOneBriefingUrl, 'mission one briefing');
+  bossDefeatScreamBuffer = await loadAudioBuffer(bossDefeatScreamUrl, 'boss defeat');
 })();
 
 void audio.music.play('title');
@@ -256,6 +262,11 @@ const playMissionTrack = (missionId: string): void => {
   void audio.music.play(trackId);
 };
 
+const playSfxBuffer = (buffer: AudioBuffer | null): void => {
+  if (!buffer) return;
+  audio.bus.playSfx(buffer);
+};
+
 const handleUIStateChange = (next: UIState, prev: UIState): void => {
   if (next === 'win' || next === 'final-win') {
     void audio.music.play('win');
@@ -264,6 +275,12 @@ const handleUIStateChange = (next: UIState, prev: UIState): void => {
   if (next === 'title') {
     void audio.music.play('title');
     return;
+  }
+  if (next === 'briefing') {
+    const activeScenario = missionCoordinator.getScenario();
+    if (activeScenario.id === 'm01') {
+      playSfxBuffer(missionOneBriefingBuffer);
+    }
   }
   if (prev === 'title' && next !== 'title') {
     playMissionTrack(missionCoordinator.getScenario().id);
@@ -415,6 +432,7 @@ const combatProcessor = createCombatProcessor({
   spawnFinalBoss,
   getRescueCueBuffer: () => rescueCueBuffer,
   getPlayerDeathBuffer: () => playerScreamBuffer,
+  getBossDefeatBuffer: () => bossDefeatScreamBuffer,
 });
 
 setBoatLandingHandler(combatProcessor.handleBoatLanding);
