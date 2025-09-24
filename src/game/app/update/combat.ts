@@ -58,6 +58,7 @@ export interface CombatProcessorDeps {
   spawnFinalBoss: (point: { tx: number; ty: number }) => Entity;
   getRescueCueBuffer?: () => AudioBuffer | null;
   getPlayerDeathBuffer?: () => AudioBuffer | null;
+  getBossDefeatBuffer?: () => AudioBuffer | null;
 }
 
 export interface CombatProcessor {
@@ -93,10 +94,18 @@ export function createCombatProcessor({
   spawnFinalBoss,
   getRescueCueBuffer = () => null,
   getPlayerDeathBuffer = () => null,
+  getBossDefeatBuffer = () => null,
 }: CombatProcessorDeps): CombatProcessor {
   const SHIELD_TAG = 'mothership-shield';
   const COAST_BASE_TAG = MISSION_TWO_BASE_TAG;
   const MOTHERSHIP_POWER_IDS = ['core-west', 'core-east', 'core-south'] as const;
+
+  const playBossDefeatCue = (): void => {
+    const buffer = getBossDefeatBuffer();
+    if (buffer) {
+      bus.playSfx(buffer);
+    }
+  };
 
   const spawnExplosion = (tx: number, ty: number, radius = 0.9, duration = 0.6): void => {
     state.explosions.push({ tx, ty, age: 0, duration, radius });
@@ -467,10 +476,12 @@ export function createCombatProcessor({
           const objective = mission.state.objectives.find((o) => o.id === boss.objectiveId);
           if (objective) objective.complete = true;
         }
+        playBossDefeatCue();
         mission.state.complete = true;
       }
     } else if (boss.phase === 'active') {
       boss.phase = 'defeated';
+      playBossDefeatCue();
       mission.state.complete = true;
     }
   };
