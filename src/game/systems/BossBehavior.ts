@@ -7,6 +7,13 @@ import type { Health } from '../components/Health';
 import type { FireEvent } from './WeaponFire';
 import { RNG } from '../../core/util/rng';
 
+const BOSS_COLLIDER_RADIUS = 1.6; // keep in sync with spawnFinalBoss collider radius
+const BOSS_MISSILE_BLAST_RADIUS = 0.45;
+const BOSS_MISSILE_SAFETY_MARGIN = 0.3;
+const BOSS_MISSILE_LAUNCH_CLEARANCE =
+  BOSS_COLLIDER_RADIUS + BOSS_MISSILE_BLAST_RADIUS + BOSS_MISSILE_SAFETY_MARGIN;
+const BOSS_MISSILE_MIN_DISTANCE = BOSS_MISSILE_LAUNCH_CLEARANCE + 0.6;
+
 export class BossBehaviorSystem implements System {
   constructor(
     private transforms: ComponentStore<Transform>,
@@ -78,27 +85,31 @@ export class BossBehaviorSystem implements System {
       if (boss.spineTimer <= 0) {
         boss.spineTimer = boss.spineCooldown * (boss.enraged ? 0.7 : 1);
         const volleys = boss.enraged ? 6 : 4;
-        for (let i = 0; i < volleys; i += 1) {
-          const jitter = (this.rng.float01() - 0.5) * (boss.enraged ? 0.35 : 0.45);
-          const spreadCos = Math.cos(jitter);
-          const spreadSin = Math.sin(jitter);
-          const aimX = dirX * spreadCos - dirY * spreadSin;
-          const aimY = dirX * spreadSin + dirY * spreadCos;
-          this.fireEvents.push({
-            faction: 'enemy',
-            kind: 'missile',
-            sx: transform.tx,
-            sy: transform.ty,
-            dx: aimX,
-            dy: aimY,
-            spread: 0,
-            speed: boss.enraged ? 22 : 18,
-            ttl: 1.2,
-            radius: 0.18,
-            damage: boss.enraged ? 20 : 16,
-            damageRadius: 0.45,
-            launchOffset: 0.4,
-          });
+        if (dist > BOSS_MISSILE_MIN_DISTANCE) {
+          // Avoid point-blank detonations by only launching when the player is
+          // outside the boss' combined collider and blast radius.
+          for (let i = 0; i < volleys; i += 1) {
+            const jitter = (this.rng.float01() - 0.5) * (boss.enraged ? 0.35 : 0.45);
+            const spreadCos = Math.cos(jitter);
+            const spreadSin = Math.sin(jitter);
+            const aimX = dirX * spreadCos - dirY * spreadSin;
+            const aimY = dirX * spreadSin + dirY * spreadCos;
+            this.fireEvents.push({
+              faction: 'enemy',
+              kind: 'missile',
+              sx: transform.tx,
+              sy: transform.ty,
+              dx: aimX,
+              dy: aimY,
+              spread: 0,
+              speed: boss.enraged ? 22 : 18,
+              ttl: 1.2,
+              radius: 0.18,
+              damage: boss.enraged ? 20 : 16,
+              damageRadius: 0.45,
+              launchOffset: BOSS_MISSILE_LAUNCH_CLEARANCE,
+            });
+          }
         }
       }
 
