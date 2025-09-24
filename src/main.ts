@@ -249,6 +249,10 @@ const playMissionTrack = (missionId: string): void => {
 };
 
 const handleUIStateChange = (next: UIState, prev: UIState): void => {
+  if (next === 'win' || next === 'final-win') {
+    void audio.music.play('win');
+    return;
+  }
   if (next === 'title') {
     void audio.music.play('title');
     return;
@@ -385,6 +389,7 @@ const combatProcessor = createCombatProcessor({
   projectilePool,
   damage,
   bus: audio.bus,
+  music: audio.music,
   shake,
   transforms: stores.transforms,
   colliders: stores.colliders,

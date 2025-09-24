@@ -15,6 +15,7 @@ import {
   type EngineSound,
 } from '../../../core/audio/sfx';
 import type { AudioBus } from '../../../core/audio/audio';
+import type { MusicController } from '../../../core/audio/music';
 import type { CameraShake } from '../../../render/camera/shake';
 import type { SystemScheduler } from '../../../core/ecs/systems';
 import type { ProjectilePool } from '../../systems/Projectile';
@@ -38,6 +39,7 @@ export interface CombatProcessorDeps {
   projectilePool: ProjectilePool;
   damage: DamageSystem;
   bus: AudioBus;
+  music: MusicController;
   shake: CameraShake;
   transforms: ComponentStore<Transform>;
   colliders: ComponentStore<Collider>;
@@ -71,6 +73,7 @@ export function createCombatProcessor({
   projectilePool,
   damage,
   bus,
+  music,
   shake,
   transforms,
   colliders,
@@ -400,6 +403,7 @@ export function createCombatProcessor({
         boss.health = bossHealth?.current ?? 0;
         boss.healthMax = bossHealth?.max ?? boss.health;
         boss.phase = 'active';
+        void music.play('boss');
       }
       mission.state.complete = false;
       return;
@@ -562,6 +566,7 @@ export function createCombatProcessor({
     mission.update();
     updateFinalBossPhase(dt);
     if (mission.state.complete && ui.state === 'in-game') {
+      void music.play('win');
       if (mission.state.def.id === 'm04' && state.finalBoss.phase === 'defeated') {
         ui.state = 'final-win';
       } else {
