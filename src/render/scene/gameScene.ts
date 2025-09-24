@@ -1,7 +1,12 @@
 import type { RuntimeTilemap } from '../../world/tiles/tiled';
 import { isoMapBounds, tileToIso } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
-import { drawBuilding, drawMothershipTeslaTower } from '../../render/sprites/buildings';
+import {
+  drawBuilding,
+  drawMothershipTeslaTower,
+  drawShieldPylons,
+  drawSynapseCluster,
+} from '../../render/sprites/buildings';
 import { drawRubble } from '../../render/sprites/rubble';
 import { drawForceFieldDome } from '../../render/sprites/forceField';
 import { drawSafeHouse, type SafeHouseParams } from '../../render/sprites/safehouse';
@@ -150,6 +155,24 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       const meta = state.buildingMeta.get(entity);
       if (meta?.tag === 'mothership-conduit') {
         drawMothershipTeslaTower(deps.context, isoParams, originWithShakeX, originWithShakeY, {
+          tx: t.tx,
+          ty: t.ty,
+          width: building.width,
+          depth: building.depth,
+          height: building.height,
+          damage01,
+        });
+      } else if (meta?.tag === 'homeland-synapse-cluster') {
+        drawSynapseCluster(deps.context, isoParams, originWithShakeX, originWithShakeY, {
+          tx: t.tx,
+          ty: t.ty,
+          width: building.width,
+          depth: building.depth,
+          height: building.height,
+          damage01,
+        });
+      } else if (meta?.tag === 'homeland-shield-pylon') {
+        drawShieldPylons(deps.context, isoParams, originWithShakeX, originWithShakeY, {
           tx: t.tx,
           ty: t.ty,
           width: building.width,
