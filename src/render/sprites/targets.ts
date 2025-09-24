@@ -832,3 +832,115 @@ export function drawAlienMonstrosity(
 
   ctx.restore();
 }
+
+export function drawVoruskNeurofurnace(
+  ctx: CanvasRenderingContext2D,
+  iso: IsoParams,
+  originX: number,
+  originY: number,
+  tx: number,
+  ty: number,
+  enraged: boolean,
+): void {
+  const halfW = iso.tileWidth / 2;
+  const halfH = iso.tileHeight / 2;
+  const ix = (tx - ty) * halfW;
+  const iy = (tx + ty) * halfH;
+  ctx.save();
+  ctx.translate(originX + ix, originY + iy);
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.beginPath();
+  ctx.ellipse(0, 16, 26, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const glow = ctx.createRadialGradient(0, 8, 4, 0, 8, 46);
+  glow.addColorStop(0, enraged ? 'rgba(255,80,121,0.5)' : 'rgba(111,255,216,0.45)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 46, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const bodyBase = enraged ? '#ff4f7d' : '#5bf5d6';
+  const bodyEdge = enraged ? '#a5143f' : '#194d45';
+  const carapace = enraged ? '#ffe5f0' : '#e3fff7';
+
+  ctx.fillStyle = bodyBase;
+  ctx.strokeStyle = bodyEdge;
+  ctx.lineWidth = 3.2;
+  ctx.beginPath();
+  ctx.moveTo(-14, -12);
+  ctx.bezierCurveTo(-42, -6, -42, 32, -12, 44);
+  ctx.bezierCurveTo(0, 50, 0, 50, 12, 44);
+  ctx.bezierCurveTo(42, 32, 42, -6, 14, -12);
+  ctx.quadraticCurveTo(0, -24, -14, -12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = carapace;
+  ctx.beginPath();
+  ctx.moveTo(0, -32);
+  ctx.bezierCurveTo(-18, -24, -28, -4, -20, 16);
+  ctx.bezierCurveTo(-12, 32, -4, 40, 0, 42);
+  ctx.bezierCurveTo(4, 40, 12, 32, 20, 16);
+  ctx.bezierCurveTo(28, -4, 18, -24, 0, -32);
+  ctx.closePath();
+  ctx.fill();
+
+  const fissureColor = enraged ? '#ffd6e8' : '#bffcef';
+  ctx.strokeStyle = fissureColor;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(0, -30);
+  ctx.quadraticCurveTo(-10, -8, -6, 8);
+  ctx.quadraticCurveTo(-2, 24, -4, 34);
+  ctx.moveTo(0, -30);
+  ctx.quadraticCurveTo(10, -8, 6, 8);
+  ctx.quadraticCurveTo(2, 24, 4, 34);
+  ctx.stroke();
+
+  const tendrilCount = 6;
+  for (let i = 0; i < tendrilCount; i += 1) {
+    const angle = (Math.PI * 2 * i) / tendrilCount;
+    const baseX = Math.cos(angle) * 14;
+    const baseY = Math.sin(angle) * 10 + 8;
+    const ctrlX = Math.cos(angle) * (42 + (i % 2 === 0 ? 8 : -6));
+    const ctrlY = Math.sin(angle) * 36 + 18;
+    const endX = Math.cos(angle) * (56 + (enraged ? 6 : 0));
+    const endY = Math.sin(angle) * 48 + 20;
+    const width = 5 + (i % 2 === 0 ? 1.6 : -0.8);
+    ctx.fillStyle = enraged ? 'rgba(255,102,153,0.85)' : 'rgba(91,245,214,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+    ctx.quadraticCurveTo(ctrlX + width, ctrlY + width, baseX + width, baseY + width);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = enraged ? '#ffe3f1' : '#f0fffd';
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 10, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const eyeGradient = ctx.createRadialGradient(0, -10, 2, 0, -10, 10);
+  eyeGradient.addColorStop(0, enraged ? '#ff4085' : '#69ffe7');
+  eyeGradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = eyeGradient;
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 12, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = enraged ? '#ff99c0' : '#a6fff0';
+  ctx.lineWidth = 1.6;
+  for (let i = 0; i < 5; i += 1) {
+    const arcRadius = 12 + i * 6;
+    ctx.beginPath();
+    ctx.arc(0, -8, arcRadius, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}

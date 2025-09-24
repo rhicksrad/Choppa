@@ -10,6 +10,7 @@ import {
   drawPatrolDrone,
   drawChaserDrone,
   drawAlienMonstrosity,
+  drawVoruskNeurofurnace,
   drawSentinelDrone,
   drawObeliskTurret,
   drawSpeedboat,
@@ -209,6 +210,19 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
         drawChaserDrone(deps.context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
       }
     });
+    stores.bosses.forEach((entity, boss) => {
+      const t = stores.transforms.get(entity);
+      if (!t) return;
+      drawVoruskNeurofurnace(
+        deps.context,
+        isoParams,
+        originWithShakeX,
+        originWithShakeY,
+        t.tx,
+        t.ty,
+        boss.enraged,
+      );
+    });
     stores.speedboats.forEach((entity) => {
       const t = stores.transforms.get(entity);
       if (t) drawSpeedboat(deps.context, isoParams, originWithShakeX, originWithShakeY, t.tx, t.ty);
@@ -365,6 +379,21 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
         ? Math.max(0, state.wave.countdown)
         : null;
 
+    let bossHud: { name: string; health01: number; enraged: boolean } | null = null;
+    const bossState = state.finalBoss;
+    if (bossState.phase !== 'inactive' && bossState.entity) {
+      const bossHealth = stores.healths.get(bossState.entity);
+      const max = bossState.healthMax > 0 ? bossState.healthMax : (bossHealth?.max ?? 0);
+      const current = bossState.health > 0 ? bossState.health : (bossHealth?.current ?? 0);
+      if (max > 0) {
+        bossHud = {
+          name: bossState.name || 'Unknown Horror',
+          health01: Math.max(0, Math.min(1, current / max)),
+          enraged: bossState.enraged,
+        };
+      }
+    }
+
     drawHUD(
       deps.context,
       {
@@ -389,6 +418,7 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
         nextWaveIn: nextWaveCountdown,
       },
       objectiveLines,
+      bossHud,
       null,
       {
         enabled: ui.settings.minimap,
@@ -539,6 +569,36 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       deps.context.restore();
     }
 
+    if (ui.state === 'nuke-cinematic') {
+      deps.context.save();
+      deps.context.fillStyle = 'rgba(4, 0, 12, 0.8)';
+      deps.context.fillRect(0, 0, viewWidth, viewHeight);
+      const cx = viewWidth / 2;
+      const cy = viewHeight / 2;
+      const blastRadius = Math.max(viewWidth, viewHeight) * 0.45;
+      const blast = deps.context.createRadialGradient(cx, cy, 12, cx, cy, blastRadius);
+      blast.addColorStop(0, 'rgba(255, 245, 196, 0.92)');
+      blast.addColorStop(0.35, 'rgba(255, 137, 92, 0.8)');
+      blast.addColorStop(0.65, 'rgba(146, 72, 255, 0.45)');
+      blast.addColorStop(1, 'rgba(0,0,0,0)');
+      deps.context.fillStyle = blast;
+      deps.context.beginPath();
+      deps.context.ellipse(cx, cy, blastRadius, blastRadius * 0.72, 0, 0, Math.PI * 2);
+      deps.context.fill();
+
+      deps.context.fillStyle = '#f4f1ff';
+      deps.context.font = 'bold 30px system-ui, sans-serif';
+      deps.context.textAlign = 'center';
+      deps.context.fillText('Black Sun Detonated', cx, cy - 120);
+      deps.context.fillStyle = '#d0f7ff';
+      deps.context.font = '16px system-ui, sans-serif';
+      const dialog = mission.state.def.phaseTwoIntroDialog ?? [];
+      for (let i = 0; i < dialog.length; i += 1) {
+        deps.context.fillText(dialog[i]!, cx, cy - 70 + i * 22);
+      }
+      deps.context.restore();
+    }
+
     if (ui.state === 'game-over') {
       deps.context.save();
       deps.context.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -558,19 +618,25 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       return;
     }
 
-    if (ui.state === 'win') {
+    if (ui.state === 'win' || ui.state === 'final-win') {
+      const finalVictory = ui.state === 'final-win';
       deps.context.save();
       deps.context.fillStyle = 'rgba(0,0,0,0.6)';
       deps.context.fillRect(0, 0, viewWidth, viewHeight);
       deps.context.fillStyle = '#92ffa6';
       deps.context.font = 'bold 28px system-ui, sans-serif';
       deps.context.textAlign = 'center';
-      deps.context.fillText('Mission Complete', viewWidth / 2, viewHeight / 2 - 8);
+      const winTitle = finalVictory
+        ? (mission.state.def.finalWinTitle ?? 'Campaign Complete')
+        : 'Mission Complete';
+      deps.context.fillText(winTitle, viewWidth / 2, viewHeight / 2 - 8);
       deps.context.fillStyle = '#c8d7e1';
       deps.context.font = '14px system-ui, sans-serif';
 
       const winBaseY = viewHeight / 2 + 16;
-      const successDialog = mission.state.def.successDialog;
+      const successDialog = finalVictory
+        ? (mission.state.def.finalWinDialog ?? mission.state.def.successDialog)
+        : mission.state.def.successDialog;
       if (successDialog && successDialog.length > 0) {
         for (let i = 0; i < successDialog.length; i += 1) {
           deps.context.fillText(successDialog[i]!, viewWidth / 2, winBaseY + i * 20);

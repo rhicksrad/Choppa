@@ -4,7 +4,7 @@ import type { PickupCraneSoundHandle } from '../../core/audio/sfx';
 import type { BoatScenarioConfig } from '../missions/coordinator';
 
 export interface EnemyMeta {
-  kind: 'aaa' | 'sam' | 'patrol' | 'chaser' | 'speedboat' | 'sentinel' | 'obelisk';
+  kind: 'aaa' | 'sam' | 'patrol' | 'chaser' | 'speedboat' | 'sentinel' | 'obelisk' | 'boss';
   score: number;
   wave?: number;
 }
@@ -70,6 +70,17 @@ export interface HiveState {
   armed: boolean;
 }
 
+export interface FinalBossState {
+  phase: 'inactive' | 'cinematic' | 'spawning' | 'active' | 'defeated';
+  timer: number;
+  entity: Entity | null;
+  objectiveId: string | null;
+  name: string;
+  health: number;
+  healthMax: number;
+  enraged: boolean;
+}
+
 export interface PickupCompleteEvent {
   entity: Entity;
   kind: Pickup['kind'];
@@ -106,6 +117,7 @@ export interface GameState {
   };
   boat: BoatState;
   hive: HiveState;
+  finalBoss: FinalBossState;
 }
 
 export function createGameState(): GameState {
@@ -134,5 +146,15 @@ export function createGameState(): GameState {
     },
     boat: { scenario: null, boatsEscaped: 0, objectiveComplete: false, objectiveFailed: false },
     hive: { planting: false, progress: 0, target: 0, armed: false },
+    finalBoss: {
+      phase: 'inactive',
+      timer: 0,
+      entity: null,
+      objectiveId: null,
+      name: '',
+      health: 0,
+      healthMax: 0,
+      enraged: false,
+    },
   };
 }

@@ -8,6 +8,8 @@ export type UIState =
   | 'in-game'
   | 'paused'
   | 'win'
+  | 'final-win'
+  | 'nuke-cinematic'
   | 'game-over';
 
 export interface SettingsState {

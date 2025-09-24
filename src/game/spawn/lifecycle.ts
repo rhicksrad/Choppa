@@ -13,6 +13,7 @@ import type { Building } from '../components/Building';
 import type { Pickup } from '../components/Pickup';
 import type { Speedboat } from '../components/Speedboat';
 import type { GameState, EnemyMeta } from '../app/state';
+import type { Boss } from '../components/Boss';
 
 export interface LifecycleStores {
   transforms: ComponentStore<Transform>;
@@ -26,6 +27,7 @@ export interface LifecycleStores {
   patrols: ComponentStore<PatrolDrone>;
   chasers: ComponentStore<ChaserDrone>;
   speedboats: ComponentStore<Speedboat>;
+  bosses: ComponentStore<Boss>;
   healths: ComponentStore<Health>;
   colliders: ComponentStore<Collider>;
   buildings: ComponentStore<Building>;
@@ -62,6 +64,7 @@ export function createEntityLifecycle({ entities, stores, state }: LifecycleDeps
     stores.patrols.remove(entity);
     stores.chasers.remove(entity);
     stores.speedboats.remove(entity);
+    stores.bosses.remove(entity);
     stores.healths.remove(entity);
     stores.colliders.remove(entity);
     stores.buildings.remove(entity);

@@ -493,6 +493,15 @@ class MissionCoordinatorImpl implements MissionCoordinator {
     this.state.hive.target = 0;
     this.state.hive.armed = false;
 
+    this.state.finalBoss.phase = 'inactive';
+    this.state.finalBoss.timer = 0;
+    this.state.finalBoss.entity = null;
+    this.state.finalBoss.objectiveId = null;
+    this.state.finalBoss.name = '';
+    this.state.finalBoss.health = 0;
+    this.state.finalBoss.healthMax = 0;
+    this.state.finalBoss.enraged = false;
+
     this.state.wave.index = 0;
     this.state.wave.countdown = this.scenario.initialWaveCountdown;
     this.state.wave.active = false;
@@ -799,6 +808,15 @@ class MissionCoordinatorImpl implements MissionCoordinator {
     this.state.hive.armed = false;
     this.state.hive.planting = false;
     this.missionHandlers['plant-nuke'] = () => this.state.hive.armed;
+    this.state.finalBoss.phase = 'inactive';
+    this.state.finalBoss.timer = 0;
+    this.state.finalBoss.entity = null;
+    this.state.finalBoss.objectiveId = null;
+    this.state.finalBoss.name = '';
+    this.state.finalBoss.health = 0;
+    this.state.finalBoss.healthMax = 0;
+    this.state.finalBoss.enraged = false;
+    this.missionHandlers['final-boss'] = () => this.state.finalBoss.phase === 'defeated';
   }
 
   private setupMissionFourObjectiveLabels(): void {
@@ -820,6 +838,17 @@ class MissionCoordinatorImpl implements MissionCoordinator {
     this.objectiveLabelOverrides.extract = (objective) => {
       if (objective.complete) return objective.name;
       return `${objective.name} (Nuke armed)`;
+    };
+    this.objectiveLabelOverrides['final-boss'] = (objective) => {
+      const boss = this.state.finalBoss;
+      if (objective.complete) return `${objective.name} (Vorusk neutralized)`;
+      if (boss.phase === 'inactive' || boss.phase === 'cinematic' || !boss.objectiveId) {
+        return `${objective.name} (Awaiting contact)`;
+      }
+      const max = Math.max(1, boss.healthMax);
+      const percent = Math.max(0, Math.round((boss.health / max) * 100));
+      const enragedTag = boss.enraged ? ' | Enraged' : '';
+      return `${objective.name} (${percent}% vitality${enragedTag})`;
     };
   }
 }
