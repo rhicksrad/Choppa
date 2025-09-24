@@ -509,7 +509,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
 
   const campusSites: BuildingSite[] = [
     {
-      tx: 19.5,
+      tx: 9.2,
       ty: 35.0,
       width: 2.2,
       depth: 1.6,
@@ -525,7 +525,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       tag: 'mothership-conduit',
     },
     {
-      tx: 40.5,
+      tx: 50.8,
       ty: 35.0,
       width: 2.2,
       depth: 1.6,
@@ -542,7 +542,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
     },
     {
       tx: 30.0,
-      ty: 41.0,
+      ty: 54.0,
       width: 2.4,
       depth: 1.6,
       height: 34,
@@ -693,9 +693,9 @@ export function createMissionThreeLayout(map: { width: number; height: number })
   ];
 
   const sentinelPosts: SentinelPost[] = [
-    { tx: 19.5, ty: 35.0, holdRadius: 1.0, leashRange: 7.6, fireRange: 8.0 },
-    { tx: 40.5, ty: 35.0, holdRadius: 1.0, leashRange: 7.6, fireRange: 8.0 },
-    { tx: 30.0, ty: 41.0, holdRadius: 1.1, leashRange: 8.4, fireRange: 8.4 },
+    { tx: 9.2, ty: 35.0, holdRadius: 1.0, leashRange: 7.6, fireRange: 8.0 },
+    { tx: 50.8, ty: 35.0, holdRadius: 1.0, leashRange: 7.6, fireRange: 8.0 },
+    { tx: 30.0, ty: 54.0, holdRadius: 1.1, leashRange: 8.4, fireRange: 8.4 },
     { tx: 30.0, ty: 24.8, holdRadius: 1.0, leashRange: 7.6, fireRange: 8.6 },
   ];
 
