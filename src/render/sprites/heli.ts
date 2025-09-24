@@ -296,6 +296,104 @@ export function drawHeli(ctx: CanvasRenderingContext2D, p: HeliDrawParams): void
   ctx.restore();
 }
 
+export interface CrashSiteDrawParams {
+  tx: number;
+  ty: number;
+  iso: IsoParams;
+  originX: number;
+  originY: number;
+  elapsed: number;
+  duration: number;
+}
+
+export function drawCrashSite(ctx: CanvasRenderingContext2D, p: CrashSiteDrawParams): void {
+  const halfW = p.iso.tileWidth / 2;
+  const halfH = p.iso.tileHeight / 2;
+  const ix = (p.tx - p.ty) * halfW;
+  const iy = (p.tx + p.ty) * halfH;
+  const x = p.originX + ix;
+  const y = p.originY + iy;
+  const elapsed = Math.max(0, p.elapsed);
+  const duration = Math.max(0.0001, p.duration);
+  const emberStrength = Math.max(0, 1 - Math.min(1, elapsed / duration));
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.save();
+  ctx.scale(1.35, 0.82);
+  ctx.fillStyle = 'rgba(18, 12, 8, 0.6)';
+  ctx.beginPath();
+  ctx.ellipse(0, 12, 26, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  const hullGradient = ctx.createLinearGradient(-26, -18, 22, 18);
+  hullGradient.addColorStop(0, '#32373b');
+  hullGradient.addColorStop(0.5, '#272b2f');
+  hullGradient.addColorStop(1, '#1b1918');
+  ctx.fillStyle = hullGradient;
+  ctx.strokeStyle = 'rgba(10, 12, 14, 0.9)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-24, -6);
+  ctx.quadraticCurveTo(-12, -18, 4, -16);
+  ctx.quadraticCurveTo(18, -10, 22, -2);
+  ctx.quadraticCurveTo(16, 14, -10, 16);
+  ctx.quadraticCurveTo(-28, 10, -30, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  const glowAlpha = 0.22 + emberStrength * 0.45;
+  ctx.fillStyle = `rgba(255, 138, 70, ${glowAlpha})`;
+  ctx.beginPath();
+  ctx.ellipse(-6, -2, 7, 5, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = `rgba(255, 204, 140, ${0.18 + emberStrength * 0.35})`;
+  ctx.beginPath();
+  ctx.ellipse(6, 3, 5, 4, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(115, 126, 134, 0.58)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-16, -12);
+  ctx.lineTo(-30, -20);
+  ctx.moveTo(12, -8);
+  ctx.lineTo(28, -4);
+  ctx.moveTo(-8, 14);
+  ctx.lineTo(-22, 20);
+  ctx.stroke();
+
+  ctx.fillStyle = `rgba(255, 220, 160, ${0.22 * emberStrength})`;
+  ctx.beginPath();
+  ctx.arc(-12, 6, 2.2, 0, Math.PI * 2);
+  ctx.arc(4, 10, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  const smokeBase = elapsed * 0.25;
+  for (let i = 0; i < 3; i += 1) {
+    const cycle = (smokeBase + i * 0.33) % 1;
+    const progress = cycle < 0 ? cycle + 1 : cycle;
+    const puffAlpha = Math.max(0, (0.35 - progress * 0.25) * (0.4 + emberStrength * 0.6));
+    if (puffAlpha <= 0.01) continue;
+    const puffRadius = 10 + progress * 14;
+    const puffX = Math.sin(elapsed * 0.9 + i * 1.1) * (5 + progress * 4);
+    const puffY = -14 - progress * 36;
+    const puffTilt = Math.sin(elapsed * 0.6 + i) * 0.25;
+    ctx.save();
+    ctx.globalAlpha = puffAlpha;
+    ctx.fillStyle = '#d9e1e8';
+    ctx.beginPath();
+    ctx.ellipse(puffX, puffY, puffRadius * 0.55, puffRadius * 0.72, puffTilt, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 export function drawPad(
   ctx: CanvasRenderingContext2D,
   iso: IsoParams,
