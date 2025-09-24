@@ -1,5 +1,36 @@
 import type { IsoParams } from '../iso/projection';
 
+function drawRotor(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  bladeColor: string,
+  hubColor: string,
+  highlightColor?: string,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = bladeColor;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, radius, radius * 0.45, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (highlightColor) {
+    ctx.strokeStyle = highlightColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, radius * 0.8, radius * 0.32, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = hubColor;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 export function drawAAATurret(
   ctx: CanvasRenderingContext2D,
   iso: IsoParams,
@@ -152,15 +183,45 @@ export function drawPatrolDrone(
   const iy = (tx + ty) * halfH;
   ctx.save();
   ctx.translate(originX + ix, originY + iy);
-  ctx.fillStyle = '#3e4c65';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.beginPath();
+  ctx.ellipse(0, 9, 14, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#2b3648';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-12, -3);
+  ctx.lineTo(12, 1);
+  ctx.moveTo(-3, -11);
+  ctx.lineTo(1, 11);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  ctx.fillStyle = '#42526a';
   ctx.strokeStyle = '#1d2533';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(-5, -4, 10, 8, 2);
+  ctx.roundRect(-6, -5, 12, 10, 3);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = '#9fb3c8';
-  ctx.fillRect(-2, -8, 4, 4);
+
+  ctx.fillStyle = '#b5c8df';
+  ctx.beginPath();
+  ctx.arc(0, -1, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#e0ecff';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(0, -1, 4, 0, Math.PI * 2);
+  ctx.stroke();
+
+  drawRotor(ctx, -12, -4, 3.6, '#2a3649', '#d0e1f8');
+  drawRotor(ctx, 12, 2, 3.6, '#2a3649', '#d0e1f8');
+  drawRotor(ctx, -4, 11, 3.2, '#2a3649', '#d0e1f8');
+  drawRotor(ctx, 4, -11, 3.2, '#2a3649', '#d0e1f8');
   ctx.restore();
 }
 
@@ -178,17 +239,54 @@ export function drawChaserDrone(
   const iy = (tx + ty) * halfH;
   ctx.save();
   ctx.translate(originX + ix, originY + iy);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+  ctx.beginPath();
+  ctx.ellipse(0, 10, 16, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#3a1624';
+  ctx.lineWidth = 3.4;
+  ctx.beginPath();
+  ctx.moveTo(-14, -4);
+  ctx.lineTo(14, 2);
+  ctx.moveTo(-4, -14);
+  ctx.lineTo(2, 14);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  ctx.strokeStyle = '#532338';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(-9, -1);
+  ctx.lineTo(9, 3);
+  ctx.moveTo(-1, -9);
+  ctx.lineTo(3, 9);
+  ctx.stroke();
+
   ctx.fillStyle = '#5a2f43';
   ctx.strokeStyle = '#2a0f1c';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.roundRect(-5, -5, 10, 10, 3);
+  ctx.roundRect(-7, -6, 14, 12, 4);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = '#ffd166';
+
+  ctx.fillStyle = '#ff8b7d';
   ctx.beginPath();
-  ctx.arc(0, -2, 2.5, 0, Math.PI * 2);
+  ctx.arc(0, -1.5, 3.2, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.strokeStyle = '#ffd166';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(0, -1.5, 4.6, 0, Math.PI * 2);
+  ctx.stroke();
+
+  drawRotor(ctx, -14, -5, 4.2, '#31111d', '#ffccd2');
+  drawRotor(ctx, 14, 3, 4.2, '#31111d', '#ffccd2');
+  drawRotor(ctx, -5, 14, 3.8, '#31111d', '#ffccd2');
+  drawRotor(ctx, 5, -14, 3.8, '#31111d', '#ffccd2');
   ctx.restore();
 }
 
@@ -208,30 +306,58 @@ export function drawSentinelDrone(
   ctx.translate(originX + ix, originY + iy);
   ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
   ctx.beginPath();
-  ctx.ellipse(0, 10, 14, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 12, 18, 10, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#1b1029';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-16, -5);
+  ctx.lineTo(16, 3);
+  ctx.moveTo(-5, -16);
+  ctx.lineTo(3, 16);
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+
+  ctx.strokeStyle = '#2e1a44';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(-11, -1);
+  ctx.lineTo(11, 5);
+  ctx.moveTo(-1, -11);
+  ctx.lineTo(5, 11);
+  ctx.stroke();
 
   ctx.fillStyle = '#211733';
   ctx.strokeStyle = '#8dfcff';
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 2.6;
   ctx.beginPath();
-  ctx.roundRect(-6, -6, 12, 12, 4);
+  ctx.roundRect(-7, -7, 14, 14, 5);
   ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = '#3a2753';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-5, -5, 10, 10, 4);
   ctx.stroke();
 
   ctx.fillStyle = '#4be0ff';
   ctx.beginPath();
-  ctx.arc(0, -2, 3.4, 0, Math.PI * 2);
+  ctx.arc(0, -2, 3.8, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.strokeStyle = '#c6fff7';
   ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.moveTo(-6, -2);
-  ctx.lineTo(-10, 2);
-  ctx.moveTo(6, -2);
-  ctx.lineTo(10, 2);
+  ctx.arc(0, -2, 5.6, 0, Math.PI * 2);
   ctx.stroke();
+
+  drawRotor(ctx, -16, -6, 4.8, '#251736', '#aefcff', '#6bf7ff');
+  drawRotor(ctx, 16, 4, 4.8, '#251736', '#aefcff', '#6bf7ff');
+  drawRotor(ctx, -6, 16, 4.4, '#251736', '#aefcff', '#6bf7ff');
+  drawRotor(ctx, 6, -16, 4.4, '#251736', '#aefcff', '#6bf7ff');
 
   ctx.restore();
 }
