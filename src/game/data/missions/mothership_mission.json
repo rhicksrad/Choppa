@@ -17,8 +17,8 @@
       "type": "destroy",
       "name": "Disable the western power conduit",
       "at": {
-        "tx": 24.2,
-        "ty": 30.2
+        "tx": 24.0,
+        "ty": 33.2
       },
       "radiusTiles": 1.8
     },
@@ -27,8 +27,8 @@
       "type": "destroy",
       "name": "Disable the eastern power conduit",
       "at": {
-        "tx": 35.8,
-        "ty": 30.0
+        "tx": 36.0,
+        "ty": 33.2
       },
       "radiusTiles": 1.8
     },
@@ -38,7 +38,7 @@
       "name": "Disable the southern power conduit",
       "at": {
         "tx": 30.0,
-        "ty": 38.6
+        "ty": 36.6
       },
       "radiusTiles": 1.9
     },

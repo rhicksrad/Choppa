@@ -509,8 +509,8 @@ export function createMissionThreeLayout(map: { width: number; height: number })
 
   const campusSites: BuildingSite[] = [
     {
-      tx: 24.2,
-      ty: 30.2,
+      tx: 24.0,
+      ty: 33.2,
       width: 2.2,
       depth: 1.6,
       height: 36,
@@ -525,8 +525,8 @@ export function createMissionThreeLayout(map: { width: number; height: number })
       tag: 'mothership-conduit',
     },
     {
-      tx: 35.8,
-      ty: 30.0,
+      tx: 36.0,
+      ty: 33.2,
       width: 2.2,
       depth: 1.6,
       height: 36,
@@ -542,7 +542,7 @@ export function createMissionThreeLayout(map: { width: number; height: number })
     },
     {
       tx: 30.0,
-      ty: 38.6,
+      ty: 36.6,
       width: 2.4,
       depth: 1.6,
       height: 34,
