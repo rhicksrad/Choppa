@@ -89,6 +89,7 @@ export class WeaponFireSystem implements System {
   private input: InputSnapshot | null = null;
   private aimTileX = 0;
   private aimTileY = 0;
+  private canFire = true;
   private eventsOut: FireEvent[];
   private rng: RNG;
 
@@ -104,10 +105,16 @@ export class WeaponFireSystem implements System {
     this.rng = rng;
   }
 
-  public setInput(snapshot: InputSnapshot, aimTileX: number, aimTileY: number): void {
+  public setInput(
+    snapshot: InputSnapshot,
+    aimTileX: number,
+    aimTileY: number,
+    canFire = true,
+  ): void {
     this.input = snapshot;
     this.aimTileX = aimTileX;
     this.aimTileY = aimTileY;
+    this.canFire = canFire;
   }
 
   update(_dt: number): void {
@@ -120,6 +127,13 @@ export class WeaponFireSystem implements System {
 
     const snap = this.input;
     if (!snap) return;
+
+    if (!this.canFire) {
+      this.weapons.forEach((_entity, w) => {
+        if (w.active !== 'missile') w.active = 'missile';
+      });
+      return;
+    }
 
     // Fire inputs
     const isLmb = (snap.mouseButtons & (1 << 0)) !== 0;

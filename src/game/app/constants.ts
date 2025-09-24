@@ -1,0 +1,1 @@
+export const PLAYER_RESPAWN_DURATION = 4;
