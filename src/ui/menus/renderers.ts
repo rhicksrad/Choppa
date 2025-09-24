@@ -2,6 +2,7 @@ import type { UIStore } from './scenes';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 import { computeSettingsLayout } from './settingsLayout';
 import type { AchievementRenderState } from '../../game/achievements/tracker';
+import { drawBackdrop, drawPanel, font, mixColor, palette } from '../theme';
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -16,46 +17,52 @@ export function renderSettings(context: CanvasRenderingContext2D, ui: UIStore): 
 
   context.save();
 
-  // Dim the game scene
-  context.fillStyle = '#050b12';
-  context.globalAlpha = 0.82;
-  context.fillRect(0, 0, w, h);
-  context.globalAlpha = 1;
+  drawBackdrop(context, w, h);
 
-  // Settings panel
-  context.fillStyle = '#0f1c29';
-  context.fillRect(layout.panel.x, layout.panel.y, layout.panel.width, layout.panel.height);
-  context.strokeStyle = '#1d2f3f';
-  context.lineWidth = 2;
-  context.strokeRect(layout.panel.x, layout.panel.y, layout.panel.width, layout.panel.height);
+  const panelRect = {
+    x: layout.panel.x,
+    y: layout.panel.y,
+    width: layout.panel.width,
+    height: layout.panel.height,
+  } as const;
+  const panelGradient = context.createLinearGradient(panelRect.x, panelRect.y, panelRect.x, panelRect.y + panelRect.height);
+  panelGradient.addColorStop(0, 'rgba(18, 36, 52, 0.95)');
+  panelGradient.addColorStop(1, palette.panel);
+  drawPanel(context, panelRect, {
+    radius: 22,
+    fill: panelGradient,
+    stroke: palette.accentSoft,
+    borderWidth: 1.5,
+    shadow: { color: 'rgba(0, 0, 0, 0.5)', blur: 30, offsetY: 18 },
+  });
 
   const titleX = layout.panel.x + layout.panel.paddingX;
   let cursorY = layout.panel.y + layout.panel.paddingTop;
 
   context.textAlign = 'left';
   context.textBaseline = 'top';
-  context.fillStyle = '#92ffa6';
-  context.font = 'bold 30px system-ui, sans-serif';
+  context.fillStyle = palette.accent;
+  context.font = font(30, 'bold');
   context.fillText('Settings', titleX, cursorY);
   cursorY += 38;
 
-  context.fillStyle = '#c8d7e1';
-  context.font = '15px system-ui, sans-serif';
+  context.fillStyle = palette.textSecondary;
+  context.font = font(15);
   context.fillText('Fine-tune the mix and presentation for your mission.', titleX, cursorY);
 
   // Volume sliders
   context.textBaseline = 'middle';
-  context.font = '16px system-ui, sans-serif';
+  context.font = font(16);
   for (const slider of layout.sliders) {
     const value = clamp01(ui.settings[slider.id]);
     const fillWidth = slider.track.width * value;
     const knobX = slider.track.x + fillWidth;
 
-    context.fillStyle = '#c8d7e1';
+    context.fillStyle = palette.textSecondary;
     context.textAlign = 'left';
     context.fillText(slider.label, slider.labelX, slider.centerY);
 
-    context.fillStyle = '#132437';
+    context.fillStyle = 'rgba(20, 34, 48, 0.95)';
     context.fillRect(slider.track.x, slider.track.y, slider.track.width, slider.track.height);
 
     if (fillWidth > 0) {
@@ -65,37 +72,49 @@ export function renderSettings(context: CanvasRenderingContext2D, ui: UIStore): 
         slider.track.x + slider.track.width,
         0,
       );
-      gradient.addColorStop(0, '#1fb879');
-      gradient.addColorStop(1, '#82ffb8');
+      gradient.addColorStop(0, mixColor(palette.accentStrong, '#ffffff', 0.25));
+      gradient.addColorStop(1, palette.accent);
       context.fillStyle = gradient;
       context.fillRect(slider.track.x, slider.track.y, fillWidth, slider.track.height);
     }
 
     context.beginPath();
     context.arc(knobX, slider.centerY, slider.knobRadius, 0, Math.PI * 2);
-    context.fillStyle = '#f4fff8';
+    context.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    context.shadowBlur = 6;
+    context.shadowOffsetY = 2;
+    context.fillStyle = palette.textPrimary;
     context.fill();
-    context.strokeStyle = '#0b151d';
+    context.shadowColor = 'transparent';
+    context.shadowBlur = 0;
+    context.shadowOffsetY = 0;
+    context.strokeStyle = palette.textInverted;
     context.lineWidth = 2;
     context.stroke();
 
     context.textAlign = 'center';
-    context.fillStyle = '#92ffa6';
+    context.fillStyle = palette.accent;
     context.fillText(`${Math.round(value * 100)}%`, slider.valueX, slider.centerY);
   }
 
   // Toggle switches
   context.textAlign = 'left';
-  context.font = '15px system-ui, sans-serif';
+  context.font = font(15);
   for (const toggle of layout.toggles) {
     const enabled = ui.settings[toggle.id];
-    context.fillStyle = enabled ? '#16382a' : '#0b141d';
-    context.fillRect(toggle.box.x, toggle.box.y, toggle.box.width, toggle.box.height);
-    context.strokeStyle = enabled ? '#92ffa6' : '#2b3c4b';
-    context.lineWidth = 2;
-    context.strokeRect(toggle.box.x, toggle.box.y, toggle.box.width, toggle.box.height);
+    drawPanel(
+      context,
+      { x: toggle.box.x, y: toggle.box.y, width: toggle.box.width, height: toggle.box.height },
+      {
+        radius: 10,
+        fill: enabled ? 'rgba(24, 56, 44, 0.95)' : 'rgba(11, 20, 29, 0.95)',
+        stroke: enabled ? palette.accentSoft : 'rgba(43, 60, 75, 0.8)',
+        borderWidth: 1.4,
+        shadow: false,
+      },
+    );
     if (enabled) {
-      context.strokeStyle = '#92ffa6';
+      context.strokeStyle = palette.accent;
       context.lineWidth = 2.5;
       context.beginPath();
       context.moveTo(toggle.box.x + 4, toggle.box.y + toggle.box.height / 2 + 2);
@@ -103,28 +122,34 @@ export function renderSettings(context: CanvasRenderingContext2D, ui: UIStore): 
       context.lineTo(toggle.box.x + toggle.box.width - 4, toggle.box.y + 4);
       context.stroke();
     }
-    context.fillStyle = '#c8d7e1';
+    context.fillStyle = palette.textSecondary;
     context.fillText(toggle.label, toggle.labelX, toggle.centerY);
   }
 
   // Reset button
   const button = layout.resetButton;
-  context.fillStyle = '#102a3a';
-  context.fillRect(button.x, button.y, button.width, button.height);
-  context.strokeStyle = '#2d4154';
-  context.lineWidth = 2;
-  context.strokeRect(button.x, button.y, button.width, button.height);
-  context.fillStyle = '#c8d7e1';
+  drawPanel(
+    context,
+    { x: button.x, y: button.y, width: button.width, height: button.height },
+    {
+      radius: 14,
+      fill: 'rgba(16, 42, 58, 0.95)',
+      stroke: 'rgba(45, 65, 84, 0.85)',
+      borderWidth: 1.4,
+      shadow: { color: 'rgba(0, 0, 0, 0.4)', blur: 14, offsetY: 8 },
+    },
+  );
+  context.fillStyle = palette.textSecondary;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.font = '15px system-ui, sans-serif';
+  context.font = font(15, 'bold');
   context.fillText('Restore Defaults', button.x + button.width / 2, button.y + button.height / 2);
 
   // Instructions footer
   context.textAlign = 'left';
   context.textBaseline = 'top';
-  context.font = '13px system-ui, sans-serif';
-  context.fillStyle = '#7f92a3';
+  context.font = font(13);
+  context.fillStyle = palette.textMuted;
   for (let i = 0; i < layout.instructions.lines.length; i += 1) {
     context.fillText(
       layout.instructions.lines[i]!,
@@ -167,7 +192,7 @@ export function renderAchievements(
   const panelX = (w - panelWidth) / 2;
   const panelY = Math.max(24, (h - panelHeight) / 2);
 
-  const bodyFont = '13px system-ui, sans-serif';
+  const bodyFont = font(13);
   const wrapDescription = (text: string, maxWidth: number): string[] => {
     const words = text.split(/\s+/).filter(Boolean);
     const lines: string[] = [];
@@ -188,16 +213,19 @@ export function renderAchievements(
   };
 
   context.save();
-  context.fillStyle = '#050b12';
-  context.globalAlpha = 0.82;
-  context.fillRect(0, 0, w, h);
-  context.globalAlpha = 1;
+  drawBackdrop(context, w, h);
 
-  context.fillStyle = '#0f1c29';
-  context.fillRect(panelX, panelY, panelWidth, panelHeight);
-  context.strokeStyle = '#1d2f3f';
-  context.lineWidth = 2;
-  context.strokeRect(panelX, panelY, panelWidth, panelHeight);
+  const panelRect = { x: panelX, y: panelY, width: panelWidth, height: panelHeight } as const;
+  const panelGradient = context.createLinearGradient(panelRect.x, panelRect.y, panelRect.x, panelRect.y + panelRect.height);
+  panelGradient.addColorStop(0, 'rgba(18, 36, 52, 0.95)');
+  panelGradient.addColorStop(1, palette.panel);
+  drawPanel(context, panelRect, {
+    radius: 24,
+    fill: panelGradient,
+    stroke: palette.accentSoft,
+    borderWidth: 1.6,
+    shadow: { color: 'rgba(0, 0, 0, 0.55)', blur: 34, offsetY: 20 },
+  });
 
   context.save();
   context.beginPath();
@@ -209,17 +237,17 @@ export function renderAchievements(
 
   context.textAlign = 'left';
   context.textBaseline = 'top';
-  context.fillStyle = '#92ffa6';
-  context.font = 'bold 30px system-ui, sans-serif';
+  context.fillStyle = palette.accent;
+  context.font = font(30, 'bold');
   context.fillText('Achievements', titleX, cursorY);
   cursorY += 36;
 
-  context.fillStyle = '#c8d7e1';
-  context.font = '15px system-ui, sans-serif';
+  context.fillStyle = palette.textSecondary;
+  context.font = font(15);
   context.fillText('Campaign milestones and rescue accolades.', titleX, cursorY);
   cursorY += 28;
 
-  context.fillStyle = 'rgba(146, 255, 166, 0.18)';
+  context.fillStyle = palette.accentSoft;
   context.fillRect(panelX + panelPaddingX, cursorY, panelWidth - panelPaddingX * 2, 1);
   cursorY += 24;
 
@@ -235,22 +263,28 @@ export function renderAchievements(
       const entryHeight = rowHeight;
 
       context.save();
-      context.fillStyle = unlocked ? 'rgba(24, 52, 39, 0.9)' : 'rgba(9, 18, 27, 0.88)';
-      context.fillRect(entryX, entryY, columnWidth, entryHeight);
-      context.strokeStyle = unlocked ? 'rgba(146, 255, 166, 0.35)' : 'rgba(48, 66, 80, 0.55)';
-      context.lineWidth = 1.5;
-      context.strokeRect(entryX + 0.5, entryY + 0.5, columnWidth - 1, entryHeight - 1);
+      drawPanel(
+        context,
+        { x: entryX, y: entryY, width: columnWidth, height: entryHeight },
+        {
+          radius: 16,
+          fill: unlocked ? 'rgba(24, 58, 44, 0.94)' : 'rgba(11, 20, 29, 0.92)',
+          stroke: unlocked ? palette.accentSoft : palette.panelBorderMuted,
+          borderWidth: 1.2,
+          shadow: false,
+        },
+      );
 
       const badgeCenterX = entryX + 20;
       const badgeCenterY = entryY + entryHeight / 2;
 
       context.lineWidth = 2;
       if (unlocked) {
-        context.fillStyle = '#1fb879';
+        context.fillStyle = palette.accentStrong;
         context.beginPath();
         context.arc(badgeCenterX, badgeCenterY, 14, 0, Math.PI * 2);
         context.fill();
-        context.strokeStyle = '#0b1d12';
+        context.strokeStyle = mixColor(palette.accentStrong, '#000000', 0.5);
         context.stroke();
         context.strokeStyle = '#ffffff';
         context.lineWidth = 2.5;
@@ -260,7 +294,7 @@ export function renderAchievements(
         context.lineTo(badgeCenterX + 7, badgeCenterY - 6);
         context.stroke();
       } else {
-        context.strokeStyle = 'rgba(146, 255, 166, 0.3)';
+        context.strokeStyle = palette.accentSoft;
         context.beginPath();
         context.arc(badgeCenterX, badgeCenterY, 14, 0, Math.PI * 2);
         context.stroke();
@@ -270,21 +304,21 @@ export function renderAchievements(
       const textWidth = columnWidth - (textX - entryX) - 18;
 
       context.textAlign = 'left';
-      context.fillStyle = unlocked ? '#ffffff' : '#e6eef5';
-      context.font = 'bold 16px system-ui, sans-serif';
+      context.fillStyle = unlocked ? palette.textPrimary : palette.textSecondary;
+      context.font = font(16, 'bold');
       context.fillText(def.title, textX, entryY + 14);
 
       const descriptionLines = wrapDescription(def.description, textWidth);
 
-      context.fillStyle = '#9fb3c8';
+      context.fillStyle = palette.textMuted;
       context.font = bodyFont;
       for (let lineIndex = 0; lineIndex < descriptionLines.length; lineIndex += 1) {
         context.fillText(descriptionLines[lineIndex]!, textX, entryY + 36 + lineIndex * 16);
       }
 
       context.textAlign = 'right';
-      context.font = '12px system-ui, sans-serif';
-      context.fillStyle = unlocked ? '#92ffa6' : '#5f7386';
+      context.font = font(12, 'bold');
+      context.fillStyle = unlocked ? palette.accent : 'rgba(95, 115, 134, 0.9)';
       context.fillText(unlocked ? 'Unlocked' : 'Locked', entryX + columnWidth - 16, entryY + 16);
       context.textAlign = 'left';
 
@@ -292,8 +326,8 @@ export function renderAchievements(
     }
   }
 
-  context.font = '13px system-ui, sans-serif';
-  context.fillStyle = '#7f92a3';
+  context.font = font(13);
+  context.fillStyle = palette.textMuted;
   context.fillText('Press Esc to return.', titleX, panelY + panelHeight - panelPaddingBottom + 8);
 
   context.restore();
@@ -397,7 +431,7 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   const entrySpacing = 68;
 
   context.save();
-  context.font = '14px system-ui, sans-serif';
+  context.font = font(14);
   let chipRows = 1;
   let measureChipX = 0;
   for (const chip of techChips) {
@@ -439,29 +473,22 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
 
   context.save();
 
-  const backdropGradient = context.createLinearGradient(0, 0, 0, h);
-  backdropGradient.addColorStop(0, 'rgba(5, 11, 18, 0.9)');
-  backdropGradient.addColorStop(1, 'rgba(4, 10, 15, 0.94)');
-  context.fillStyle = backdropGradient;
-  context.fillRect(0, 0, w, h);
-
+  drawBackdrop(context, w, h, 0.85);
+  const panelRect = { x: panelX, y: panelY, width: panelWidth, height: panelHeight } as const;
   const panelGradient = context.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
-  panelGradient.addColorStop(0, '#13273a');
-  panelGradient.addColorStop(1, '#0b1620');
-  context.shadowColor = 'rgba(10, 28, 38, 0.65)';
-  context.shadowBlur = 28;
-  context.fillStyle = panelGradient;
-  context.fillRect(panelX, panelY, panelWidth, panelHeight);
-  context.shadowColor = 'transparent';
-  context.shadowBlur = 0;
-
-  context.strokeStyle = '#1f3547';
-  context.lineWidth = 2;
-  context.strokeRect(panelX, panelY, panelWidth, panelHeight);
+  panelGradient.addColorStop(0, 'rgba(18, 36, 52, 0.96)');
+  panelGradient.addColorStop(1, palette.panel);
+  drawPanel(context, panelRect, {
+    radius: 28,
+    fill: panelGradient,
+    stroke: palette.accentSoft,
+    borderWidth: 1.8,
+    shadow: { color: 'rgba(0, 0, 0, 0.58)', blur: 36, offsetY: 24 },
+  });
 
   const accentGradient = context.createLinearGradient(panelX, panelY, panelX + panelWidth, panelY);
-  accentGradient.addColorStop(0, '#1fb879');
-  accentGradient.addColorStop(1, '#6fffbe');
+  accentGradient.addColorStop(0, palette.accentStrong);
+  accentGradient.addColorStop(1, palette.accent);
   context.fillStyle = accentGradient;
   context.fillRect(panelX, panelY, panelWidth, 3);
 
@@ -471,14 +498,14 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   context.textAlign = 'left';
   context.textBaseline = 'top';
 
-  context.fillStyle = '#92ffa6';
-  context.font = 'bold 32px system-ui, sans-serif';
+  context.fillStyle = palette.accent;
+  context.font = font(32, 'bold');
   context.fillText('About Choppa', contentX, cursorY);
   cursorY += 34;
   cursorY += 10;
 
-  context.fillStyle = '#d2e8f3';
-  context.font = '16px system-ui, sans-serif';
+  context.fillStyle = palette.textSecondary;
+  context.font = font(16);
   for (const line of taglineLines) {
     context.fillText(line, contentX, cursorY);
     cursorY += 20;
@@ -490,47 +517,45 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   const statsTop = cursorY;
   for (let i = 0; i < stats.length; i += 1) {
     const cardX = contentX + i * (cardWidth + statGap);
-    const cardGradient = context.createLinearGradient(
-      cardX,
-      statsTop,
-      cardX,
-      statsTop + statCardHeight,
-    );
-    cardGradient.addColorStop(0, '#14283a');
-    cardGradient.addColorStop(1, '#101d2a');
-    context.fillStyle = cardGradient;
-    context.fillRect(cardX, statsTop, cardWidth, statCardHeight);
-    context.strokeStyle = '#274058';
-    context.strokeRect(cardX, statsTop, cardWidth, statCardHeight);
+    const cardGradient = context.createLinearGradient(cardX, statsTop, cardX, statsTop + statCardHeight);
+    cardGradient.addColorStop(0, 'rgba(24, 48, 66, 0.96)');
+    cardGradient.addColorStop(1, 'rgba(14, 26, 36, 0.94)');
+    drawPanel(context, { x: cardX, y: statsTop, width: cardWidth, height: statCardHeight }, {
+      radius: 18,
+      fill: cardGradient,
+      stroke: 'rgba(39, 64, 88, 0.65)',
+      borderWidth: 1.2,
+      shadow: false,
+    });
 
-    context.fillStyle = '#74e49a';
-    context.font = 'bold 15px system-ui, sans-serif';
+    context.fillStyle = palette.accent;
+    context.font = font(15, 'bold');
     context.fillText(stats[i]!.label, cardX + 16, statsTop + 12);
 
-    context.fillStyle = '#f4fff8';
-    context.font = 'bold 20px system-ui, sans-serif';
+    context.fillStyle = palette.textPrimary;
+    context.font = font(20, 'bold');
     context.fillText(stats[i]!.value, cardX + 16, statsTop + 32);
 
-    context.fillStyle = '#9cb4c7';
-    context.font = '12px system-ui, sans-serif';
+    context.fillStyle = palette.textMuted;
+    context.font = font(12);
     context.fillText(stats[i]!.description, cardX + 16, statsTop + statCardHeight - 18);
   }
   cursorY += statCardHeight;
   cursorY += 32;
 
   const drawSectionHeading = (title: string) => {
-    context.fillStyle = '#1fb879';
+    context.fillStyle = palette.accentStrong;
     context.fillRect(contentX, cursorY, 44, accentHeight);
     cursorY += accentHeight + 10;
-    context.fillStyle = '#92ffa6';
-    context.font = 'bold 20px system-ui, sans-serif';
+    context.fillStyle = palette.accent;
+    context.font = font(20, 'bold');
     context.fillText(title, contentX, cursorY);
     cursorY += 24;
   };
 
   drawSectionHeading('Mission Brief');
-  context.fillStyle = '#c8d7e1';
-  context.font = '15px system-ui, sans-serif';
+  context.fillStyle = palette.textSecondary;
+  context.font = font(15);
   for (const line of missionLines) {
     context.fillText(line, contentX, cursorY);
     cursorY += 20;
@@ -538,22 +563,22 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   cursorY += 12;
 
   drawSectionHeading('Core Pillars');
-  context.font = '15px system-ui, sans-serif';
+  context.font = font(15);
   const bulletOffset = 16;
   for (const point of pillarPoints) {
-    context.fillStyle = '#92ffa6';
+    context.fillStyle = palette.accent;
     context.beginPath();
     context.arc(contentX + 5, cursorY + 8, 4, 0, Math.PI * 2);
     context.fill();
 
-    context.fillStyle = '#d2e8f3';
+    context.fillStyle = palette.textSecondary;
     context.fillText(point, contentX + bulletOffset, cursorY);
     cursorY += 22;
   }
   cursorY += 16;
 
   drawSectionHeading('Tech Stack & Tools');
-  const chipFont = '14px system-ui, sans-serif';
+  const chipFont = font(14, 'bold');
   const maxChipX = contentX + contentWidth;
   let chipX = contentX;
   let chipY = cursorY + 14;
@@ -568,19 +593,18 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
       chipY += chipHeight + chipVerticalGap;
     }
     const chipRectY = chipY - chipHeight / 2;
-    context.fillStyle = '#132437';
-    context.fillRect(chipX, chipRectY, chipWidth, chipHeight);
-    const chipStrokeGradient = context.createLinearGradient(
-      chipX,
-      chipRectY,
-      chipX,
-      chipRectY + chipHeight,
+    drawPanel(
+      context,
+      { x: chipX, y: chipRectY, width: chipWidth, height: chipHeight },
+      {
+        radius: 14,
+        fill: 'rgba(19, 36, 55, 0.95)',
+        stroke: 'rgba(43, 72, 95, 0.7)',
+        borderWidth: 1,
+        shadow: false,
+      },
     );
-    chipStrokeGradient.addColorStop(0, '#2b485f');
-    chipStrokeGradient.addColorStop(1, '#1a2f3f');
-    context.strokeStyle = chipStrokeGradient;
-    context.strokeRect(chipX, chipRectY, chipWidth, chipHeight);
-    context.fillStyle = '#a9d4ee';
+    context.fillStyle = palette.textSecondary;
     context.fillText(chip, chipX + chipWidth / 2, chipY);
     chipX += chipWidth + chipHorizontalGap;
   }
@@ -593,7 +617,7 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   const timelineX = contentX + 6;
   const timelineTop = cursorY + 4;
   const timelineBottom = cursorY + entrySpacing * (roadmap.length - 1) + 44;
-  context.strokeStyle = '#1f3547';
+  context.strokeStyle = 'rgba(31, 53, 71, 0.7)';
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(timelineX, timelineTop);
@@ -603,18 +627,18 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   let entryY = cursorY;
   for (const entry of roadmap) {
     const dotY = entryY + 6;
-    context.fillStyle = '#92ffa6';
+    context.fillStyle = palette.accent;
     context.beginPath();
     context.arc(timelineX, dotY, 5, 0, Math.PI * 2);
     context.fill();
 
     const textX = timelineX + 18;
-    context.fillStyle = '#92ffa6';
-    context.font = 'bold 16px system-ui, sans-serif';
+    context.fillStyle = palette.accent;
+    context.font = font(16, 'bold');
     context.fillText(entry.phase, textX, entryY - 4);
 
-    context.fillStyle = '#c8d7e1';
-    context.font = '14px system-ui, sans-serif';
+    context.fillStyle = palette.textSecondary;
+    context.font = font(14);
     let noteY = entryY + 18;
     for (const note of entry.notes) {
       context.fillText(`• ${note}`, textX, noteY);
@@ -626,18 +650,18 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   cursorY = entryY + 8;
 
   drawSectionHeading('How You Can Help');
-  context.font = '15px system-ui, sans-serif';
+  context.font = font(15);
   for (const item of supportPoints) {
-    context.fillStyle = '#1fb879';
+    context.fillStyle = palette.accentStrong;
     context.fillRect(contentX, cursorY + 6, 6, 6);
-    context.fillStyle = '#d2e8f3';
+    context.fillStyle = palette.textSecondary;
     context.fillText(item, contentX + 16, cursorY);
     cursorY += 22;
   }
   cursorY += 20;
 
-  context.fillStyle = '#748a9b';
-  context.font = '13px system-ui, sans-serif';
+  context.fillStyle = palette.textMuted;
+  context.font = font(13);
   for (const line of footerLines) {
     context.fillText(line, contentX, cursorY);
     cursorY += 18;
