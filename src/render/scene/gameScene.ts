@@ -2,6 +2,7 @@ import type { RuntimeTilemap } from '../../world/tiles/tiled';
 import { isoMapBounds, tileToIso } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
 import { drawBuilding } from '../../render/sprites/buildings';
+import { drawRubble } from '../../render/sprites/rubble';
 import { drawSafeHouse, type SafeHouseParams } from '../../render/sprites/safehouse';
 import { drawPickupCrate } from '../../render/sprites/pickups';
 import {
@@ -122,8 +123,13 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     originWithShakeX: number,
     originWithShakeY: number,
   ): void => {
-    const { runtimeMap, isoParams, stores, safeHouse } = args;
+    const { runtimeMap, isoParams, stores, safeHouse, state } = args;
     deps.renderer.draw(deps.context, runtimeMap, isoParams, originWithShakeX, originWithShakeY);
+
+    for (let i = 0; i < state.rubble.length; i += 1) {
+      const decal = state.rubble[i]!;
+      drawRubble(deps.context, isoParams, originWithShakeX, originWithShakeY, decal);
+    }
 
     stores.buildings.forEach((entity, building) => {
       const t = stores.transforms.get(entity);

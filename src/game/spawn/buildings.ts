@@ -62,6 +62,7 @@ export function createBuildingFactory({
   };
 
   const spawnBuildings = (sites: BuildingSite[]): void => {
+    state.rubble.length = 0;
     clearBuildings();
     for (let i = 0; i < sites.length; i += 1) {
       createBuildingEntity(sites[i]!);
