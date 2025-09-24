@@ -360,77 +360,311 @@ export function drawAlienMonstrosity(
   ctx.ellipse(0, 10, 16, 10, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Draw writhing tentacles.
-  ctx.strokeStyle = '#51ffda';
-  ctx.lineWidth = 4;
-  ctx.lineCap = 'round';
-  for (let i = 0; i < 5; i += 1) {
-    const angle = -Math.PI / 2 + (i - 2) * (Math.PI / 9);
-    const length = 18 + Math.abs(i - 2) * 4;
-    const spreadX = Math.cos(angle) * length;
-    const spreadY = Math.sin(angle) * length;
-    ctx.beginPath();
-    ctx.moveTo(0, 6);
-    ctx.quadraticCurveTo(spreadX * 0.2, 16, spreadX, spreadY + 8);
-    ctx.stroke();
+  const groundGlow = ctx.createRadialGradient(0, 6, 2, 0, 6, 24);
+  groundGlow.addColorStop(0, 'rgba(68, 255, 219, 0.3)');
+  groundGlow.addColorStop(1, 'rgba(68, 255, 219, 0)');
+  ctx.fillStyle = groundGlow;
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 24, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const cubicPoint = (p0: number, p1: number, p2: number, p3: number, t: number): number => {
+    const mt = 1 - t;
+    return mt * mt * mt * p0 + 3 * mt * mt * t * p1 + 3 * mt * t * t * p2 + t * t * t * p3;
+  };
+  const cubicTangent = (p0: number, p1: number, p2: number, p3: number, t: number): number => {
+    const mt = 1 - t;
+    return 3 * mt * mt * (p1 - p0) + 6 * mt * t * (p2 - p1) + 3 * t * t * (p3 - p2);
+  };
+
+  interface TentacleSpec {
+    startX: number;
+    startY: number;
+    ctrl1X: number;
+    ctrl1Y: number;
+    ctrl2X: number;
+    ctrl2Y: number;
+    endX: number;
+    endY: number;
+    width: number;
+    color: string;
+    highlight: string;
+    front: boolean;
   }
 
-  // Alien body core.
-  ctx.fillStyle = '#2c1146';
+  const tentacles: TentacleSpec[] = [
+    {
+      startX: -4,
+      startY: 4,
+      ctrl1X: -18,
+      ctrl1Y: 16,
+      ctrl2X: -32,
+      ctrl2Y: 28,
+      endX: -30,
+      endY: 42,
+      width: 5.5,
+      color: '#4dffe1',
+      highlight: '#b9fff5',
+      front: false,
+    },
+    {
+      startX: 4,
+      startY: 4,
+      ctrl1X: 18,
+      ctrl1Y: 16,
+      ctrl2X: 32,
+      ctrl2Y: 28,
+      endX: 30,
+      endY: 42,
+      width: 5.5,
+      color: '#4dffe1',
+      highlight: '#b9fff5',
+      front: false,
+    },
+    {
+      startX: -2,
+      startY: 6,
+      ctrl1X: -12,
+      ctrl1Y: 20,
+      ctrl2X: -18,
+      ctrl2Y: 34,
+      endX: -12,
+      endY: 44,
+      width: 5,
+      color: '#66ffec',
+      highlight: '#dbfffa',
+      front: false,
+    },
+    {
+      startX: 2,
+      startY: 6,
+      ctrl1X: 12,
+      ctrl1Y: 20,
+      ctrl2X: 18,
+      ctrl2Y: 34,
+      endX: 12,
+      endY: 44,
+      width: 5,
+      color: '#66ffec',
+      highlight: '#dbfffa',
+      front: false,
+    },
+    {
+      startX: -6,
+      startY: 2,
+      ctrl1X: -22,
+      ctrl1Y: 12,
+      ctrl2X: -28,
+      ctrl2Y: 24,
+      endX: -24,
+      endY: 32,
+      width: 6.5,
+      color: '#6bfff0',
+      highlight: '#e5fffb',
+      front: true,
+    },
+    {
+      startX: 6,
+      startY: 2,
+      ctrl1X: 22,
+      ctrl1Y: 12,
+      ctrl2X: 28,
+      ctrl2Y: 24,
+      endX: 24,
+      endY: 32,
+      width: 6.5,
+      color: '#6bfff0',
+      highlight: '#e5fffb',
+      front: true,
+    },
+    {
+      startX: 0,
+      startY: 4,
+      ctrl1X: 0,
+      ctrl1Y: 20,
+      ctrl2X: -4,
+      ctrl2Y: 32,
+      endX: -2,
+      endY: 40,
+      width: 7,
+      color: '#54ffe7',
+      highlight: '#d3fffa',
+      front: true,
+    },
+    {
+      startX: 0,
+      startY: 4,
+      ctrl1X: 0,
+      ctrl1Y: 20,
+      ctrl2X: 4,
+      ctrl2Y: 32,
+      endX: 2,
+      endY: 40,
+      width: 7,
+      color: '#54ffe7',
+      highlight: '#d3fffa',
+      front: true,
+    },
+  ];
+
+  const drawTentacle = (spec: TentacleSpec): void => {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = spec.width;
+    ctx.strokeStyle = spec.color;
+    ctx.globalAlpha = spec.front ? 0.95 : 0.8;
+    ctx.beginPath();
+    ctx.moveTo(spec.startX, spec.startY);
+    ctx.bezierCurveTo(spec.ctrl1X, spec.ctrl1Y, spec.ctrl2X, spec.ctrl2Y, spec.endX, spec.endY);
+    ctx.stroke();
+
+    ctx.globalAlpha = spec.front ? 0.65 : 0.45;
+    ctx.lineWidth = spec.width * 0.45;
+    ctx.strokeStyle = spec.highlight;
+    ctx.beginPath();
+    ctx.moveTo(spec.startX + 0.4, spec.startY - 0.6);
+    ctx.bezierCurveTo(
+      spec.ctrl1X * 0.85,
+      spec.ctrl1Y * 0.85,
+      spec.ctrl2X * 0.85,
+      spec.ctrl2Y * 0.85,
+      spec.endX * 0.9,
+      spec.endY * 0.9,
+    );
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(240, 255, 254, 0.55)';
+    const cups = spec.front ? 4 : 3;
+    for (let i = 1; i <= cups; i += 1) {
+      const t = i / (cups + 1);
+      const px = cubicPoint(spec.startX, spec.ctrl1X, spec.ctrl2X, spec.endX, t);
+      const py = cubicPoint(spec.startY, spec.ctrl1Y, spec.ctrl2Y, spec.endY, t);
+      const tx = cubicTangent(spec.startX, spec.ctrl1X, spec.ctrl2X, spec.endX, t);
+      const ty = cubicTangent(spec.startY, spec.ctrl1Y, spec.ctrl2Y, spec.endY, t);
+      const angle = Math.atan2(ty, tx);
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle);
+      ctx.scale(1, 0.6);
+      ctx.beginPath();
+      ctx.arc(0, 0, spec.front ? 1.8 : 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  tentacles
+    .filter((spec) => !spec.front)
+    .forEach((spec) => {
+      drawTentacle(spec);
+    });
+
+  const bodyGradient = ctx.createLinearGradient(0, -24, 0, 18);
+  bodyGradient.addColorStop(0, '#2d0b45');
+  bodyGradient.addColorStop(0.4, '#46196f');
+  bodyGradient.addColorStop(0.8, '#30114c');
+  ctx.fillStyle = bodyGradient;
   ctx.beginPath();
-  ctx.ellipse(0, -2, 14, 18, 0, 0, Math.PI * 2);
+  ctx.moveTo(0, -24);
+  ctx.bezierCurveTo(-16, -22, -20, -8, -12, 14);
+  ctx.bezierCurveTo(-6, 26, 6, 26, 12, 14);
+  ctx.bezierCurveTo(20, -8, 16, -22, 0, -24);
+  ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = '#431a6b';
+  ctx.strokeStyle = '#7a43cf';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+
+  const bellyGlow = ctx.createRadialGradient(-4, -6, 0, 0, -2, 16);
+  bellyGlow.addColorStop(0, 'rgba(145, 255, 235, 0.9)');
+  bellyGlow.addColorStop(0.5, 'rgba(120, 220, 255, 0.4)');
+  bellyGlow.addColorStop(1, 'rgba(48, 8, 78, 0)');
+  ctx.fillStyle = bellyGlow;
   ctx.beginPath();
-  ctx.ellipse(0, -4, 10, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -2, 12, 16, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Bioluminescent veins.
+  ctx.fillStyle = '#14061f';
+  ctx.beginPath();
+  ctx.moveTo(-6, -2);
+  ctx.bezierCurveTo(-5, 4, -2, 7, 0, 8);
+  ctx.bezierCurveTo(2, 7, 5, 4, 6, -2);
+  ctx.bezierCurveTo(2, -6, -2, -6, -6, -2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = '#ff6ac6';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-4.5, 0);
+  ctx.quadraticCurveTo(0, 3.6, 4.5, 0);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fefbff';
+  ctx.beginPath();
+  ctx.ellipse(-5.5, -10, 2.5, 3.2, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(0, -12, 3, 3.6, 0, 0, Math.PI * 2);
+  ctx.ellipse(5.5, -10, 2.5, 3.2, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#37ffd0';
+  ctx.beginPath();
+  ctx.ellipse(-5.5, -10, 1.4, 1.7, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(0, -12, 1.6, 2, 0, 0, Math.PI * 2);
+  ctx.ellipse(5.5, -10, 1.4, 1.7, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#071a1c';
+  ctx.beginPath();
+  ctx.ellipse(-5.5, -9.6, 0.7, 0.9, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(0, -11.6, 0.8, 1, 0, 0, Math.PI * 2);
+  ctx.ellipse(5.5, -9.6, 0.7, 0.9, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.strokeStyle = '#9ffff2';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.quadraticCurveTo(-6, -4, -2, 6);
-  ctx.moveTo(0, -12);
-  ctx.quadraticCurveTo(6, -4, 2, 6);
+  ctx.moveTo(0, -18);
+  ctx.quadraticCurveTo(-7, -6, -4, 8);
+  ctx.moveTo(0, -18);
+  ctx.quadraticCurveTo(7, -6, 4, 8);
+  ctx.moveTo(-2, 2);
+  ctx.quadraticCurveTo(-1, 10, -2, 16);
+  ctx.moveTo(2, 2);
+  ctx.quadraticCurveTo(1, 10, 2, 16);
   ctx.stroke();
 
-  // Clustered eyes.
-  ctx.fillStyle = '#fdf6ff';
+  ctx.strokeStyle = '#5fffe8';
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.arc(-4, -8, 2.5, 0, Math.PI * 2);
-  ctx.arc(0, -10, 3, 0, Math.PI * 2);
-  ctx.arc(4, -8, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#3fffc7';
-  ctx.beginPath();
-  ctx.arc(-4, -8, 1.2, 0, Math.PI * 2);
-  ctx.arc(0, -10, 1.4, 0, Math.PI * 2);
-  ctx.arc(4, -8, 1.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Maw.
-  ctx.fillStyle = '#0a020f';
-  ctx.beginPath();
-  ctx.ellipse(0, -2, 6, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = '#f05f9f';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-5, -2);
-  ctx.lineTo(5, -2);
+  ctx.moveTo(-8, -14);
+  ctx.quadraticCurveTo(-6, -20, -2, -24);
+  ctx.moveTo(8, -14);
+  ctx.quadraticCurveTo(6, -20, 2, -24);
   ctx.stroke();
 
-  // Inner glow to emphasize alien energy.
-  const gradient = ctx.createRadialGradient(0, -6, 0, 0, -6, 12);
-  gradient.addColorStop(0, 'rgba(140, 255, 235, 0.9)');
-  gradient.addColorStop(1, 'rgba(80, 20, 120, 0)');
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = '#63fff2';
   ctx.beginPath();
-  ctx.ellipse(0, -4, 12, 16, 0, 0, Math.PI * 2);
+  ctx.arc(-2.4, -24, 1.6, 0, Math.PI * 2);
+  ctx.arc(2.4, -24, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  tentacles
+    .filter((spec) => spec.front)
+    .forEach((spec) => {
+      drawTentacle(spec);
+    });
+
+  const innerAura = ctx.createRadialGradient(0, -6, 0, 0, -6, 18);
+  innerAura.addColorStop(0, 'rgba(150, 255, 240, 0.8)');
+  innerAura.addColorStop(1, 'rgba(80, 20, 120, 0)');
+  ctx.fillStyle = innerAura;
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 14, 18, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
