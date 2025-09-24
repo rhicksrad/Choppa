@@ -1,7 +1,7 @@
 import type { RuntimeTilemap } from '../../world/tiles/tiled';
 import { isoMapBounds, tileToIso } from '../../render/iso/projection';
 import { getCanvasViewMetrics } from '../../render/canvas/metrics';
-import { drawBuilding } from '../../render/sprites/buildings';
+import { drawBuilding, drawMothershipTeslaTower } from '../../render/sprites/buildings';
 import { drawRubble } from '../../render/sprites/rubble';
 import { drawForceFieldDome } from '../../render/sprites/forceField';
 import { drawSafeHouse, type SafeHouseParams } from '../../render/sprites/safehouse';
@@ -79,6 +79,14 @@ export interface GameSceneRenderer {
   render: (args: GameSceneRenderArgs) => void;
 }
 
+type ShieldSite = {
+  tx: number;
+  ty: number;
+  width: number;
+  depth: number;
+  height: number;
+};
+
 export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneRenderer {
   const wrapText = (text: string, maxWidth: number): string[] => {
     const words = text.split(' ');
@@ -132,36 +140,44 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       drawRubble(deps.context, isoParams, originWithShakeX, originWithShakeY, decal);
     }
 
-    let shieldSite:
-      | { tx: number; ty: number; width: number; depth: number; height: number }
-      | null = null;
+    let shieldSite: ShieldSite | null = null;
 
     stores.buildings.forEach((entity, building) => {
       const t = stores.transforms.get(entity);
       const h = stores.healths.get(entity);
       if (!t || !h) return;
-      drawBuilding(deps.context, isoParams, originWithShakeX, originWithShakeY, {
-        tx: t.tx,
-        ty: t.ty,
-        width: building.width,
-        depth: building.depth,
-        height: building.height,
-        bodyColor: building.bodyColor,
-        roofColor: building.roofColor,
-        ruinColor: building.ruinColor,
-        damage01: 1 - h.current / h.max,
-      });
-      if (state.flags.mothershipShieldActive) {
-        const meta = state.buildingMeta.get(entity);
-        if (meta?.tag === 'mothership-shield') {
-          shieldSite = {
-            tx: t.tx,
-            ty: t.ty,
-            width: building.width,
-            depth: building.depth,
-            height: building.height,
-          };
-        }
+      const damage01 = 1 - h.current / h.max;
+      const meta = state.buildingMeta.get(entity);
+      if (meta?.tag === 'mothership-conduit') {
+        drawMothershipTeslaTower(deps.context, isoParams, originWithShakeX, originWithShakeY, {
+          tx: t.tx,
+          ty: t.ty,
+          width: building.width,
+          depth: building.depth,
+          height: building.height,
+          damage01,
+        });
+      } else {
+        drawBuilding(deps.context, isoParams, originWithShakeX, originWithShakeY, {
+          tx: t.tx,
+          ty: t.ty,
+          width: building.width,
+          depth: building.depth,
+          height: building.height,
+          bodyColor: building.bodyColor,
+          roofColor: building.roofColor,
+          ruinColor: building.ruinColor,
+          damage01,
+        });
+      }
+      if (state.flags.mothershipShieldActive && meta?.tag === 'mothership-shield') {
+        shieldSite = {
+          tx: t.tx,
+          ty: t.ty,
+          width: building.width,
+          depth: building.depth,
+          height: building.height,
+        };
       }
     });
 
@@ -429,8 +445,8 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     const bossState = state.finalBoss;
     if (bossState.phase !== 'inactive' && bossState.entity) {
       const bossHealth = stores.healths.get(bossState.entity);
-      const max = bossState.healthMax > 0 ? bossState.healthMax : bossHealth?.max ?? 0;
-      const current = bossState.health > 0 ? bossState.health : bossHealth?.current ?? 0;
+      const max = bossState.healthMax > 0 ? bossState.healthMax : (bossHealth?.max ?? 0);
+      const current = bossState.health > 0 ? bossState.health : (bossHealth?.current ?? 0);
       if (max > 0) {
         bossHud = {
           name: bossState.name || 'Unknown Horror',
@@ -780,5 +796,3 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
     },
   };
 }
-
-

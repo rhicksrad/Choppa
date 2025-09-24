@@ -42,12 +42,28 @@ export function drawRubble(
 
   ctx.fillStyle = 'rgba(62, 52, 44, 0.8)';
   ctx.beginPath();
-  ctx.ellipse(0, smearOffsetY - 2, baseWidth * 0.78, baseDepth * 0.58, smearTilt * 0.5, 0, Math.PI * 2);
+  ctx.ellipse(
+    0,
+    smearOffsetY - 2,
+    baseWidth * 0.78,
+    baseDepth * 0.58,
+    smearTilt * 0.5,
+    0,
+    Math.PI * 2,
+  );
   ctx.fill();
 
   ctx.fillStyle = 'rgba(94, 82, 68, 0.55)';
   ctx.beginPath();
-  ctx.ellipse(0, smearOffsetY - 3, baseWidth * 0.62, baseDepth * 0.45, smearTilt * 0.3, 0, Math.PI * 2);
+  ctx.ellipse(
+    0,
+    smearOffsetY - 3,
+    baseWidth * 0.62,
+    baseDepth * 0.45,
+    smearTilt * 0.3,
+    0,
+    Math.PI * 2,
+  );
   ctx.fill();
 
   const shardCount = 5;
