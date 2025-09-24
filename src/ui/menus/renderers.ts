@@ -25,7 +25,12 @@ export function renderSettings(context: CanvasRenderingContext2D, ui: UIStore): 
     width: layout.panel.width,
     height: layout.panel.height,
   } as const;
-  const panelGradient = context.createLinearGradient(panelRect.x, panelRect.y, panelRect.x, panelRect.y + panelRect.height);
+  const panelGradient = context.createLinearGradient(
+    panelRect.x,
+    panelRect.y,
+    panelRect.x,
+    panelRect.y + panelRect.height,
+  );
   panelGradient.addColorStop(0, 'rgba(18, 36, 52, 0.95)');
   panelGradient.addColorStop(1, palette.panel);
   drawPanel(context, panelRect, {
@@ -216,7 +221,12 @@ export function renderAchievements(
   drawBackdrop(context, w, h);
 
   const panelRect = { x: panelX, y: panelY, width: panelWidth, height: panelHeight } as const;
-  const panelGradient = context.createLinearGradient(panelRect.x, panelRect.y, panelRect.x, panelRect.y + panelRect.height);
+  const panelGradient = context.createLinearGradient(
+    panelRect.x,
+    panelRect.y,
+    panelRect.x,
+    panelRect.y + panelRect.height,
+  );
   panelGradient.addColorStop(0, 'rgba(18, 36, 52, 0.95)');
   panelGradient.addColorStop(1, palette.panel);
   drawPanel(context, panelRect, {
@@ -345,6 +355,26 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   const paddingBottom = 44;
   const contentWidth = panelWidth - paddingX * 2;
 
+  const wrapText = (text: string, fontSpec: string, maxWidth: number): string[] => {
+    context.save();
+    context.font = fontSpec;
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let current = '';
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (context.measureText(candidate).width <= maxWidth || !current) {
+        current = candidate;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+    context.restore();
+    return lines;
+  };
+
   const taglineLines = [
     'An isometric rescue prototype focused on speed, clarity, and high-stakes extractions.',
     'Every sortie is tuned to make each evac feel clutch—fuel dwindles, civilians panic, and AAA fire lights the ridge.',
@@ -424,14 +454,72 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
 
   const accentHeight = 4;
   const headingBlock = accentHeight + 10 + 24;
-  const statCardHeight = 70;
   const chipHeight = 28;
   const chipHorizontalGap = 12;
   const chipVerticalGap = 12;
-  const entrySpacing = 68;
+  const taglineFont = font(16);
+  const missionFont = font(15);
+  const pillarFont = font(15);
+  const supportFont = font(15);
+  const statLabelFont = font(15, 'bold');
+  const statValueFont = font(20, 'bold');
+  const statDescriptionFont = font(12);
+  const statDescriptionLineHeight = 14;
+  const chipFont = font(14, 'bold');
+  const roadmapNoteFont = font(14);
+  const bulletOffset = 16;
+  const supportIndent = 16;
+  const taglineLineHeight = 20;
+  const missionLineHeight = 20;
+  const pillarLineHeight = 22;
+  const supportLineHeight = 20;
+  const supportItemGap = 10;
+  const roadmapNoteLineHeight = 18;
+
+  const contentX = panelX + paddingX;
+
+  const statGap = 16;
+  const cardWidth = (contentWidth - statGap * (stats.length - 1)) / stats.length;
+  const statDescriptions = stats.map((stat) =>
+    wrapText(stat.description, statDescriptionFont, Math.max(0, cardWidth - 32)),
+  );
+  const maxStatDescriptionLines = Math.max(
+    1,
+    ...statDescriptions.map((lines) => lines.length || 0),
+  );
+  const statDescriptionBlockHeight = maxStatDescriptionLines * statDescriptionLineHeight;
+  const statCardHeight = 52 + statDescriptionBlockHeight + 12;
+
+  const taglineWrapped = taglineLines.map((line) => wrapText(line, taglineFont, contentWidth));
+  const taglineLineCount = taglineWrapped.reduce(
+    (sum, lines) => sum + Math.max(1, lines.length || 0),
+    0,
+  );
+
+  const missionWrapped = missionLines.map((line) => wrapText(line, missionFont, contentWidth));
+  const missionLineCount = missionWrapped.reduce(
+    (sum, lines) => sum + Math.max(1, lines.length || 0),
+    0,
+  );
+
+  const pillarWrapped = pillarPoints.map((point) =>
+    wrapText(point, pillarFont, Math.max(0, contentWidth - bulletOffset)),
+  );
+  const pillarLineCount = pillarWrapped.reduce(
+    (sum, lines) => sum + Math.max(1, lines.length || 0),
+    0,
+  );
+
+  const supportWrapped = supportPoints.map((point) =>
+    wrapText(point, supportFont, Math.max(0, contentWidth - supportIndent)),
+  );
+  const supportTotalHeight = supportWrapped.reduce((sum, lines) => {
+    const lineCount = Math.max(1, lines.length || 0);
+    return sum + lineCount * supportLineHeight + supportItemGap;
+  }, 0);
 
   context.save();
-  context.font = font(14);
+  context.font = chipFont;
   let chipRows = 1;
   let measureChipX = 0;
   for (const chip of techChips) {
@@ -447,25 +535,48 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   const chipsBlockHeight =
     14 + chipHeight / 2 + 20 + 12 + (chipRows - 1) * (chipHeight + chipVerticalGap);
 
+  const timelineTextIndent = 24;
+  const timelineBulletWidth = (() => {
+    context.save();
+    context.font = roadmapNoteFont;
+    const width = context.measureText('• ').width;
+    context.restore();
+    return width;
+  })();
+  const roadmapNoteWidth = Math.max(0, contentWidth - timelineTextIndent - timelineBulletWidth);
+  const roadmapLayouts = roadmap.map((entry) => {
+    const wrappedNotes = entry.notes.map((note) =>
+      wrapText(note, roadmapNoteFont, roadmapNoteWidth),
+    );
+    const noteLineCount = wrappedNotes.reduce(
+      (sum, lines) => sum + Math.max(1, lines.length || 0),
+      0,
+    );
+    const noteBlockHeight = noteLineCount * roadmapNoteLineHeight;
+    const height = Math.max(64, noteBlockHeight + 36);
+    return { ...entry, wrappedNotes, noteLineCount, height };
+  });
+  const totalRoadmapHeight = roadmapLayouts.reduce((sum, entry) => sum + entry.height, 0);
+
   let panelContentHeight = paddingTop;
   panelContentHeight += 34; // title
   panelContentHeight += 10;
-  panelContentHeight += taglineLines.length * 20;
+  panelContentHeight += taglineLineCount * taglineLineHeight;
   panelContentHeight += 26;
   panelContentHeight += statCardHeight;
   panelContentHeight += 32;
   panelContentHeight += headingBlock; // Mission heading
-  panelContentHeight += missionLines.length * 20;
+  panelContentHeight += missionLineCount * missionLineHeight;
   panelContentHeight += 12;
   panelContentHeight += headingBlock; // Pillars heading
-  panelContentHeight += pillarPoints.length * 22;
+  panelContentHeight += pillarLineCount * pillarLineHeight;
   panelContentHeight += 16;
   panelContentHeight += headingBlock; // Tech heading
   panelContentHeight += chipsBlockHeight;
   panelContentHeight += headingBlock; // Flight Plan heading
-  panelContentHeight += entrySpacing * roadmap.length + 8;
+  panelContentHeight += totalRoadmapHeight + 8;
   panelContentHeight += headingBlock; // Support heading
-  panelContentHeight += supportPoints.length * 22;
+  panelContentHeight += supportTotalHeight;
   panelContentHeight += 20;
   panelContentHeight += footerLines.length * 18;
 
@@ -492,7 +603,6 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   context.fillStyle = accentGradient;
   context.fillRect(panelX, panelY, panelWidth, 3);
 
-  const contentX = panelX + paddingX;
   let cursorY = panelY + paddingTop;
 
   context.textAlign = 'left';
@@ -505,40 +615,55 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   cursorY += 10;
 
   context.fillStyle = palette.textSecondary;
-  context.font = font(16);
-  for (const line of taglineLines) {
-    context.fillText(line, contentX, cursorY);
-    cursorY += 20;
+  context.font = taglineFont;
+  for (const paragraph of taglineWrapped) {
+    const lines = paragraph.length ? paragraph : [''];
+    for (const line of lines) {
+      context.fillText(line, contentX, cursorY);
+      cursorY += taglineLineHeight;
+    }
   }
   cursorY += 26;
 
-  const statGap = 16;
-  const cardWidth = (contentWidth - statGap * (stats.length - 1)) / stats.length;
   const statsTop = cursorY;
   for (let i = 0; i < stats.length; i += 1) {
     const cardX = contentX + i * (cardWidth + statGap);
-    const cardGradient = context.createLinearGradient(cardX, statsTop, cardX, statsTop + statCardHeight);
+    const cardGradient = context.createLinearGradient(
+      cardX,
+      statsTop,
+      cardX,
+      statsTop + statCardHeight,
+    );
     cardGradient.addColorStop(0, 'rgba(24, 48, 66, 0.96)');
     cardGradient.addColorStop(1, 'rgba(14, 26, 36, 0.94)');
-    drawPanel(context, { x: cardX, y: statsTop, width: cardWidth, height: statCardHeight }, {
-      radius: 18,
-      fill: cardGradient,
-      stroke: 'rgba(39, 64, 88, 0.65)',
-      borderWidth: 1.2,
-      shadow: false,
-    });
+    drawPanel(
+      context,
+      { x: cardX, y: statsTop, width: cardWidth, height: statCardHeight },
+      {
+        radius: 18,
+        fill: cardGradient,
+        stroke: 'rgba(39, 64, 88, 0.65)',
+        borderWidth: 1.2,
+        shadow: false,
+      },
+    );
 
     context.fillStyle = palette.accent;
-    context.font = font(15, 'bold');
+    context.font = statLabelFont;
     context.fillText(stats[i]!.label, cardX + 16, statsTop + 12);
 
     context.fillStyle = palette.textPrimary;
-    context.font = font(20, 'bold');
+    context.font = statValueFont;
     context.fillText(stats[i]!.value, cardX + 16, statsTop + 32);
 
     context.fillStyle = palette.textMuted;
-    context.font = font(12);
-    context.fillText(stats[i]!.description, cardX + 16, statsTop + statCardHeight - 18);
+    context.font = statDescriptionFont;
+    let descY = statsTop + 52;
+    const descriptionLines = statDescriptions[i]?.length ? statDescriptions[i]! : [''];
+    for (const line of descriptionLines) {
+      context.fillText(line, cardX + 16, descY);
+      descY += statDescriptionLineHeight;
+    }
   }
   cursorY += statCardHeight;
   cursorY += 32;
@@ -555,30 +680,37 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
 
   drawSectionHeading('Mission Brief');
   context.fillStyle = palette.textSecondary;
-  context.font = font(15);
-  for (const line of missionLines) {
-    context.fillText(line, contentX, cursorY);
-    cursorY += 20;
+  context.font = missionFont;
+  for (const paragraph of missionWrapped) {
+    const lines = paragraph.length ? paragraph : [''];
+    for (const line of lines) {
+      context.fillText(line, contentX, cursorY);
+      cursorY += missionLineHeight;
+    }
   }
   cursorY += 12;
 
   drawSectionHeading('Core Pillars');
-  context.font = font(15);
-  const bulletOffset = 16;
-  for (const point of pillarPoints) {
+  context.font = pillarFont;
+  const bulletRadius = 4;
+  for (const lines of pillarWrapped) {
+    const entryLines = lines.length ? lines : [''];
     context.fillStyle = palette.accent;
     context.beginPath();
-    context.arc(contentX + 5, cursorY + 8, 4, 0, Math.PI * 2);
+    context.arc(contentX + 5, cursorY + 8, bulletRadius, 0, Math.PI * 2);
     context.fill();
 
     context.fillStyle = palette.textSecondary;
-    context.fillText(point, contentX + bulletOffset, cursorY);
-    cursorY += 22;
+    let lineY = cursorY;
+    for (const line of entryLines) {
+      context.fillText(line, contentX + bulletOffset, lineY);
+      lineY += pillarLineHeight;
+    }
+    cursorY = lineY;
   }
   cursorY += 16;
 
   drawSectionHeading('Tech Stack & Tools');
-  const chipFont = font(14, 'bold');
   const maxChipX = contentX + contentWidth;
   let chipX = contentX;
   let chipY = cursorY + 14;
@@ -616,7 +748,16 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   drawSectionHeading('Flight Plan');
   const timelineX = contentX + 6;
   const timelineTop = cursorY + 4;
-  const timelineBottom = cursorY + entrySpacing * (roadmap.length - 1) + 44;
+  let timelineBottom = timelineTop;
+  let roadmapCursor = cursorY;
+  for (const entry of roadmapLayouts) {
+    timelineBottom = Math.max(
+      timelineBottom,
+      roadmapCursor + 18 + entry.noteLineCount * roadmapNoteLineHeight,
+    );
+    roadmapCursor += entry.height;
+  }
+  timelineBottom += 6;
   context.strokeStyle = 'rgba(31, 53, 71, 0.7)';
   context.lineWidth = 2;
   context.beginPath();
@@ -624,39 +765,51 @@ export function renderAbout(context: CanvasRenderingContext2D): void {
   context.lineTo(timelineX, timelineBottom);
   context.stroke();
 
+  const textX = contentX + timelineTextIndent;
   let entryY = cursorY;
-  for (const entry of roadmap) {
+  for (const entry of roadmapLayouts) {
     const dotY = entryY + 6;
     context.fillStyle = palette.accent;
     context.beginPath();
     context.arc(timelineX, dotY, 5, 0, Math.PI * 2);
     context.fill();
 
-    const textX = timelineX + 18;
     context.fillStyle = palette.accent;
     context.font = font(16, 'bold');
     context.fillText(entry.phase, textX, entryY - 4);
 
     context.fillStyle = palette.textSecondary;
-    context.font = font(14);
+    context.font = roadmapNoteFont;
     let noteY = entryY + 18;
-    for (const note of entry.notes) {
-      context.fillText(`• ${note}`, textX, noteY);
-      noteY += 18;
+    for (const noteLines of entry.wrappedNotes) {
+      const lines = noteLines.length ? noteLines : [''];
+      const [firstLine, ...rest] = lines;
+      context.fillText(`• ${firstLine}`, textX, noteY);
+      noteY += roadmapNoteLineHeight;
+      for (const line of rest) {
+        context.fillText(line, textX + timelineBulletWidth, noteY);
+        noteY += roadmapNoteLineHeight;
+      }
     }
 
-    entryY += entrySpacing;
+    entryY += entry.height;
   }
   cursorY = entryY + 8;
 
   drawSectionHeading('How You Can Help');
-  context.font = font(15);
-  for (const item of supportPoints) {
+  context.font = supportFont;
+  for (const lines of supportWrapped) {
+    const itemTop = cursorY;
+    const entryLines = lines.length ? lines : [''];
     context.fillStyle = palette.accentStrong;
-    context.fillRect(contentX, cursorY + 6, 6, 6);
+    context.fillRect(contentX, itemTop + 6, 6, 6);
     context.fillStyle = palette.textSecondary;
-    context.fillText(item, contentX + 16, cursorY);
-    cursorY += 22;
+    let lineY = itemTop;
+    for (const line of entryLines) {
+      context.fillText(line, contentX + supportIndent, lineY);
+      lineY += supportLineHeight;
+    }
+    cursorY = lineY + supportItemGap;
   }
   cursorY += 20;
 
