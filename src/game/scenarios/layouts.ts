@@ -751,6 +751,7 @@ export function createMissionFourLayout(map: { width: number; height: number }):
       score: 480,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: 'homeland-synapse-cluster',
     },
     {
       tx: 39.5,
@@ -766,6 +767,7 @@ export function createMissionFourLayout(map: { width: number; height: number }):
       score: 480,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: 'homeland-synapse-cluster',
     },
     {
       tx: 32.0,
@@ -781,6 +783,7 @@ export function createMissionFourLayout(map: { width: number; height: number }):
       score: 500,
       category: 'stronghold',
       triggersAlarm: true,
+      tag: 'homeland-shield-pylon',
     },
   ];
 
