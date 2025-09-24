@@ -3,6 +3,7 @@ export type UIState =
   | 'settings'
   | 'achievements'
   | 'about'
+  | 'powerup-select'
   | 'briefing'
   | 'in-game'
   | 'paused'

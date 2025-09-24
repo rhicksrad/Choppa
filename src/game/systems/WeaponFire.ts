@@ -7,6 +7,25 @@ import type { Ammo } from '../components/Ammo';
 import type { InputSnapshot } from '../../core/input/input';
 import { RNG } from '../../core/util/rng';
 
+export const DEFAULT_MACHINE_GUN_COOLDOWN = 0.1;
+export const DEFAULT_MACHINE_GUN_PROJECTILE_SPEED = 22;
+export const DEFAULT_MACHINE_GUN_PROJECTILE_RADIUS = 0.08;
+export const DEFAULT_MACHINE_GUN_DAMAGE = 8;
+export const DEFAULT_MACHINE_GUN_DAMAGE_RADIUS = 0.12;
+
+export const DEFAULT_ROCKET_COOLDOWN = 0.4;
+export const DEFAULT_ROCKET_PROJECTILE_SPEED = 8.8;
+export const DEFAULT_ROCKET_PROJECTILE_RADIUS = 0.22;
+export const DEFAULT_ROCKET_DAMAGE = 19.2;
+export const DEFAULT_ROCKET_DAMAGE_RADIUS = 0.9;
+
+export const DEFAULT_HELLFIRE_COOLDOWN = 1.25;
+export const DEFAULT_HELLFIRE_PROJECTILE_SPEED = 24;
+export const DEFAULT_HELLFIRE_PROJECTILE_RADIUS = 0.3;
+export const DEFAULT_HELLFIRE_LAUNCH_OFFSET = 0.92;
+export const DEFAULT_HELLFIRE_DAMAGE = 36;
+export const DEFAULT_HELLFIRE_DAMAGE_RADIUS = 1.9;
+
 export type FireEvent =
   | {
       faction: 'player' | 'enemy';
@@ -133,7 +152,8 @@ export class WeaponFireSystem implements System {
       // Machine gun (LMB / Space)
       if (machineGunDown) {
         if (w.cooldownMissile <= 0 && ammo.missiles > 0) {
-          w.cooldownMissile = 0.1;
+          const fireDelay = w.machineGunFireDelay ?? DEFAULT_MACHINE_GUN_COOLDOWN;
+          w.cooldownMissile = fireDelay;
           ammo.missiles = Math.max(0, ammo.missiles - 1);
           const spread = 0.08; // radians
           const jitter = (this.rng.float01() - 0.5) * 2 * spread;
@@ -141,6 +161,10 @@ export class WeaponFireSystem implements System {
           const sn = Math.sin(jitter);
           const dx = dirX * cs - dirY * sn;
           const dy = dirX * sn + dirY * cs;
+          const projectileSpeed =
+            w.machineGunProjectileSpeed ?? DEFAULT_MACHINE_GUN_PROJECTILE_SPEED;
+          const damage = w.machineGunDamage ?? DEFAULT_MACHINE_GUN_DAMAGE;
+          const damageRadius = w.machineGunDamageRadius ?? DEFAULT_MACHINE_GUN_DAMAGE_RADIUS;
           this.eventsOut.push({
             faction: 'player',
             kind: 'missile',
@@ -150,11 +174,11 @@ export class WeaponFireSystem implements System {
             dy,
             spread,
             launchOffset: 0.48,
-            speed: 22,
+            speed: projectileSpeed,
             ttl: 0.6,
-            radius: 0.08,
-            damage: 8,
-            damageRadius: 0.12,
+            radius: DEFAULT_MACHINE_GUN_PROJECTILE_RADIUS,
+            damage,
+            damageRadius,
           });
         }
       }
@@ -162,9 +186,12 @@ export class WeaponFireSystem implements System {
       // Missiles (RMB / Shift)
       if (missileDown) {
         if (w.cooldownRocket <= 0 && ammo.rockets > 0) {
-          w.cooldownRocket = 0.4;
+          const fireDelay = w.rocketFireDelay ?? DEFAULT_ROCKET_COOLDOWN;
+          w.cooldownRocket = fireDelay;
           ammo.rockets = Math.max(0, ammo.rockets - 1);
-          const speed = 8.8;
+          const speed = w.rocketProjectileSpeed ?? DEFAULT_ROCKET_PROJECTILE_SPEED;
+          const damage = w.rocketDamage ?? DEFAULT_ROCKET_DAMAGE;
+          const damageRadius = w.rocketDamageRadius ?? DEFAULT_ROCKET_DAMAGE_RADIUS;
           this.eventsOut.push({
             faction: 'player',
             kind: 'rocket',
@@ -173,9 +200,9 @@ export class WeaponFireSystem implements System {
             vx: dirX * speed,
             vy: dirY * speed,
             ttl: 5.2,
-            radius: 0.22,
-            damage: 19.2,
-            damageRadius: 0.9,
+            radius: DEFAULT_ROCKET_PROJECTILE_RADIUS,
+            damage,
+            damageRadius,
           });
         }
       }
@@ -183,10 +210,13 @@ export class WeaponFireSystem implements System {
       // Hellfires (MMB / Ctrl)
       if (hellfireDown) {
         if (w.cooldownHellfire <= 0 && ammo.hellfires > 0) {
-          w.cooldownHellfire = 1.25;
+          const fireDelay = w.hellfireFireDelay ?? DEFAULT_HELLFIRE_COOLDOWN;
+          w.cooldownHellfire = fireDelay;
           ammo.hellfires = Math.max(0, ammo.hellfires - 1);
-          const speed = 24;
-          const launchOffset = 0.92;
+          const speed = w.hellfireProjectileSpeed ?? DEFAULT_HELLFIRE_PROJECTILE_SPEED;
+          const launchOffset = w.hellfireLaunchOffset ?? DEFAULT_HELLFIRE_LAUNCH_OFFSET;
+          const damage = w.hellfireDamage ?? DEFAULT_HELLFIRE_DAMAGE;
+          const damageRadius = w.hellfireDamageRadius ?? DEFAULT_HELLFIRE_DAMAGE_RADIUS;
           this.eventsOut.push({
             faction: 'player',
             kind: 'hellfire',
@@ -199,9 +229,9 @@ export class WeaponFireSystem implements System {
             targetX: this.aimTileX,
             targetY: this.aimTileY,
             ttl: 3.2,
-            radius: 0.3,
-            damage: 36,
-            damageRadius: 1.9,
+            radius: DEFAULT_HELLFIRE_PROJECTILE_RADIUS,
+            damage,
+            damageRadius,
           });
         }
       }

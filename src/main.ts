@@ -19,6 +19,11 @@ import type { MissionDef } from './game/missions/types';
 import { createAchievementTracker } from './game/achievements/tracker';
 import { defaultBindings } from './ui/input-remap/bindings';
 import { createUIStore, type UIState, type UIStore } from './ui/menus/scenes';
+import {
+  getPowerupRoundForMission,
+  PLAYER_BASE_STATS,
+  type PowerupOption,
+} from './game/app/powerups';
 
 const bootstrap = bootstrapApp();
 const state = createGameState();
@@ -84,21 +89,34 @@ stores.physics.set(player, {
   maxSpeed: 4.2,
   turnRate: Math.PI * 2,
 });
-stores.fuels.set(player, { current: 65, max: 100 });
+stores.fuels.set(player, { current: 65, max: PLAYER_BASE_STATS.fuelMax });
 stores.sprites.set(player, { color: '#92ffa6', rotor: 0 });
 stores.ammos.set(player, {
-  missiles: 200,
-  missilesMax: 200,
-  rockets: 12,
-  rocketsMax: 12,
-  hellfires: 2,
-  hellfiresMax: 2,
+  missiles: PLAYER_BASE_STATS.missilesMax,
+  missilesMax: PLAYER_BASE_STATS.missilesMax,
+  rockets: PLAYER_BASE_STATS.rocketsMax,
+  rocketsMax: PLAYER_BASE_STATS.rocketsMax,
+  hellfires: PLAYER_BASE_STATS.hellfiresMax,
+  hellfiresMax: PLAYER_BASE_STATS.hellfiresMax,
 });
 stores.weapons.set(player, {
   active: 'missile',
   cooldownMissile: 0,
   cooldownRocket: 0,
   cooldownHellfire: 0,
+  machineGunFireDelay: PLAYER_BASE_STATS.machineGunFireDelay,
+  rocketFireDelay: PLAYER_BASE_STATS.rocketFireDelay,
+  hellfireFireDelay: PLAYER_BASE_STATS.hellfireFireDelay,
+  machineGunDamage: PLAYER_BASE_STATS.machineGunDamage,
+  machineGunDamageRadius: PLAYER_BASE_STATS.machineGunDamageRadius,
+  machineGunProjectileSpeed: PLAYER_BASE_STATS.machineGunProjectileSpeed,
+  rocketDamage: PLAYER_BASE_STATS.rocketDamage,
+  rocketDamageRadius: PLAYER_BASE_STATS.rocketDamageRadius,
+  rocketProjectileSpeed: PLAYER_BASE_STATS.rocketProjectileSpeed,
+  hellfireDamage: PLAYER_BASE_STATS.hellfireDamage,
+  hellfireDamageRadius: PLAYER_BASE_STATS.hellfireDamageRadius,
+  hellfireProjectileSpeed: PLAYER_BASE_STATS.hellfireProjectileSpeed,
+  hellfireLaunchOffset: PLAYER_BASE_STATS.hellfireLaunchOffset,
 });
 stores.healths.set(player, { current: 100, max: 100 });
 stores.colliders.set(player, { radius: 0.4, team: 'player' });
@@ -212,6 +230,14 @@ const missionMusicMap = {
   m04: 'level4',
 } as const;
 
+interface ActivePowerupSelection {
+  roundLabel: string;
+  options: PowerupOption[];
+  highlightedIndex: number;
+}
+
+let activePowerupSelection: ActivePowerupSelection | null = null;
+
 const getMissionTrackId = (missionId: string): string =>
   missionMusicMap[missionId as keyof typeof missionMusicMap] ?? 'level1';
 
@@ -281,6 +307,44 @@ const playerController = createPlayerController({
   context,
   getStartPosition: () => missionCoordinator.mission.state.def.startPos,
 });
+
+const hasActivePowerupSelection = (): boolean => activePowerupSelection !== null;
+
+const getActivePowerupOptionCount = (): number =>
+  activePowerupSelection ? activePowerupSelection.options.length : 0;
+
+const moveActivePowerupHighlight = (direction: -1 | 1): void => {
+  if (!activePowerupSelection) return;
+  const optionCount = activePowerupSelection.options.length;
+  if (optionCount === 0) return;
+  const nextIndex =
+    (activePowerupSelection.highlightedIndex + direction + optionCount) % optionCount;
+  activePowerupSelection.highlightedIndex = nextIndex;
+};
+
+const setActivePowerupHighlight = (index: number): void => {
+  if (!activePowerupSelection) return;
+  if (index < 0 || index >= activePowerupSelection.options.length) return;
+  activePowerupSelection.highlightedIndex = index;
+};
+
+const confirmActivePowerupSelection = (): boolean => {
+  if (!activePowerupSelection) return false;
+  const { options, highlightedIndex } = activePowerupSelection;
+  const choice = options[highlightedIndex];
+  if (!choice) return false;
+  const ammoComp = stores.ammos.get(player);
+  const fuelComp = stores.fuels.get(player);
+  const weaponComp = stores.weapons.get(player);
+  if (!ammoComp || !fuelComp || !weaponComp) return false;
+  choice.apply({ ammo: ammoComp, fuel: fuelComp, weapon: weaponComp });
+  weaponComp.cooldownMissile = 0;
+  weaponComp.cooldownRocket = 0;
+  weaponComp.cooldownHellfire = 0;
+  activePowerupSelection = null;
+  playerController.resetPlayer();
+  return true;
+};
 
 const pickupProcessor = createPickupProcessor({
   state,
@@ -386,10 +450,56 @@ const resetGame = (targetMissionIndex?: number): void => {
   state.pickupCraneSounds.forEach((handle) => handle.cancel());
   state.pickupCraneSounds.clear();
 
+  const fuelComp = stores.fuels.get(player);
+  if (fuelComp) {
+    fuelComp.max = PLAYER_BASE_STATS.fuelMax;
+    fuelComp.current = fuelComp.max;
+  }
+  const ammoComp = stores.ammos.get(player);
+  if (ammoComp) {
+    ammoComp.missilesMax = PLAYER_BASE_STATS.missilesMax;
+    ammoComp.rocketsMax = PLAYER_BASE_STATS.rocketsMax;
+    ammoComp.hellfiresMax = PLAYER_BASE_STATS.hellfiresMax;
+    ammoComp.missiles = ammoComp.missilesMax;
+    ammoComp.rockets = ammoComp.rocketsMax;
+    ammoComp.hellfires = ammoComp.hellfiresMax;
+  }
+  const weaponComp = stores.weapons.get(player);
+  if (weaponComp) {
+    weaponComp.machineGunFireDelay = PLAYER_BASE_STATS.machineGunFireDelay;
+    weaponComp.rocketFireDelay = PLAYER_BASE_STATS.rocketFireDelay;
+    weaponComp.hellfireFireDelay = PLAYER_BASE_STATS.hellfireFireDelay;
+    weaponComp.machineGunDamage = PLAYER_BASE_STATS.machineGunDamage;
+    weaponComp.machineGunDamageRadius = PLAYER_BASE_STATS.machineGunDamageRadius;
+    weaponComp.machineGunProjectileSpeed = PLAYER_BASE_STATS.machineGunProjectileSpeed;
+    weaponComp.rocketDamage = PLAYER_BASE_STATS.rocketDamage;
+    weaponComp.rocketDamageRadius = PLAYER_BASE_STATS.rocketDamageRadius;
+    weaponComp.rocketProjectileSpeed = PLAYER_BASE_STATS.rocketProjectileSpeed;
+    weaponComp.hellfireDamage = PLAYER_BASE_STATS.hellfireDamage;
+    weaponComp.hellfireDamageRadius = PLAYER_BASE_STATS.hellfireDamageRadius;
+    weaponComp.hellfireProjectileSpeed = PLAYER_BASE_STATS.hellfireProjectileSpeed;
+    weaponComp.hellfireLaunchOffset = PLAYER_BASE_STATS.hellfireLaunchOffset;
+    weaponComp.cooldownMissile = 0;
+    weaponComp.cooldownRocket = 0;
+    weaponComp.cooldownHellfire = 0;
+  }
+
+  activePowerupSelection = null;
+
   fog.reset();
   playerController.resetPlayer();
 
-  transitionUIState('briefing');
+  const powerupRound = getPowerupRoundForMission(scenario.id);
+  if (powerupRound) {
+    activePowerupSelection = {
+      roundLabel: powerupRound.roundLabel,
+      options: powerupRound.options,
+      highlightedIndex: 0,
+    };
+    transitionUIState('powerup-select');
+  } else {
+    transitionUIState('briefing');
+  }
 };
 
 const resetCampaignProgress = (): void => {
@@ -423,6 +533,13 @@ const uiController = createUIController({
   resetCampaign: resetCampaignProgress,
   getNextMissionIndex: () => missionCoordinator.getMissionIndices().next,
   onStateChange: handleUIStateChange,
+  powerups: {
+    hasSelection: hasActivePowerupSelection,
+    getOptionCount: getActivePowerupOptionCount,
+    moveHighlight: (direction: -1 | 1) => moveActivePowerupHighlight(direction),
+    setHighlight: (index: number) => setActivePowerupHighlight(index),
+    confirmSelection: () => confirmActivePowerupSelection(),
+  },
 });
 
 let fps = 0;
@@ -465,6 +582,16 @@ const loop = new GameLoop({
       pad,
       safeHouse,
       achievements: achievementTracker.getRenderState(),
+      powerupSelection: activePowerupSelection
+        ? {
+            roundLabel: activePowerupSelection.roundLabel,
+            highlightedIndex: activePowerupSelection.highlightedIndex,
+            options: activePowerupSelection.options.map((option) => ({
+              title: option.title,
+              description: option.description,
+            })),
+          }
+        : null,
       fps,
       dt: lastStepDt,
     });

@@ -20,11 +20,20 @@ export interface UIControllerDeps {
   resetCampaign: () => void;
   getNextMissionIndex: () => number;
   onStateChange?: (next: UIState, prev: UIState) => void;
+  powerups: PowerupSelectionBridge;
 }
 
 export interface UIController {
   update: (dt: number, snapshot: InputSnapshot) => boolean;
   isAudioMuted: () => boolean;
+}
+
+export interface PowerupSelectionBridge {
+  hasSelection: () => boolean;
+  getOptionCount: () => number;
+  moveHighlight: (direction: -1 | 1) => void;
+  setHighlight: (index: number) => void;
+  confirmSelection: () => boolean;
 }
 
 export function createUIController({
@@ -38,6 +47,7 @@ export function createUIController({
   resetCampaign,
   getNextMissionIndex,
   onStateChange,
+  powerups,
 }: UIControllerDeps): UIController {
   let pauseLatch = false;
   let muteLatch = false;
@@ -47,6 +57,9 @@ export function createUIController({
   let sliderDirty = false;
   let prevUIState: UIState = ui.state;
   let briefingConfirmLocked = ui.state === 'briefing';
+  let powerupConfirmLocked = ui.state === 'powerup-select';
+  let powerupLeftLatch = false;
+  let powerupRightLatch = false;
 
   const changeState = (next: UIState): void => {
     if (ui.state === next) return;
@@ -62,6 +75,9 @@ export function createUIController({
     ui.state = next;
     prevUIState = next;
     briefingConfirmLocked = next === 'briefing';
+    powerupConfirmLocked = next === 'powerup-select';
+    powerupLeftLatch = false;
+    powerupRightLatch = false;
     onStateChange?.(next, prev);
   };
 
@@ -91,6 +107,9 @@ export function createUIController({
     if (ui.state !== prevUIState) {
       prevUIState = ui.state;
       briefingConfirmLocked = ui.state === 'briefing';
+      powerupConfirmLocked = ui.state === 'powerup-select';
+      powerupLeftLatch = false;
+      powerupRightLatch = false;
     }
 
     const pauseDown = isDown(snapshot, bindings, 'pause');
@@ -222,6 +241,38 @@ export function createUIController({
         snapshot.keys['Spacebar'];
       if (!confirmDown) briefingConfirmLocked = false;
       if (!briefingConfirmLocked && confirmDown) changeState('in-game');
+      return false;
+    }
+
+    if (ui.state === 'powerup-select') {
+      if (!powerups.hasSelection() || powerups.getOptionCount() === 0) {
+        changeState('briefing');
+        return false;
+      }
+
+      const leftDown = snapshot.keys['ArrowLeft'] || snapshot.keys['a'] || snapshot.keys['A'];
+      if (leftDown && !powerupLeftLatch) powerups.moveHighlight(-1);
+      powerupLeftLatch = Boolean(leftDown);
+
+      const rightDown = snapshot.keys['ArrowRight'] || snapshot.keys['d'] || snapshot.keys['D'];
+      if (rightDown && !powerupRightLatch) powerups.moveHighlight(1);
+      powerupRightLatch = Boolean(rightDown);
+
+      if (snapshot.keys['1']) powerups.setHighlight(0);
+      if (snapshot.keys['2']) powerups.setHighlight(1);
+      if (snapshot.keys['3']) powerups.setHighlight(2);
+
+      const confirmDown =
+        snapshot.keys['Enter'] ||
+        snapshot.keys[' '] ||
+        snapshot.keys['Space'] ||
+        snapshot.keys['Spacebar'];
+      if (!confirmDown) powerupConfirmLocked = false;
+      if (!powerupConfirmLocked && confirmDown) {
+        if (powerups.confirmSelection()) changeState('briefing');
+        powerupConfirmLocked = true;
+      }
+
       return false;
     }
 

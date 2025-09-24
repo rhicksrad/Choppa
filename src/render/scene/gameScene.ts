@@ -62,6 +62,11 @@ export interface GameSceneRenderArgs {
   pad: PadConfig;
   safeHouse: SafeHouseParams;
   achievements: AchievementRenderState;
+  powerupSelection: {
+    roundLabel: string;
+    highlightedIndex: number;
+    options: Array<{ title: string; description: string }>;
+  } | null;
   fps: number;
   dt: number;
 }
@@ -71,6 +76,24 @@ export interface GameSceneRenderer {
 }
 
 export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneRenderer {
+  const wrapText = (text: string, maxWidth: number): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let current = '';
+    for (let i = 0; i < words.length; i += 1) {
+      const word = words[i]!;
+      const testLine = current ? `${current} ${word}` : word;
+      if (deps.context.measureText(testLine).width > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = testLine;
+      }
+    }
+    if (current) lines.push(current);
+    return lines;
+  };
+
   const renderMenuScenes = (args: GameSceneRenderArgs): boolean => {
     const { ui, titleMenu, achievements } = args;
     if (ui.state === 'title') {
@@ -386,6 +409,74 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       deps.context.font = 'bold 18px system-ui, sans-serif';
       deps.context.textAlign = 'center';
       deps.context.fillText('Respawning...', viewWidth / 2, viewHeight / 2);
+      deps.context.restore();
+    }
+
+    if (ui.state === 'powerup-select') {
+      deps.context.save();
+      deps.context.fillStyle = 'rgba(4, 10, 18, 0.72)';
+      deps.context.fillRect(0, 0, viewWidth, viewHeight);
+      deps.context.textAlign = 'center';
+      deps.context.fillStyle = '#92ffa6';
+      deps.context.font = 'bold 28px system-ui, sans-serif';
+      const heading = args.powerupSelection
+        ? `${args.powerupSelection.roundLabel} Power-Up`
+        : 'Power-Up Selection';
+      deps.context.fillText(heading, viewWidth / 2, viewHeight / 2 - 170);
+
+      if (args.powerupSelection) {
+        const { options, highlightedIndex } = args.powerupSelection;
+        const cardWidth = 220;
+        const cardHeight = 180;
+        const gap = 28;
+        const totalWidth = options.length * cardWidth + Math.max(0, options.length - 1) * gap;
+        const startX = viewWidth / 2 - totalWidth / 2;
+        const startY = viewHeight / 2 - cardHeight / 2 - 10;
+        for (let i = 0; i < options.length; i += 1) {
+          const option = options[i]!;
+          const cardX = startX + i * (cardWidth + gap);
+          const isHighlighted = i === highlightedIndex;
+          deps.context.fillStyle = isHighlighted
+            ? 'rgba(20, 38, 56, 0.95)'
+            : 'rgba(11, 24, 38, 0.9)';
+          deps.context.fillRect(cardX, startY, cardWidth, cardHeight);
+          deps.context.lineWidth = isHighlighted ? 3 : 1.5;
+          deps.context.strokeStyle = isHighlighted ? '#ffd166' : 'rgba(146, 255, 166, 0.4)';
+          deps.context.strokeRect(cardX, startY, cardWidth, cardHeight);
+
+          deps.context.textAlign = 'center';
+          deps.context.fillStyle = '#92ffa6';
+          deps.context.font = 'bold 16px system-ui, sans-serif';
+          deps.context.fillText(option.title, cardX + cardWidth / 2, startY + 32);
+
+          deps.context.textAlign = 'left';
+          deps.context.fillStyle = '#c8d7e1';
+          deps.context.font = '14px system-ui, sans-serif';
+          const lines = wrapText(option.description, cardWidth - 32);
+          let textY = startY + 58;
+          for (let j = 0; j < lines.length; j += 1) {
+            deps.context.fillText(lines[j]!, cardX + 16, textY + j * 18);
+          }
+
+          deps.context.fillStyle = '#6c8294';
+          deps.context.font = '12px system-ui, sans-serif';
+          deps.context.fillText(`Press ${i + 1}`, cardX + 16, startY + cardHeight - 14);
+        }
+
+        deps.context.textAlign = 'center';
+        deps.context.fillStyle = '#c8d7e1';
+        deps.context.font = 'bold 16px system-ui, sans-serif';
+        deps.context.fillText(
+          'Use A / D or 1-3 to choose. Press Enter to confirm.',
+          viewWidth / 2,
+          startY + cardHeight + 34,
+        );
+      } else {
+        deps.context.fillStyle = '#c8d7e1';
+        deps.context.font = '16px system-ui, sans-serif';
+        deps.context.fillText('Preparing loadout options...', viewWidth / 2, viewHeight / 2 - 110);
+      }
+
       deps.context.restore();
     }
 
