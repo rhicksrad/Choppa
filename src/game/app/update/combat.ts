@@ -6,6 +6,7 @@ import type { Health } from '../../components/Health';
 import type { Physics } from '../../components/Physics';
 import type { Building } from '../../components/Building';
 import type { GameState } from '../state';
+import { PLAYER_RESPAWN_DURATION } from '../constants';
 import {
   playMissile,
   playAlienLaser,
@@ -163,7 +164,7 @@ export function createCombatProcessor({
     }
     state.player.lives -= 1;
     state.player.invulnerable = true;
-    state.player.respawnTimer = 2.5;
+    state.player.respawnTimer = PLAYER_RESPAWN_DURATION;
     if (state.player.lives <= 0) {
       ui.state = 'game-over';
       state.wave.active = false;
@@ -205,7 +206,18 @@ export function createCombatProcessor({
       const buildingComp = buildings.get(entity);
       if (buildingComp) {
         const t = transforms.get(entity);
-        if (t) spawnExplosion(t.tx, t.ty);
+        if (t) {
+          spawnExplosion(t.tx, t.ty);
+          const seed = entity * 1103515245 + 12345;
+          state.rubble.push({
+            tx: t.tx,
+            ty: t.ty,
+            width: buildingComp.width,
+            depth: buildingComp.depth,
+            seed,
+          });
+          if (state.rubble.length > 120) state.rubble.splice(0, state.rubble.length - 120);
+        }
         playExplosion(bus);
         const meta = state.buildingMeta.get(entity);
         if (meta) {
@@ -228,7 +240,21 @@ export function createCombatProcessor({
       const meta = state.buildingMeta.get(entity);
       if (!meta || meta.tag !== tag) continue;
       const transform = transforms.get(entity);
-      if (transform) spawnExplosion(transform.tx, transform.ty, 1.2, 0.9);
+      if (transform) {
+        spawnExplosion(transform.tx, transform.ty, 1.2, 0.9);
+        const building = buildings.get(entity);
+        if (building) {
+          const seed = entity * 1103515245 + 12345;
+          state.rubble.push({
+            tx: transform.tx,
+            ty: transform.ty,
+            width: building.width,
+            depth: building.depth,
+            seed,
+          });
+          if (state.rubble.length > 120) state.rubble.splice(0, state.rubble.length - 120);
+        }
+      }
       destroyEntity(entity);
       removed = true;
     }
@@ -392,19 +418,27 @@ export function createCombatProcessor({
 
     if (boss.phase === 'cinematic') {
       boss.timer += dt;
-      if (boss.timer >= 4.8) {
-        boss.timer = 0;
-        ui.state = 'in-game';
-        const spawnPoint = { tx: 32, ty: 21 };
-        const entity = spawnFinalBoss(spawnPoint);
-        boss.entity = entity;
-        boss.name = 'Vorusk the Neurofurnace';
-        const bossHealth = healths.get(entity);
-        boss.health = bossHealth?.current ?? 0;
-        boss.healthMax = bossHealth?.max ?? boss.health;
-        boss.phase = 'active';
-        void music.play('boss');
+      mission.state.complete = false;
+      if (ui.state === 'nuke-cinematic') {
+        return;
       }
+      if (ui.state !== 'in-game') {
+        ui.state = 'in-game';
+      }
+      boss.phase = 'spawning';
+      boss.timer = 0;
+    }
+
+    if (boss.phase === 'spawning') {
+      const spawnPoint = { tx: 32, ty: 21 };
+      const entity = spawnFinalBoss(spawnPoint);
+      boss.entity = entity;
+      boss.name = 'Vorusk the Neurofurnace';
+      const bossHealth = healths.get(entity);
+      boss.health = bossHealth?.current ?? 0;
+      boss.healthMax = bossHealth?.max ?? boss.health;
+      boss.phase = 'active';
+      void music.play('boss');
       mission.state.complete = false;
       return;
     }
