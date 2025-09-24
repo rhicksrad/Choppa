@@ -18,6 +18,9 @@ export interface MissionDef {
   objectives: ObjectiveDef[];
   enemySpawns?: Array<{ type: 'AAA' | 'SAM'; at: { tx: number; ty: number } }>;
   successDialog?: string[];
+  phaseTwoIntroDialog?: string[];
+  finalWinDialog?: string[];
+  finalWinTitle?: string;
 }
 
 export interface ObjectiveState extends ObjectiveDef {

@@ -181,6 +181,7 @@ const enemyFactory = createEnemyFactory({
     patrols: stores.patrols,
     chasers: stores.chasers,
     speedboats: stores.speedboats,
+    bosses: stores.bosses,
   },
   rng,
   state,
@@ -196,6 +197,7 @@ const {
   spawnAlienUnit,
   spawnSentinel,
   spawnObelisk,
+  spawnFinalBoss,
 } = enemyFactory;
 
 const missionCoordinator = createMissionCoordinator({
@@ -389,6 +391,7 @@ const combatProcessor = createCombatProcessor({
   physics: stores.physics,
   healths: stores.healths,
   buildings: stores.buildings,
+  bosses: stores.bosses,
   mission: missionCoordinator.mission,
   missionCoordinator,
   spawnSurvivors,
@@ -396,6 +399,7 @@ const combatProcessor = createCombatProcessor({
   destroyEntity,
   engine: audio.engine,
   spawnAlienUnit,
+  spawnFinalBoss,
   getRescueCueBuffer: () => rescueCueBuffer,
 });
 
@@ -555,8 +559,10 @@ const loop = new GameLoop({
     achievementTracker.update(dt, state, missionCoordinator.mission);
     if (!playing) return;
 
-    playerController.update(dt, snapshot, isoParams, runtimeMap);
-    pickupProcessor.update(dt, isoParams, pad, safeHouse);
+    if (ui.state === 'in-game') {
+      playerController.update(dt, snapshot, isoParams, runtimeMap);
+      pickupProcessor.update(dt, isoParams, pad, safeHouse);
+    }
     combatProcessor.update(dt);
 
     accumulator += dt;

@@ -15,6 +15,12 @@ export interface BarsData {
   enemiesRemaining: number;
   nextWaveIn: number | null;
 }
+
+type BossBarData = {
+  name: string;
+  health01: number;
+  enraged: boolean;
+} | null;
 const ammoDisplayOrder: {
   key: keyof BarsData['ammo'];
   label: string;
@@ -30,6 +36,7 @@ export function drawHUD(
   ctx: CanvasRenderingContext2D,
   bars: BarsData,
   objectiveLines: string[],
+  boss: BossBarData,
   compassDir: { dx: number; dy: number } | null,
   minimap: {
     enabled: boolean;
@@ -46,6 +53,28 @@ export function drawHUD(
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
+
+  if (boss) {
+    const barWidth = Math.min(420, Math.max(260, w * 0.55));
+    const barHeight = 18;
+    const drawX = Math.max(20, Math.floor((w - barWidth) / 2));
+    const drawY = 28;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f4f1ff';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillText(boss.name, drawX + barWidth / 2, drawY - 10);
+
+    ctx.fillStyle = 'rgba(10, 4, 18, 0.82)';
+    ctx.fillRect(drawX, drawY, barWidth, barHeight);
+    const fillWidth = Math.max(0, Math.min(1, boss.health01)) * (barWidth - 4);
+    ctx.fillStyle = boss.enraged ? '#ff5d8f' : '#92ffa6';
+    ctx.fillRect(drawX + 2, drawY + 2, fillWidth, barHeight - 4);
+    ctx.strokeStyle = boss.enraged ? 'rgba(255,93,143,0.85)' : 'rgba(146,255,166,0.85)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(drawX + 1, drawY + 1, barWidth - 2, barHeight - 2);
+    ctx.restore();
+  }
 
   const showMinimap = minimap.enabled;
   const mmW = 140;

@@ -57,5 +57,17 @@
     "Science: Nuke planted. The hivemind lattice is collapsing across the spectrum.",
     "XO: All craft, punch out! That blast will rewrite their planet in seconds.",
     "Press Enter to relaunch or Esc for title"
+  ],
+  "phaseTwoIntroDialog": [
+    "Science: Black Sun detonation confirmed. We saved the day... or did we? Psi backlash is redlining!",
+    "XO: The crater is boiling over—whatever's down there is angry and clawing its way up. Phase two just found us.",
+    "Pilot: Something titanic is rising—Vorusk the Neurofurnace, a cathedral of fused bone cages and molten synapse glass.",
+    "Science: It's knitting scythe-limbs from the wreckage. Brace yourselves, it's enraged!"
+  ],
+  "finalWinTitle": "Operation Black Sun Complete",
+  "finalWinDialog": [
+    "Science: Vorusk's cortex signature just imploded. The lattice is shattering into inert glass.",
+    "XO: All units, stand down. Their portal web is collapsing across every channel.",
+    "Pilot: Copy, command. Day saved for real this time—Vorusk's slag is all that's left. Let's head home before any other nightmares wake up."
   ]
 }

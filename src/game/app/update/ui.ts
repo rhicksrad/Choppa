@@ -294,7 +294,7 @@ export function createUIController({
       return false;
     }
 
-    if (ui.state === 'win') {
+    if (ui.state === 'win' || ui.state === 'final-win') {
       if (snapshot.keys['Enter'] || snapshot.keys[' ']) resetGame(getNextMissionIndex());
       if (snapshot.keys['Escape']) changeState('title');
       return false;

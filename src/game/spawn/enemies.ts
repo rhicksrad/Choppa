@@ -6,6 +6,7 @@ import type { Health } from '../components/Health';
 import type { Collider } from '../components/Collider';
 import type { AAA, SAM, PatrolDrone, ChaserDrone } from '../components/AI';
 import type { Speedboat } from '../components/Speedboat';
+import type { Boss } from '../components/Boss';
 import type { GameState, EnemyMeta } from '../app/state';
 import { RNG } from '../../core/util/rng';
 import type { MissionDef } from '../missions/types';
@@ -21,6 +22,7 @@ export interface EnemyStores {
   patrols: ComponentStore<PatrolDrone>;
   chasers: ComponentStore<ChaserDrone>;
   speedboats: ComponentStore<Speedboat>;
+  bosses: ComponentStore<Boss>;
 }
 
 export interface EnemyFactoryDeps {
@@ -66,6 +68,7 @@ export function createEnemyFactory({
     waveIndex: number,
     boatScenario: { lanes: BoatLane[]; waves: BoatWave[] },
   ) => boolean;
+  spawnFinalBoss: (point: { tx: number; ty: number }) => Entity;
 } {
   const spawnCoastGuard = (point: { tx: number; ty: number }, leashRange: number): void => {
     const entity = entities.create();
@@ -449,6 +452,34 @@ export function createEnemyFactory({
     return waveDef.count > 0;
   };
 
+  const spawnFinalBoss = (point: { tx: number; ty: number }): Entity => {
+    const entity = entities.create();
+    stores.transforms.set(entity, { tx: point.tx, ty: point.ty, rot: 0 });
+    stores.physics.set(entity, {
+      vx: 0,
+      vy: 0,
+      ax: 0,
+      ay: 0,
+      drag: 0.82,
+      maxSpeed: 2.6,
+      turnRate: Math.PI,
+    });
+    stores.healths.set(entity, { current: 900, max: 900 });
+    stores.colliders.set(entity, { radius: 1.6, team: 'enemy' });
+    stores.bosses.set(entity, {
+      name: 'Vorusk the Neurofurnace',
+      scytheCooldown: 4.2,
+      scytheTimer: 2.4,
+      spineCooldown: 3.6,
+      spineTimer: 1.6,
+      quakeCooldown: 6.2,
+      quakeTimer: 4.4,
+      enraged: false,
+    });
+    registerEnemy(entity, { kind: 'boss', score: 12000 });
+    return entity;
+  };
+
   return {
     spawnMissionEnemies,
     spawnCoastGuard,
@@ -461,5 +492,6 @@ export function createEnemyFactory({
     spawnObelisk,
     spawnDefaultWave,
     spawnBoatWave,
+    spawnFinalBoss,
   };
 }

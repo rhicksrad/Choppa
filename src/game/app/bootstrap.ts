@@ -24,6 +24,7 @@ import type { Collider } from '../components/Collider';
 import type { Building } from '../components/Building';
 import type { Pickup } from '../components/Pickup';
 import type { Speedboat } from '../components/Speedboat';
+import type { Boss } from '../components/Boss';
 import { SystemScheduler } from '../../core/ecs/systems';
 import { MovementSystem } from '../systems/Movement';
 import { RotorSpinSystem } from '../systems/RotorSpin';
@@ -35,6 +36,7 @@ import { AIControlSystem } from '../systems/AIControl';
 import { EnemyBehaviorSystem } from '../systems/EnemyBehavior';
 import { SpeedboatBehaviorSystem } from '../systems/SpeedboatBehavior';
 import { DamageSystem } from '../systems/Damage';
+import { BossBehaviorSystem } from '../systems/BossBehavior';
 import { loadJson } from '../../core/util/storage';
 import { loadBindings, type KeyBindings } from '../../ui/input-remap/bindings';
 
@@ -75,6 +77,7 @@ export interface BootstrapResult {
     buildings: ComponentStore<Building>;
     pickups: ComponentStore<Pickup>;
     speedboats: ComponentStore<Speedboat>;
+    bosses: ComponentStore<Boss>;
   };
   scheduler: SystemScheduler;
   rng: RNG;
@@ -195,6 +198,7 @@ function setupEcs(): {
     buildings: new ComponentStore<Building>(),
     pickups: new ComponentStore<Pickup>(),
     speedboats: new ComponentStore<Speedboat>(),
+    bosses: new ComponentStore<Boss>(),
   };
   return { entities, stores };
 }
@@ -248,6 +252,15 @@ function setupSystems(
     rng,
     () => playerLocator(),
   );
+  const bossBehavior = new BossBehaviorSystem(
+    stores.transforms,
+    stores.physics,
+    stores.bosses,
+    stores.healths,
+    fireEvents,
+    rng,
+    () => playerLocator(),
+  );
   const boatBehavior = new SpeedboatBehaviorSystem(
     stores.transforms,
     stores.physics,
@@ -260,6 +273,7 @@ function setupSystems(
 
   scheduler.add(aiControl);
   scheduler.add(enemyBehavior);
+  scheduler.add(bossBehavior);
   scheduler.add(boatBehavior);
 
   const setPlayerLocator = (fn: () => { x: number; y: number }): void => {

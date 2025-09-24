@@ -24,6 +24,8 @@ import type { MissionTracker } from '../../missions/tracker';
 import type { MissionCoordinator } from '../../missions/coordinator';
 import type { SurvivorSite } from '../../scenarios/layouts';
 import type { UIStore } from '../../../ui/menus/scenes';
+import type { ObjectiveState } from '../../missions/types';
+import type { Boss } from '../../components/Boss';
 
 const NUKE_PLANT_TIME = 8;
 
@@ -42,6 +44,7 @@ export interface CombatProcessorDeps {
   physics: ComponentStore<Physics>;
   healths: ComponentStore<Health>;
   buildings: ComponentStore<Building>;
+  bosses: ComponentStore<Boss>;
   mission: MissionTracker;
   missionCoordinator: MissionCoordinator;
   spawnSurvivors: (sites: SurvivorSite[]) => void;
@@ -49,6 +52,7 @@ export interface CombatProcessorDeps {
   destroyEntity: (entity: Entity) => void;
   engine: EngineSound;
   spawnAlienUnit: (point: { tx: number; ty: number }) => void;
+  spawnFinalBoss: (point: { tx: number; ty: number }) => Entity;
   getRescueCueBuffer?: () => AudioBuffer | null;
 }
 
@@ -73,6 +77,7 @@ export function createCombatProcessor({
   physics,
   healths,
   buildings,
+  bosses,
   mission,
   missionCoordinator,
   spawnSurvivors,
@@ -80,6 +85,7 @@ export function createCombatProcessor({
   destroyEntity,
   engine,
   spawnAlienUnit,
+  spawnFinalBoss,
   getRescueCueBuffer = () => null,
 }: CombatProcessorDeps): CombatProcessor {
   const SHIELD_TAG = 'mothership-shield';
@@ -175,6 +181,20 @@ export function createCombatProcessor({
         const t = transforms.get(entity);
         if (t) spawnExplosion(t.tx, t.ty);
         playExplosion(bus);
+        if (enemyMeta.kind === 'boss') {
+          state.finalBoss.phase = 'defeated';
+          state.finalBoss.timer = 0;
+          state.finalBoss.entity = null;
+          state.finalBoss.health = 0;
+          state.finalBoss.enraged = false;
+          if (state.finalBoss.objectiveId) {
+            const objective = mission.state.objectives.find(
+              (o) => o.id === state.finalBoss.objectiveId,
+            );
+            if (objective) objective.complete = true;
+          }
+          mission.state.complete = true;
+        }
         state.stats.score += enemyMeta.score;
         destroyEntity(entity);
         continue;
@@ -318,6 +338,100 @@ export function createCombatProcessor({
     }
   };
 
+  const ensureFinalBossObjective = (): void => {
+    if (state.finalBoss.objectiveId) return;
+    const existing = mission.state.objectives.find((o) => o.id === 'final-boss');
+    if (existing) {
+      existing.complete = false;
+      state.finalBoss.objectiveId = existing.id;
+      mission.state.complete = false;
+      return;
+    }
+    const bossObjective: ObjectiveState = {
+      id: 'final-boss',
+      type: 'custom',
+      name: 'Destroy Vorusk the Neurofurnace',
+      at: { tx: 32, ty: 21 },
+      radiusTiles: 4.5,
+      requires: ['extract'],
+      complete: false,
+    };
+    mission.state.objectives.push(bossObjective);
+    state.finalBoss.objectiveId = bossObjective.id;
+    mission.state.complete = false;
+  };
+
+  const beginFinalBossCinematic = (): void => {
+    ensureFinalBossObjective();
+    state.finalBoss.phase = 'cinematic';
+    state.finalBoss.timer = 0;
+    state.finalBoss.entity = null;
+    state.finalBoss.name = 'Vorusk the Neurofurnace';
+    state.finalBoss.health = 0;
+    state.finalBoss.healthMax = 0;
+    state.finalBoss.enraged = false;
+    state.wave.active = false;
+    state.wave.countdown = Number.POSITIVE_INFINITY;
+    state.wave.enemies.clear();
+    ui.state = 'nuke-cinematic';
+  };
+
+  const updateFinalBossPhase = (dt: number): void => {
+    if (mission.state.def.id !== 'm04') return;
+    const boss = state.finalBoss;
+
+    if (boss.phase === 'inactive') {
+      if (mission.state.complete && !boss.objectiveId) {
+        beginFinalBossCinematic();
+      }
+      return;
+    }
+
+    if (boss.phase === 'cinematic') {
+      boss.timer += dt;
+      if (boss.timer >= 4.8) {
+        boss.timer = 0;
+        ui.state = 'in-game';
+        const spawnPoint = { tx: 32, ty: 21 };
+        const entity = spawnFinalBoss(spawnPoint);
+        boss.entity = entity;
+        boss.name = 'Vorusk the Neurofurnace';
+        const bossHealth = healths.get(entity);
+        boss.health = bossHealth?.current ?? 0;
+        boss.healthMax = bossHealth?.max ?? boss.health;
+        boss.phase = 'active';
+      }
+      mission.state.complete = false;
+      return;
+    }
+
+    if (boss.entity) {
+      const bossHealth = healths.get(boss.entity);
+      const bossComp = bosses.get(boss.entity);
+      if (bossHealth) {
+        boss.health = bossHealth.current;
+        boss.healthMax = bossHealth.max;
+      }
+      boss.enraged = bossComp?.enraged ?? boss.enraged;
+      mission.state.complete = false;
+      if (!bossHealth || bossHealth.current <= 0) {
+        boss.phase = 'defeated';
+        boss.timer = 0;
+        boss.entity = null;
+        boss.health = 0;
+        boss.enraged = false;
+        if (boss.objectiveId) {
+          const objective = mission.state.objectives.find((o) => o.id === boss.objectiveId);
+          if (objective) objective.complete = true;
+        }
+        mission.state.complete = true;
+      }
+    } else if (boss.phase === 'active') {
+      boss.phase = 'defeated';
+      mission.state.complete = true;
+    }
+  };
+
   const update = (dt: number): void => {
     const scenario = missionCoordinator.getScenario();
     scheduler.update(dt);
@@ -446,8 +560,13 @@ export function createCombatProcessor({
     updateHivePlanting(dt);
 
     mission.update();
+    updateFinalBossPhase(dt);
     if (mission.state.complete && ui.state === 'in-game') {
-      ui.state = 'win';
+      if (mission.state.def.id === 'm04' && state.finalBoss.phase === 'defeated') {
+        ui.state = 'final-win';
+      } else {
+        ui.state = 'win';
+      }
       missionCoordinator.onMissionWin();
     }
 
