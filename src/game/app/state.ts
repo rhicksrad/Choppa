@@ -25,6 +25,14 @@ export interface Explosion {
   radius: number;
 }
 
+export interface RubbleDecal {
+  tx: number;
+  ty: number;
+  width: number;
+  depth: number;
+  seed: number;
+}
+
 export interface RescueRunner {
   startIso: { x: number; y: number };
   endIso: { x: number; y: number };
@@ -97,6 +105,7 @@ export interface GameState {
   player: PlayerState;
   stats: { score: number };
   explosions: Explosion[];
+  rubble: RubbleDecal[];
   enemyMeta: Map<Entity, EnemyMeta>;
   buildingMeta: Map<Entity, BuildingMeta>;
   wave: WaveState;
@@ -126,6 +135,7 @@ export function createGameState(): GameState {
     player: { lives: 3, respawnTimer: 0, invulnerable: false },
     stats: { score: 0 },
     explosions: [],
+    rubble: [],
     enemyMeta: new Map(),
     buildingMeta: new Map(),
     wave: { index: 0, countdown: 3, active: false, timeInWave: 0, enemies: new Set() },
