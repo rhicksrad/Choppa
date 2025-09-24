@@ -24,7 +24,7 @@ import type { DamageSystem } from '../../systems/Damage';
 import type { FireEvent } from '../../systems/WeaponFire';
 import type { MissionTracker } from '../../missions/tracker';
 import type { MissionCoordinator } from '../../missions/coordinator';
-import type { SurvivorSite } from '../../scenarios/layouts';
+import { MISSION_TWO_BASE_TAG, type SurvivorSite } from '../../scenarios/layouts';
 import type { UIStore } from '../../../ui/menus/scenes';
 import type { ObjectiveState } from '../../missions/types';
 import type { Boss } from '../../components/Boss';
@@ -93,6 +93,7 @@ export function createCombatProcessor({
   getRescueCueBuffer = () => null,
 }: CombatProcessorDeps): CombatProcessor {
   const SHIELD_TAG = 'mothership-shield';
+  const COAST_BASE_TAG = MISSION_TWO_BASE_TAG;
   const MOTHERSHIP_POWER_IDS = ['core-west', 'core-east', 'core-south'] as const;
 
   const spawnExplosion = (tx: number, ty: number, radius = 0.9, duration = 0.6): void => {
@@ -576,6 +577,14 @@ export function createCombatProcessor({
       if (campusRemaining === 0) state.flags.campusLeveled = true;
     }
 
+    if (mission.state.def.id === 'm02' && !state.flags.coastBaseLeveled) {
+      let baseRemaining = 0;
+      state.buildingMeta.forEach((meta) => {
+        if (meta.tag === COAST_BASE_TAG) baseRemaining += 1;
+      });
+      if (baseRemaining === 0) state.flags.coastBaseLeveled = true;
+    }
+
     if (
       state.flags.aliensTriggered &&
       !state.flags.aliensDefeated &&
@@ -584,7 +593,13 @@ export function createCombatProcessor({
       state.flags.aliensDefeated = true;
     }
 
-    if (!state.rescue.survivorsSpawned && state.flags.campusLeveled && state.flags.aliensDefeated) {
+    const missionId = mission.state.def.id;
+    const rescueReady =
+      missionId === 'm02'
+        ? state.flags.coastBaseLeveled && state.flags.aliensDefeated
+        : state.flags.campusLeveled && state.flags.aliensDefeated;
+
+    if (!state.rescue.survivorsSpawned && rescueReady) {
       const totalSurvivors = scenario.survivorSites.reduce(
         (sum, site) => sum + Math.max(0, Math.round(site.count)),
         0,

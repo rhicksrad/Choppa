@@ -121,6 +121,7 @@ export interface GameState {
     aliensTriggered: boolean;
     aliensDefeated: boolean;
     campusLeveled: boolean;
+    coastBaseLeveled: boolean;
     mothershipShieldActive: boolean;
     mothershipBreachOpen: boolean;
   };
@@ -151,6 +152,7 @@ export function createGameState(): GameState {
       aliensTriggered: false,
       aliensDefeated: false,
       campusLeveled: false,
+      coastBaseLeveled: false,
       mothershipShieldActive: false,
       mothershipBreachOpen: false,
     },

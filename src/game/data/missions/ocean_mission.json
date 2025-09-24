@@ -38,10 +38,18 @@
       "radiusTiles": 6.8
     },
     {
+      "id": "scientists",
+      "type": "custom",
+      "name": "Rescue the trapped nuclear scientists",
+      "requires": ["obj1", "obj2", "obj3"],
+      "at": { "tx": 26.0, "ty": 30.8 },
+      "radiusTiles": 3.0
+    },
+    {
       "id": "obj6",
       "type": "reach",
       "name": "Return to the carrier deck",
-      "requires": ["obj1", "obj2", "obj3", "boats"],
+      "requires": ["obj1", "obj2", "obj3", "boats", "scientists"],
       "at": { "tx": 26, "ty": 2 },
       "radiusTiles": 1.6
     }

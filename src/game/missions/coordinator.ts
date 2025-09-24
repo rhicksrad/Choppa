@@ -480,6 +480,7 @@ class MissionCoordinatorImpl implements MissionCoordinator {
     this.state.flags.aliensTriggered = false;
     this.state.flags.aliensDefeated = false;
     this.state.flags.campusLeveled = false;
+    this.state.flags.coastBaseLeveled = false;
     this.state.flags.mothershipShieldActive = isMothership;
     this.state.flags.mothershipBreachOpen = false;
 
@@ -729,6 +730,8 @@ class MissionCoordinatorImpl implements MissionCoordinator {
   private setupMissionTwoHandlers(): void {
     this.missionHandlers.boats = () =>
       this.state.boat.objectiveComplete && !this.state.boat.objectiveFailed;
+    this.missionHandlers.scientists = () =>
+      this.state.rescue.rescued >= this.state.rescue.total;
   }
 
   private setupMissionTwoObjectiveLabels(): void {
@@ -751,6 +754,13 @@ class MissionCoordinatorImpl implements MissionCoordinator {
           label += ` | Next wave in: ${Math.max(0, this.state.wave.countdown).toFixed(1)}s`;
         }
       }
+      label += ')';
+      return label;
+    };
+    this.objectiveLabelOverrides.scientists = (objective) => {
+      const carrying = this.state.rescue.carrying;
+      let label = `${objective.name} (${this.state.rescue.rescued}/${this.state.rescue.total}`;
+      if (carrying > 0) label += ` +${carrying}`;
       label += ')';
       return label;
     };
