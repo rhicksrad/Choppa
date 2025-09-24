@@ -50,50 +50,87 @@ export function drawAAATurret(
   ctx.ellipse(0, 10, 18, 10, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#1c1030';
+  ctx.fillStyle = '#252a33';
+  ctx.beginPath();
+  ctx.moveTo(-20, 9);
+  ctx.lineTo(0, -3);
+  ctx.lineTo(20, 9);
+  ctx.lineTo(0, 21);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#2f3540';
   ctx.beginPath();
   ctx.moveTo(-16, 8);
-  ctx.lineTo(0, -10);
+  ctx.lineTo(0, 0);
   ctx.lineTo(16, 8);
   ctx.lineTo(0, 16);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = '#63fce0';
-  ctx.lineWidth = 3;
+  ctx.fillStyle = '#414956';
   ctx.beginPath();
-  ctx.ellipse(0, -2, 11, 6, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.fillStyle = '#2a1548';
-  ctx.beginPath();
-  ctx.roundRect(-9, -16, 18, 16, 6);
+  ctx.ellipse(0, -2, 12, 7, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#9bfff1';
-  ctx.beginPath();
-  ctx.arc(0, -8, 5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = '#c7a4ff';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(-11, -3);
-  ctx.lineTo(-20, -11);
-  ctx.moveTo(11, -3);
-  ctx.lineTo(20, -11);
-  ctx.stroke();
-
-  ctx.strokeStyle = '#6dfcdf';
+  ctx.strokeStyle = '#636d7a';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(0, -16);
-  ctx.lineTo(0, -26);
-  ctx.moveTo(-5, -14);
-  ctx.lineTo(-7, -22);
-  ctx.moveTo(5, -14);
-  ctx.lineTo(7, -22);
+  ctx.ellipse(0, -2, 13, 8, 0, 0, Math.PI * 2);
   ctx.stroke();
+
+  ctx.fillStyle = '#1e232b';
+  ctx.beginPath();
+  ctx.roundRect(-11, -15, 22, 14, 5);
+  ctx.fill();
+
+  ctx.fillStyle = '#2a303b';
+  ctx.beginPath();
+  ctx.roundRect(-9, -13, 18, 10, 4);
+  ctx.fill();
+
+  ctx.fillStyle = '#10141a';
+  ctx.beginPath();
+  ctx.roundRect(-6, -12, 12, 8, 3);
+  ctx.fill();
+
+  ctx.fillStyle = '#59616d';
+  ctx.beginPath();
+  ctx.arc(0, -8, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#4b545f';
+  ctx.beginPath();
+  ctx.arc(-12, 12, 2, 0, Math.PI * 2);
+  ctx.arc(12, 12, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#3b424d';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(-5, -10);
+  ctx.lineTo(-13, -24);
+  ctx.moveTo(5, -10);
+  ctx.lineTo(13, -24);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#a3acb9';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-5, -12);
+  ctx.lineTo(-14, -30);
+  ctx.moveTo(5, -12);
+  ctx.lineTo(14, -30);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ccd3db';
+  ctx.beginPath();
+  ctx.arc(-14, -30, 2, 0, Math.PI * 2);
+  ctx.arc(14, -30, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineCap = 'butt';
   ctx.restore();
 }
 
