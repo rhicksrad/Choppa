@@ -45,6 +45,8 @@ export function createUIController({
   let settingsMouseDown = false;
   let activeSlider: VolumeSliderKey | null = null;
   let sliderDirty = false;
+  let prevUIState: UIState = ui.state;
+  let briefingConfirmLocked = ui.state === 'briefing';
 
   const changeState = (next: UIState): void => {
     if (ui.state === next) return;
@@ -58,6 +60,8 @@ export function createUIController({
       settingsMouseDown = false;
     }
     ui.state = next;
+    prevUIState = next;
+    briefingConfirmLocked = next === 'briefing';
     onStateChange?.(next, prev);
   };
 
@@ -84,6 +88,11 @@ export function createUIController({
   };
 
   const update = (_dt: number, snapshot: InputSnapshot): boolean => {
+    if (ui.state !== prevUIState) {
+      prevUIState = ui.state;
+      briefingConfirmLocked = ui.state === 'briefing';
+    }
+
     const pauseDown = isDown(snapshot, bindings, 'pause');
     if (pauseDown && !pauseLatch) {
       if (ui.state === 'in-game') changeState('paused');
@@ -206,8 +215,13 @@ export function createUIController({
     }
 
     if (ui.state === 'briefing') {
-      if (snapshot.keys['Enter'] || snapshot.keys[' '] || snapshot.keys['Space'])
-        changeState('in-game');
+      const confirmDown =
+        snapshot.keys['Enter'] ||
+        snapshot.keys[' '] ||
+        snapshot.keys['Space'] ||
+        snapshot.keys['Spacebar'];
+      if (!confirmDown) briefingConfirmLocked = false;
+      if (!briefingConfirmLocked && confirmDown) changeState('in-game');
       return false;
     }
 
