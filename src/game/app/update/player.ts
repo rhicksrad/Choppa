@@ -108,6 +108,27 @@ export function createPlayerController({
 
     const transform = transforms.get(player)!;
     const body = physics.get(player)!;
+    const { width: viewWidth, height: viewHeight } = getCanvasViewMetrics(context);
+    let aimTile = screenToApproxTile(
+      snapshot.mouseX,
+      snapshot.mouseY,
+      viewWidth,
+      viewHeight,
+      camera.x,
+      camera.y,
+      isoParams,
+    );
+    let aimDx = aimTile.x - transform.tx;
+    let aimDy = aimTile.y - transform.ty;
+    if (!Number.isFinite(aimDx) || !Number.isFinite(aimDy) || Math.hypot(aimDx, aimDy) < 0.3) {
+      aimTile = {
+        x: transform.tx + Math.cos(transform.rot),
+        y: transform.ty + Math.sin(transform.rot),
+      };
+      aimDx = aimTile.x - transform.tx;
+      aimDy = aimTile.y - transform.ty;
+    }
+
     let dx = 0;
     let dy = 0;
     if (!state.player.invulnerable) {
@@ -115,8 +136,18 @@ export function createPlayerController({
       if (isDown(snapshot, bindings, 'moveDown')) dy += 1;
       if (isDown(snapshot, bindings, 'moveLeft')) dx -= 1;
       if (isDown(snapshot, bindings, 'moveRight')) dx += 1;
-      if (isDown(snapshot, bindings, 'strafeLeft')) dx -= 1;
-      if (isDown(snapshot, bindings, 'strafeRight')) dx += 1;
+
+      const aimLen = Math.hypot(aimDx, aimDy) || 1;
+      const leftX = -aimDy / aimLen;
+      const leftY = aimDx / aimLen;
+      if (isDown(snapshot, bindings, 'strafeLeft')) {
+        dx += leftX;
+        dy += leftY;
+      }
+      if (isDown(snapshot, bindings, 'strafeRight')) {
+        dx -= leftX;
+        dy -= leftY;
+      }
     }
     if (dx !== 0 || dy !== 0) {
       const len = Math.hypot(dx, dy) || 1;
@@ -131,24 +162,6 @@ export function createPlayerController({
     engine.start();
     engine.setIntensity(speed);
 
-    const { width: viewWidth, height: viewHeight } = getCanvasViewMetrics(context);
-    let aimTile = screenToApproxTile(
-      snapshot.mouseX,
-      snapshot.mouseY,
-      viewWidth,
-      viewHeight,
-      camera.x,
-      camera.y,
-      isoParams,
-    );
-    const aimDx = aimTile.x - transform.tx;
-    const aimDy = aimTile.y - transform.ty;
-    if (!Number.isFinite(aimDx) || !Number.isFinite(aimDy) || Math.hypot(aimDx, aimDy) < 0.3) {
-      aimTile = {
-        x: transform.tx + Math.cos(transform.rot),
-        y: transform.ty + Math.sin(transform.rot),
-      };
-    }
     weaponFire.setInput(snapshot, aimTile.x, aimTile.y, !state.player.invulnerable);
 
     const margin = 1.2;
