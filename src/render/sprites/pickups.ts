@@ -136,7 +136,7 @@ function drawSurvivorPickup(
   drawRescueRunner(ctx, {
     x: baseX,
     y: baseY - lift,
-    angle: (Math.PI * 3) / 2 + Math.PI / 2,
+    angle: Math.PI,
     stepPhase,
     bob,
     fade: 1,
