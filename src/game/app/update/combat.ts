@@ -585,14 +585,19 @@ export function createCombatProcessor({
     }
 
     if (!state.rescue.survivorsSpawned && state.flags.campusLeveled && state.flags.aliensDefeated) {
-      spawnSurvivors(scenario.survivorSites);
-      const rescueCue = getRescueCueBuffer();
-      if (rescueCue) bus.playSfx(rescueCue);
-      state.rescue.survivorsSpawned = true;
-      state.rescue.total = scenario.survivorSites.reduce(
+      const totalSurvivors = scenario.survivorSites.reduce(
         (sum, site) => sum + Math.max(0, Math.round(site.count)),
         0,
       );
+      state.rescue.total = totalSurvivors;
+
+      if (totalSurvivors > 0) {
+        spawnSurvivors(scenario.survivorSites);
+        const rescueCue = getRescueCueBuffer();
+        if (rescueCue) bus.playSfx(rescueCue);
+      }
+
+      state.rescue.survivorsSpawned = true;
     }
 
     updateHivePlanting(dt);
