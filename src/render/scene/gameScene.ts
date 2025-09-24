@@ -618,25 +618,19 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       return;
     }
 
-    if (ui.state === 'win' || ui.state === 'final-win') {
-      const finalVictory = ui.state === 'final-win';
+    if (ui.state === 'win') {
       deps.context.save();
       deps.context.fillStyle = 'rgba(0,0,0,0.6)';
       deps.context.fillRect(0, 0, viewWidth, viewHeight);
       deps.context.fillStyle = '#92ffa6';
       deps.context.font = 'bold 28px system-ui, sans-serif';
       deps.context.textAlign = 'center';
-      const winTitle = finalVictory
-        ? (mission.state.def.finalWinTitle ?? 'Campaign Complete')
-        : 'Mission Complete';
-      deps.context.fillText(winTitle, viewWidth / 2, viewHeight / 2 - 8);
+      deps.context.fillText('Mission Complete', viewWidth / 2, viewHeight / 2 - 8);
       deps.context.fillStyle = '#c8d7e1';
       deps.context.font = '14px system-ui, sans-serif';
 
       const winBaseY = viewHeight / 2 + 16;
-      const successDialog = finalVictory
-        ? (mission.state.def.finalWinDialog ?? mission.state.def.successDialog)
-        : mission.state.def.successDialog;
+      const successDialog = mission.state.def.successDialog;
       if (successDialog && successDialog.length > 0) {
         for (let i = 0; i < successDialog.length; i += 1) {
           deps.context.fillText(successDialog[i]!, viewWidth / 2, winBaseY + i * 20);
@@ -644,6 +638,39 @@ export function createGameSceneRenderer(deps: GameSceneRendererDeps): GameSceneR
       } else {
         deps.context.fillText('Press Enter to restart or Esc for title', viewWidth / 2, winBaseY);
       }
+      deps.context.restore();
+    }
+
+    if (ui.state === 'final-win') {
+      deps.context.save();
+      deps.context.fillStyle = 'rgba(0,0,0,0.7)';
+      deps.context.fillRect(0, 0, viewWidth, viewHeight);
+      deps.context.textAlign = 'center';
+
+      const centerX = viewWidth / 2;
+      const centerY = viewHeight / 2;
+      const dialog = mission.state.def.finalWinDialog ?? mission.state.def.successDialog ?? [];
+
+      deps.context.fillStyle = '#92ffa6';
+      deps.context.font = 'bold 32px system-ui, sans-serif';
+      deps.context.fillText('You Won, Game Over', centerX, centerY - 60);
+
+      deps.context.fillStyle = '#c8d7e1';
+      deps.context.font = '16px system-ui, sans-serif';
+      deps.context.fillText('Created by Ryan Hicks and ChatGPT5 with Codex', centerX, centerY - 20);
+
+      if (dialog.length > 0) {
+        deps.context.font = '14px system-ui, sans-serif';
+        for (let i = 0; i < dialog.length; i += 1) {
+          deps.context.fillText(dialog[i]!, centerX, centerY + 20 + i * 22);
+        }
+      }
+
+      deps.context.font = '13px system-ui, sans-serif';
+      deps.context.fillStyle = '#b4c8d6';
+      const returnY = centerY + 20 + dialog.length * 22 + 28;
+      deps.context.fillText('Returning to title...', centerX, returnY);
+
       deps.context.restore();
     }
   };
